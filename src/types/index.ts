@@ -1,0 +1,300 @@
+// ==================== MASTER DATA TYPES ====================
+
+export interface Customer {
+  id: string;
+  code: string;               // CUS-XXXXXX (6 random alphanumeric)
+  company_name: string;
+  office_address: string;
+  warehouse_address: string;
+  email: string;
+  npwp: string;
+  status: 'Active' | 'Inactive';
+  created_date: string;
+  updated_date: string;
+}
+
+export interface PIC {
+  id: string;
+  name: string;
+  customer_id: string;
+  customer_name?: string;     // denormalized for display
+  phone: string;
+  email: string;
+  position: string;
+}
+
+export interface Vendor {
+  id: string;
+  code: string;
+  vendor_name: string;
+  address: string;
+  npwp: string;
+  products: string; // Long text
+  status: 'Active' | 'Inactive';
+  created_date: string;
+  updated_date: string;
+}
+
+export interface PicVendor {
+  id: string;
+  name: string;
+  vendor_id: string;
+  vendor_name?: string; // denormalized
+  phone: string;
+  email: string;
+  position: string;
+}
+
+export interface Product {
+  id: string;
+  code: string;
+  part_number: string;
+  product_name: string;
+  description: string;
+  brand: string;
+  specification: string;
+  category: string;
+  subcategory: string;
+  uom: string;
+  weight_kg: number;
+  dimension: string;
+  origin: string;
+  hs_code: string;
+  default_margin: number;
+  notes: string;
+  status: 'Active' | 'Inactive';
+}
+
+// ==================== TRANSACTION TYPES ====================
+
+export interface Inquiry {
+  id: string;
+  request_number: string;         // No Permintaan
+  request_title: string;          // Judul Permintaan
+  request_date: string;           // Tanggal Permintaan
+  offer_deadline: string;         // Batas Penawaran
+  customer_id: string;
+  customer_name?: string;
+  pic_id: string;                 // PIC dari management customer
+  pic_name?: string;
+  documents: string;              // JSON array of Drive URLs
+  status: InquiryStatus;
+  notes?: string;
+  created_date: string;
+  updated_date: string;
+}
+
+export type InquiryStatus = 'Jalan' | 'Batal' | 'Telat' | 'Neraca';
+
+export interface Neraca {
+  id: string;
+  inquiry_id: string;
+  name: string;        // e.g. "Neraca 1", "Neraca 2"
+  created_date: string;
+  updated_date: string;
+}
+
+export interface NeracaDetail {
+  id: string;
+  neraca_id: string;
+  // Ongkir Vendor-Kantor (Rp)
+  ongkir_a: number;
+  ongkir_b: number;
+  ongkir_c: number;
+  ongkir_d: number;
+  ongkir_e: number;
+  // Ongkir Kantor-Customer (Rp)
+  ongkir_x: number;
+  ongkir_y: number;
+  ongkir_z: number;
+  // Difficulty of Item (%)
+  difficulty_easy: number;   // default 30
+  difficulty_medium: number; // default 100
+  difficulty_hard: number;   // default 150
+  difficulty_rare: number;   // default 200
+  // Resume settings
+  disc: number;   // discount %, default 0
+  ppn: number;    // PPN %, default 11
+  un_cost: number; // Un Cost %, default 2
+  updated_date: string;
+}
+
+export interface NeracaItem {
+  id: string;
+  neraca_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  documents: string;     // JSON array [{name, url}]
+  item_customer: string; // Item name as shown to customer
+  item_vendor: string;   // Item name from vendor
+  category_vk: string;   // 'A' | 'B' | 'C' | 'D' | 'E'
+  category_kc: string;   // 'X' | 'Y' | 'Z'
+  difficulty: string;    // 'Easy' | 'Medium' | 'Hard' | 'Rare'
+  qty: number;
+  harga_beli: number;
+  berat: number;
+  delivery_time?: string;
+  created_date: string;
+  updated_date: string;
+}
+
+export interface VendorDiscount {
+  id: string;
+  neraca_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  discount_pct: number;   // discount as percentage
+  discount_cash: number;  // discount as cash (Rp)
+  updated_date: string;
+}
+
+export type NeracaQuotationStatus = 'Draft' | 'Send' | 'PO' | 'Invoice' | 'Tracking' | 'Selesai';
+
+export interface NeracaQuotation {
+  id: string;
+  quotation_number: string;  // e.g. QT-2026-00001
+  neraca_id: string;
+  inquiry_id: string;
+  customer_id: string;
+  customer_name: string;
+  request_title: string;     // judul permintaan dari inquiry
+  nilai: number;             // grand_total dari neraca
+  dokumen: string;           // URL dokumen (optional)
+  status: NeracaQuotationStatus;
+  created_date: string;
+  updated_date: string;
+}
+
+export interface InquiryItem {
+  id: string;
+  inquiry_id: string;
+  item_id: string;
+  description: string;
+  specification: string;
+  quantity: number;
+  unit: string;
+  customer_target_price: number;
+  required_date: string;
+  weight: number;
+  notes: string;
+  status: InquiryItemStatus;
+}
+
+export type InquiryItemStatus = 'Draft' | 'Sourcing' | 'Vendor Quotation Received' | 'Pricing' | 'Quoted' | 'Won' | 'Lost' | 'Cancelled';
+
+export interface SourcingRequest {
+  id: string;
+  inquiry_item_id: string;
+  vendor_id: string;
+  vendor_name?: string;
+  request_date: string;
+  request_number: string;
+  requested_qty: number;
+  requested_specification: string;
+  deadline: string;
+  status: SourcingStatus;
+  notes: string;
+}
+
+export type SourcingStatus = 'Not Sent' | 'Sent' | 'Waiting Response' | 'Responded' | 'No Response' | 'Rejected' | 'Expired';
+
+export interface VendorQuotation {
+  id: string;
+  sourcing_id: string;
+  vendor_id: string;
+  vendor_name?: string;
+  quotation_number: string;
+  quotation_date: string;
+  valid_until: string;
+  currency: string;
+  unit_price: number;
+  quantity: number;
+  discount: number;
+  tax: number;
+  total: number;
+  lead_time: string;
+  weight: number;
+  shipping_cost: number;
+  payment_term: string;
+  notes: string;
+  received_date: string;
+}
+
+export interface CostCalculation {
+  id: string;
+  inquiry_item_id: string;
+  vendor_id: string;
+  vendor_cost: number;
+  vendor_shipping: number;
+  office_shipping: number;
+  handling: number;
+  other_cost: number;
+  payment_adjustment_pct: number;
+  margin: number;
+  margin_type: 'markup' | 'gross_margin';
+  selling_price: number;
+  rounding: number;
+}
+
+export interface Quotation {
+  id: string;
+  quotation_number: string;
+  inquiry_id: string;
+  customer_id: string;
+  customer_name?: string;
+  date: string;
+  valid_until: string;
+  project: string;
+  payment_term: string;
+  currency: string;
+  subtotal: number;
+  tax_pct: number;
+  grand_total: number;
+  status: QuotationStatus;
+  revision: number;
+  notes: string;
+  created_by: string;
+}
+
+export type QuotationStatus = 'Draft' | 'Waiting Approval' | 'Approved' | 'Sent' | 'Viewed' | 'Negotiation' | 'Revised' | 'Won' | 'Lost' | 'Expired' | 'Cancelled';
+
+// ==================== COMPANY ====================
+
+export interface Company {
+  id: string;
+  name: string;           // Nama lengkap perusahaan
+  short_name: string;     // Singkatan / nama pendek
+  logo_url: string;       // URL logo dari Google Drive
+  address: string;        // Alamat lengkap
+  email: string;
+  phone: string;
+  admin_position: string; // Posisi admin untuk tanda tangan quotation
+  updated_date: string;
+}
+
+// ==================== UI TYPES ====================
+
+export interface Column<T> {
+  key: keyof T | string;
+  label: string;
+  render?: (value: unknown, row: T) => React.ReactNode;
+  width?: string;
+}
+
+export interface PricingCalculation {
+  vendor_cost: number;
+  vendor_shipping: number;
+  office_shipping: number;
+  handling: number;
+  other_cost: number;
+  subtotal_cost: number;
+  payment_term: string;
+  payment_adjustment_pct: number;
+  adjusted_cost: number;
+  margin: number;
+  margin_type: 'markup' | 'gross_margin';
+  selling_price: number;
+  rounded_price: number;
+  gross_profit: number;
+  gross_margin_pct: number;
+}
