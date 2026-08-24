@@ -1,14 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui';
-import { usePurchaseOrders, useDeletePurchaseOrder } from '@/hooks/useData';
+import { usePurchaseOrders, useDeletePurchaseOrder, usePoIns } from '@/hooks/useData';
 import type { PurchaseOrder } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
-  const { data: purchaseOrders = [], isLoading } = usePurchaseOrders();
+  const { data: purchaseOrders = [], isLoading: loadingPOs } = usePurchaseOrders();
+  const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
   const deletePurchaseOrder = useDeletePurchaseOrder();
+  
+  const isLoading = loadingPOs || loadingPoIns;
 
   const handleDeletePo = async (po: PurchaseOrder) => {
     if (confirm(`Hapus PO ${po.po_number}?`)) {
@@ -37,7 +40,8 @@ export default function PurchaseOrders() {
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4">NO. PO</th>
+                  <th className="px-6 py-4">CUSTOMER</th>
+                  <th className="px-6 py-4">NO. PO OUT</th>
                   <th className="px-6 py-4">VENDOR</th>
                   <th className="px-6 py-4 text-center">JML ITEM</th>
                   <th className="px-6 py-4 text-right">TOTAL NILAI</th>
@@ -54,8 +58,17 @@ export default function PurchaseOrders() {
                     } catch {}
                   }
 
+                  const poIn = poIns.find(p => p.quotation_id === po.quotation_id);
+
                   return (
                     <tr key={po.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900">{poIn?.customer_name || '—'}</span>
+                          <span className="text-xs text-gray-500 font-medium truncate max-w-[200px]" title={poIn?.judul}>{poIn?.judul || '—'}</span>
+                          <span className="text-[11px] text-gray-400 font-mono mt-0.5">{poIn?.po_in_number || '—'}</span>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 font-mono text-xs font-semibold text-violet-700">
                         {po.po_number}
                       </td>
