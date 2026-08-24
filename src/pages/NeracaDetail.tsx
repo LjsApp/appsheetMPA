@@ -5,6 +5,9 @@ import { Button, FormField } from '@/components/ui';
 import Modal from '@/components/Modal';
 import type { NeracaDetail as NeracaDetailType, NeracaItem } from '@/types';
 import { useForm, Controller } from 'react-hook-form';
+import { 
+  DEFAULT_DETAIL, calcBaseHargaJual 
+} from '@/lib/neracaUtils';
 import {
   useNeracas, useNeracaDetail, useSaveNeracaDetail,
   useNeracaItems, useSaveNeracaItem, useDeleteNeracaItem,
@@ -22,13 +25,6 @@ const DELIVERY_TIMES = [
   '6-7 Minggu','7-8 Minggu','8-9 Minggu','9-10 Minggu','10-11 Minggu',
   '11-12 Minggu','12-13 Minggu','13-14 Minggu','14-15 Minggu','15-16 Minggu','16-17 Minggu',
 ];
-
-const DEFAULT_DETAIL: Partial<NeracaDetailType> = {
-  ongkir_a: '' as any, ongkir_b: '' as any, ongkir_c: '' as any, ongkir_d: '' as any, ongkir_e: '' as any,
-  ongkir_x: '' as any, ongkir_y: '' as any, ongkir_z: '' as any,
-  difficulty_easy: '' as any, difficulty_medium: '' as any, difficulty_hard: '' as any, difficulty_rare: '' as any,
-  disc: '' as any, ppn: 11, un_cost: 2,
-};
 
 function fmt(n: number) {
   return new Intl.NumberFormat('id-ID').format(Math.round(n));
@@ -65,55 +61,6 @@ function ThousandInput({ value, onChange, className, placeholder, min = 0, isFlo
   };
 
   return <input type="text" value={localVal} onChange={handleChange} className={className} placeholder={placeholder} disabled={disabled} />;
-}
-
-// ==================== Calculation Helpers ====================
-function getDifficultyValue(detail: Partial<NeracaDetailType>, difficulty: string): number {
-  if (difficulty === 'Easy') return Number(detail.difficulty_easy) || 0;
-  if (difficulty === 'Medium') return Number(detail.difficulty_medium) || 0;
-  if (difficulty === 'Hard') return Number(detail.difficulty_hard) || 0;
-  if (difficulty === 'Rare') return Number(detail.difficulty_rare) || 0;
-  return 0;
-}
-
-function getOngkirVK(detail: Partial<NeracaDetailType>, cat: string): number {
-  if (cat === 'A') return Number(detail.ongkir_a) || 0;
-  if (cat === 'B') return Number(detail.ongkir_b) || 0;
-  if (cat === 'C') return Number(detail.ongkir_c) || 0;
-  if (cat === 'D') return Number(detail.ongkir_d) || 0;
-  if (cat === 'E') return Number(detail.ongkir_e) || 0;
-  return 0;
-}
-
-function getOngkirKC(detail: Partial<NeracaDetailType>, cat: string): number {
-  if (cat === 'X') return Number(detail.ongkir_x) || 0;
-  if (cat === 'Y') return Number(detail.ongkir_y) || 0;
-  if (cat === 'Z') return Number(detail.ongkir_z) || 0;
-  return 0;
-}
-
-/**
- * For each item: harga_jual = (harga_beli_setelah_diskon) + (ongkir_vk / count_same_vk) + (ongkir_kc / count_same_kc) + (harga_beli_setelah_diskon * difficulty_pct / 100 / count_same_diff)
- */
-function calcBaseHargaJual(item: NeracaItem, items: NeracaItem[], detail: Partial<NeracaDetailType>): number {
-  const hb = Number(item.harga_beli) || 0;
-  const qty = Number(item.qty) || 1;
-
-  // 1. Calculate Vendor Discount (Not deducted from Harga Jual base)
-  let hbDiskon = hb; // User requested not to deduct this from the selling price
-
-  const sameVK = items.filter(i => i.category_vk === item.category_vk).length || 1;
-  const sameKC = items.filter(i => i.category_kc === item.category_kc).length || 1;
-  const sameDiff = items.filter(i => i.difficulty === item.difficulty).length || 1;
-
-  const ongkirVKPerItem = getOngkirVK(detail, item.category_vk) / sameVK;
-  const ongkirKCPerItem = getOngkirKC(detail, item.category_kc) / sameKC;
-  
-  const difficultyPct = getDifficultyValue(detail, item.difficulty);
-  const difficultyPerItem = (hbDiskon * (difficultyPct / 100)) / sameDiff;
-
-  const hjSatuan = hbDiskon + ongkirVKPerItem + ongkirKCPerItem + difficultyPerItem;
-  return hjSatuan * qty;
 }
 
 // ==================== Component ====================

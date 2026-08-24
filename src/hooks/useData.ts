@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
+export { fetchApi };
 import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn } from '../types';
 
 

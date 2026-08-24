@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink, Edit2 } from 'lucide-react';
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import Modal from '@/components/Modal';
-import type { Neraca } from '@/types';
 import { useForm } from 'react-hook-form';
 import { FileCheck2 } from 'lucide-react';
-import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useSaveNeracaQuotation, useGetNextQuotationNumber } from '@/hooks/useData';
+import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi } from '@/hooks/useData';
+import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
+import type { Neraca } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 export default function Neracas() {
@@ -36,6 +37,10 @@ export default function Neracas() {
     }
     try {
       const qtNumber = await getNextQtNumber.mutateAsync();
+      const items = await fetchApi(`getNeracaItems&neraca_id=${neraca.id}`);
+      const detail = await fetchApi(`getNeracaDetail&neraca_id=${neraca.id}`);
+      const grandTotal = calculateNeracaGrandTotal(items || [], detail || undefined);
+
       const payload = {
         id: `QT-${Date.now()}`,
         quotation_number: qtNumber || `QT-${new Date().getFullYear()}-${Date.now()}`,
@@ -44,7 +49,7 @@ export default function Neracas() {
         customer_id: inq.customer_id || '',
         customer_name: inq.customer_name || '',
         request_title: inq.request_title || inq.project_name || '',
-        nilai: 0,
+        nilai: grandTotal,
         dokumen: '',
         status: 'Draft' as const,
         created_date: new Date().toISOString().split('T')[0],
