@@ -81,8 +81,35 @@ function routeRequest(action, method, body, params) {
         catch (e) { return addRecord('neracas', body); }
       }
       return addRecord('neracas', body);
-    case 'deleteNeraca':
-      return deleteRecord('neracas', 'id', body.id);
+    case 'deleteNeraca': {
+      var neracaId = body.id;
+      // Cascading delete — remove all related records first
+      try {
+        // 1. Delete neraca_items
+        var items = getRecords('neraca_items').filter(function(r){ return r.neraca_id === neracaId; });
+        items.forEach(function(r){ try { deleteRecord('neraca_items', 'id', r.id); } catch(e){} });
+        // 2. Delete neraca_details
+        var details = getRecords('neraca_details').filter(function(r){ return r.neraca_id === neracaId; });
+        details.forEach(function(r){ try { deleteRecord('neraca_details', 'id', r.id); } catch(e){} });
+        // 3. Delete neraca_vendor_discounts
+        try {
+          var vds = getRecords('neraca_vendor_discounts').filter(function(r){ return r.neraca_id === neracaId; });
+          vds.forEach(function(r){ try { deleteRecord('neraca_vendor_discounts', 'id', r.id); } catch(e){} });
+        } catch(e){}
+        // 4. Delete purchase_orders
+        try {
+          var pos = getRecords('purchase_orders').filter(function(r){ return r.neraca_id === neracaId; });
+          pos.forEach(function(r){ try { deleteRecord('purchase_orders', 'id', r.id); } catch(e){} });
+        } catch(e){}
+        // 5. Delete neraca_quotations
+        try {
+          var quotes = getRecords('neraca_quotations').filter(function(r){ return r.neraca_id === neracaId; });
+          quotes.forEach(function(r){ try { deleteRecord('neraca_quotations', 'id', r.id); } catch(e){} });
+        } catch(e){}
+      } catch(e){ Logger.log('Cascade delete neraca error: ' + e); }
+      // Finally delete neraca itself
+      return deleteRecord('neracas', 'id', neracaId);
+    }
 
     // Neraca Details (ongkir settings per neraca)
     case 'getNeracaDetail': {
@@ -144,8 +171,15 @@ function routeRequest(action, method, body, params) {
         catch (e) { return addRecord('neraca_quotations', body); }
       }
       return addRecord('neraca_quotations', body);
-    case 'deleteNeracaQuotation':
-      return deleteRecord('neraca_quotations', 'id', body.id);
+    case 'deleteNeracaQuotation': {
+      var qtId = body.id;
+      // Cascading delete — remove all POs linked to this quotation
+      try {
+        var pos = getRecords('purchase_orders').filter(function(r){ return r.quotation_id === qtId; });
+        pos.forEach(function(r){ try { deleteRecord('purchase_orders', 'id', r.id); } catch(e){} });
+      } catch(e){ Logger.log('Cascade delete quotation POs error: ' + e); }
+      return deleteRecord('neraca_quotations', 'id', qtId);
+    }
 
     // Get latest quotation number for auto-increment
     case 'getNextQuotationNumber': {
@@ -177,6 +211,41 @@ function routeRequest(action, method, body, params) {
       }
     }
 
+    // Purchase Orders
+    case 'getPurchaseOrders':
+      return getRecords('purchase_orders');
+    case 'savePurchaseOrder':
+      if (body.id) {
+        try { return updateRecord('purchase_orders', 'id', body); }
+        catch (e) { return addRecord('purchase_orders', body); }
+      }
+      return addRecord('purchase_orders', body);
+    case 'deletePurchaseOrder':
+      return deleteRecord('purchase_orders', 'id', body.id);
+
+    case 'getNextPoNumber': {
+      try {
+        const all = getRecords('purchase_orders');
+        const nextNum = all.length + 1; // "berdasarkan semua po yang perna ada"
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        
+        let shortName = 'MPA';
+        try {
+          const comp = getRecords('company');
+          if (comp && comp.length > 0 && comp[0].short_name) {
+            shortName = comp[0].short_name;
+          }
+        } catch(e){}
+
+        return nextNum + '/PO/' + shortName + '/' + month + '.' + year;
+      } catch(e) { 
+        const d = new Date();
+        return '1/PO/MPA/' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear(); 
+      }
+    }
+
     // Initialize Neraca Sheets (add missing columns / create new sheets)
     case 'initNeracaSheets': {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -186,8 +255,34 @@ function routeRequest(action, method, body, params) {
       var vdSheet = ss.getSheetByName('neraca_vendor_discounts');
       if (!vdSheet) {
         vdSheet = ss.insertSheet('neraca_vendor_discounts');
-        vdSheet.appendRow(['id','neraca_id','vendor_id','vendor_name','discount_pct','discount_cash','updated_date']);
+        vdSheet.appendRow(['id','neraca_id','vendor_id','vendor_name','discount_pct','discount_cash','subject','delivery_time_disc','letter_date','updated_date']);
         results.push('Created sheet: neraca_vendor_discounts');
+      } else {
+        var vdHeaders = vdSheet.getRange(1, 1, 1, vdSheet.getLastColumn()).getValues()[0];
+        var newCols = ['subject', 'delivery_time_disc', 'letter_date'];
+        newCols.forEach(function(col) {
+          if (vdHeaders.indexOf(col) === -1) {
+            var lastCol = vdSheet.getLastColumn();
+            vdSheet.getRange(1, lastCol + 1).setValue(col);
+            vdHeaders.push(col);
+            results.push('Added column ' + col + ' to neraca_vendor_discounts');
+          }
+        });
+      }
+
+      // 1b. Add bank columns to vendors sheet if missing
+      var vendSheet = ss.getSheetByName('vendors');
+      if (vendSheet) {
+        var vendHeaders = vendSheet.getRange(1, 1, 1, vendSheet.getLastColumn()).getValues()[0];
+        var bankCols = ['bank_name', 'bank_account_name', 'bank_account_number'];
+        bankCols.forEach(function(col) {
+          if (vendHeaders.indexOf(col) === -1) {
+            var lastCol = vendSheet.getLastColumn();
+            vendSheet.getRange(1, lastCol + 1).setValue(col);
+            vendHeaders.push(col);
+            results.push('Added column ' + col + ' to vendors');
+          }
+        });
       }
 
       // 2. Add delivery_time column to neraca_items if missing
@@ -224,8 +319,23 @@ function routeRequest(action, method, body, params) {
       var compSheet = ss.getSheetByName('company');
       if (!compSheet) {
         compSheet = ss.insertSheet('company');
-        compSheet.appendRow(['id','name','short_name','logo_url','address','email','phone','admin_position','updated_date']);
+        compSheet.appendRow(['id','name','short_name','logo_url','address','email','phone','leader_name','admin_position','updated_date']);
         results.push('Created sheet: company');
+      } else {
+        var compHeaders = compSheet.getRange(1, 1, 1, compSheet.getLastColumn()).getValues()[0];
+        if (compHeaders.indexOf('leader_name') === -1) {
+          var compLastCol = compSheet.getLastColumn();
+          compSheet.getRange(1, compLastCol + 1).setValue('leader_name');
+          results.push('Added column leader_name to company');
+        }
+      }
+
+      // 6. Create purchase_orders sheet if not exists
+      var poSheet = ss.getSheetByName('purchase_orders');
+      if (!poSheet) {
+        poSheet = ss.insertSheet('purchase_orders');
+        poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','created_date','updated_date']);
+        results.push('Created sheet: purchase_orders');
       }
 
       return results.length > 0 ? results.join('; ') : 'All sheets already up to date';

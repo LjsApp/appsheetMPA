@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
-import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company } from '../types';
+import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder } from '../types';
 
 
 // ==================== Customers ====================
@@ -293,6 +293,47 @@ export function useDeleteNeracaQuotation() {
 export function useGetNextQuotationNumber() {
   return useMutation({
     mutationFn: () => fetchApi('getNextQuotationNumber', 'POST', {}),
+  });
+}
+
+// ==================== Purchase Orders ====================
+
+export function usePurchaseOrders() {
+  return useQuery<PurchaseOrder[]>({
+    queryKey: ['purchase_orders'],
+    queryFn: async () => {
+      const data: PurchaseOrder[] = await fetchApi('getPurchaseOrders');
+      return data.map((po, idx) => ({
+        ...po,
+        id: po.id || `fallback-po-${po.po_number?.replace(/\//g, '-')}-${idx}`
+      }));
+    },
+  });
+}
+
+export function useSavePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<PurchaseOrder>) => fetchApi('savePurchaseOrder', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
+    },
+  });
+}
+
+export function useDeletePurchaseOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deletePurchaseOrder', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
+    },
+  });
+}
+
+export function useGetNextPoNumber() {
+  return useMutation({
+    mutationFn: () => fetchApi('getNextPoNumber', 'POST', {}),
   });
 }
 

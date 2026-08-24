@@ -6,12 +6,14 @@ import {
   Building2, 
   Package, 
   FileText,
-  Search,
-  Calculator,
   FileCheck2,
   Settings,
   Scale,
-  Menu
+  Menu,
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
+  ShoppingCart
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -27,14 +29,27 @@ const MENU_ITEMS = [
   { label: 'Products', icon: Package, path: '/products' },
   { label: 'Inquiries', icon: FileText, path: '/inquiries' },
   { label: 'Neraca', icon: Scale, path: '/neraca' },
-  { label: 'Sourcing', icon: Search, path: '/sourcing' },
-  { label: 'Pricing', icon: Calculator, path: '/pricing' },
-  { label: 'Quotations', icon: FileCheck2, path: '/quotations' },
+  { 
+    label: 'Dokumen', 
+    icon: FolderOpen, 
+    path: '#',
+    submenus: [
+      { label: 'Quotation', icon: FileCheck2, path: '/quotations' },
+      { label: 'Purchase Order (PO)', icon: ShoppingCart, path: '/po' }
+    ]
+  },
 ];
 
 export default function MainLayout() {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
+    'Dokumen': true
+  });
+
+  const toggleMenu = (label: string) => {
+    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans">
@@ -49,6 +64,60 @@ export default function MainLayout() {
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
             {MENU_ITEMS.map((item) => {
+              if (item.submenus) {
+                const isSubActive = item.submenus.some(sub => location.pathname === sub.path || location.pathname.startsWith(`${sub.path}/`));
+                const isOpen = openMenus[item.label];
+                
+                return (
+                  <li key={item.label} className="flex flex-col">
+                    <button
+                      onClick={() => {
+                        if (!isSidebarOpen) setIsSidebarOpen(true);
+                        toggleMenu(item.label);
+                      }}
+                      className={cn(
+                        "flex items-center justify-between rounded-md text-sm font-medium transition-colors w-full",
+                        isSidebarOpen ? "px-3 py-2" : "p-2.5 justify-center",
+                        isSubActive ? "bg-blue-50/50 text-blue-700" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      )}
+                      title={isSidebarOpen ? undefined : item.label}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className={cn("w-5 h-5 flex-shrink-0", isSubActive ? "text-blue-600" : "text-gray-400")} />
+                        {isSidebarOpen && <span>{item.label}</span>}
+                      </div>
+                      {isSidebarOpen && (
+                        <ChevronDown className={cn("w-4 h-4 transition-transform", isOpen ? "" : "-rotate-90")} />
+                      )}
+                    </button>
+                    
+                    {isSidebarOpen && isOpen && (
+                      <ul className="mt-1 space-y-1 ml-9 border-l border-gray-200 pl-3">
+                        {item.submenus.map(sub => {
+                          const subActive = location.pathname === sub.path || location.pathname.startsWith(`${sub.path}/`);
+                          return (
+                            <li key={sub.path}>
+                              <Link
+                                to={sub.path}
+                                className={cn(
+                                  "flex items-center rounded-md text-sm font-medium transition-colors py-2 px-3 gap-3",
+                                  subActive
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                )}
+                              >
+                                <sub.icon className={cn("w-4 h-4 flex-shrink-0", subActive ? "text-blue-600" : "text-gray-400")} />
+                                <span>{sub.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+
               const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
               return (
                 <li key={item.path}>

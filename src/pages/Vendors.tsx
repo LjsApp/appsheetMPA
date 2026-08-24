@@ -176,6 +176,15 @@ export default function Vendors() {
     { key: 'npwp', label: 'NPWP', render: (v: unknown) => v ? <a href={String(v)} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat Dokumen</a> : '-' },
     { key: 'address', label: 'Alamat' },
     { key: 'products', label: 'Produk', render: (v: unknown) => <div className="max-w-xs truncate" title={String(v || '')}>{String(v || '-')}</div> },
+    { key: 'bank_name', label: 'Info Rekening', render: (_: unknown, row: any) => (
+      row.bank_name || row.bank_account_name || row.bank_account_number ? (
+        <div className="text-sm leading-snug">
+          {row.bank_name && <div className="font-medium text-gray-700">{row.bank_name}</div>}
+          {row.bank_account_name && <div className="text-gray-600">{row.bank_account_name}</div>}
+          {row.bank_account_number && <div className="text-gray-500 font-mono">{row.bank_account_number}</div>}
+        </div>
+      ) : <span className="text-gray-400">-</span>
+    )},
     { key: 'status', label: 'Status', render: (v: unknown) => <StatusBadge label={String(v || 'Inactive')} /> },
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center gap-2">
@@ -348,6 +357,33 @@ export default function Vendors() {
               placeholder="Deskripsikan produk yang disediakan..."
             />
           </FormField>
+
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Info Rekening</p>
+            <div className="grid grid-cols-1 gap-3">
+              <FormField label="Nama Bank">
+                <input
+                  {...vendorForm.register('bank_name')}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="BCA / Mandiri / BNI ..."
+                />
+              </FormField>
+              <FormField label="Nama Pemilik Rekening">
+                <input
+                  {...vendorForm.register('bank_account_name')}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="Sesuai nama di buku tabungan"
+                />
+              </FormField>
+              <FormField label="Nomor Rekening">
+                <input
+                  {...vendorForm.register('bank_account_number')}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="1234567890"
+                />
+              </FormField>
+            </div>
+          </div>
           
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsVendorModalOpen(false)} disabled={saveVendor.isPending || uploadFile.isPending}>Batal</Button>

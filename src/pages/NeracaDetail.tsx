@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Loader2, Save, FileText, Upload, X, Edit2, Eye, Settings } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Save, FileText, Upload, X, Edit2, Eye, Settings, Lock, AlertTriangle } from 'lucide-react';
 import { Button, FormField } from '@/components/ui';
 import Modal from '@/components/Modal';
 import type { NeracaDetail as NeracaDetailType, NeracaItem } from '@/types';
@@ -9,7 +9,8 @@ import {
   useNeracas, useNeracaDetail, useSaveNeracaDetail,
   useNeracaItems, useSaveNeracaItem, useDeleteNeracaItem,
   useVendors, useUploadFile,
-  useVendorDiscounts, useSaveVendorDiscount, useDeleteVendorDiscount
+  useVendorDiscounts, useSaveVendorDiscount, useDeleteVendorDiscount,
+  useNeracaQuotations, usePurchaseOrders
 } from '@/hooks/useData';
 
 // ==================== Constants ====================
@@ -33,7 +34,7 @@ function fmt(n: number) {
   return new Intl.NumberFormat('id-ID').format(Math.round(n));
 }
 
-function ThousandInput({ value, onChange, className, placeholder, min = 0, isFloat = false }: { value: any, onChange: (v: number | '') => void, className?: string, placeholder?: string, min?: number, isFloat?: boolean }) {
+function ThousandInput({ value, onChange, className, placeholder, min = 0, isFloat = false, disabled = false }: { value: any, onChange: (v: number | '') => void, className?: string, placeholder?: string, min?: number, isFloat?: boolean, disabled?: boolean }) {
   const formatStr = (val: any) => {
     if (val === undefined || val === null || val === '') return '';
     return isFloat ? String(val) : new Intl.NumberFormat('id-ID').format(Number(val));
@@ -63,7 +64,7 @@ function ThousandInput({ value, onChange, className, placeholder, min = 0, isFlo
     }
   };
 
-  return <input type="text" value={localVal} onChange={handleChange} className={className} placeholder={placeholder} />;
+  return <input type="text" value={localVal} onChange={handleChange} className={className} placeholder={placeholder} disabled={disabled} />;
 }
 
 // ==================== Calculation Helpers ====================
@@ -160,6 +161,13 @@ export default function NeracaDetail() {
   const { data: vendors = [] } = useVendors();
   const uploadFile = useUploadFile();
 
+  // --- Lock status: locked if this neraca already has Quotations or POs ---
+  const { data: allQuotations = [] } = useNeracaQuotations();
+  const { data: allPOs = [] } = usePurchaseOrders();
+  const hasQuotation = allQuotations.some(q => q.neraca_id === neracaId);
+  const hasPO = allPOs.some(p => p.neraca_id === neracaId);
+  const isLocked = hasQuotation || hasPO;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -170,7 +178,7 @@ export default function NeracaDetail() {
   // --- Vendor Discount Modal ---
   const { data: vendorDiscounts = [] } = useVendorDiscounts(neracaId!);
   const [vendorDiscountModalId, setVendorDiscountModalId] = useState<string | null>(null);
-  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | ''}>({ pct: '', cash: '' });
+  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', subject: string, delivery_time_disc: string, letter_date: string}>({ pct: '', cash: '', subject: '', delivery_time_disc: '', letter_date: '' });
   const [vdFormType, setVdFormType] = useState<'pct' | 'cash'>('pct');
   const saveVd = useSaveVendorDiscount();
   const deleteVd = useDeleteVendorDiscount();
@@ -178,10 +186,16 @@ export default function NeracaDetail() {
   const openVendorDiscount = (vendorId: string) => {
     const existing = (vendorDiscounts || []).find(d => d.vendor_id === vendorId);
     if (existing) {
-      setVdForm({ pct: existing.discount_pct || '', cash: existing.discount_cash || '' });
+      setVdForm({ 
+        pct: existing.discount_pct || '', 
+        cash: existing.discount_cash || '',
+        subject: existing.subject || '',
+        delivery_time_disc: existing.delivery_time_disc || '',
+        letter_date: existing.letter_date || ''
+      });
       setVdFormType(existing.discount_cash > 0 && !existing.discount_pct ? 'cash' : 'pct');
     } else {
-      setVdForm({ pct: '', cash: '' });
+      setVdForm({ pct: '', cash: '', subject: '', delivery_time_disc: '', letter_date: '' });
       setVdFormType('pct');
     }
     setVendorDiscountModalId(vendorId);
@@ -199,6 +213,9 @@ export default function NeracaDetail() {
       vendor_name: vendor?.vendor_name || vendorDiscountModalId,
       discount_pct: vdFormType === 'pct' ? (Number(vdForm.pct) || 0) : 0,
       discount_cash: vdFormType === 'cash' ? (Number(vdForm.cash) || 0) : 0,
+      subject: vdForm.subject,
+      delivery_time_disc: vdForm.delivery_time_disc,
+      letter_date: vdForm.letter_date,
       updated_date: new Date().toISOString().split('T')[0]
     };
     
@@ -338,7 +355,8 @@ export default function NeracaDetail() {
                     <ThousandInput
                       value={detail[`ongkir_${g.toLowerCase()}` as keyof NeracaDetailType] as any}
                       onChange={val => updateDetail(`ongkir_${g.toLowerCase()}` as keyof NeracaDetailType, val)}
-                      className="flex-1 min-w-0 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="flex-1 min-w-0 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={isLocked}
                     />
                   </div>
                 ))}
@@ -357,7 +375,8 @@ export default function NeracaDetail() {
                     <ThousandInput
                       value={detail[`ongkir_${g.toLowerCase()}` as keyof NeracaDetailType] as any}
                       onChange={val => updateDetail(`ongkir_${g.toLowerCase()}` as keyof NeracaDetailType, val)}
-                      className="flex-1 min-w-0 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="flex-1 min-w-0 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={isLocked}
                     />
                   </div>
                 ))}
@@ -376,7 +395,8 @@ export default function NeracaDetail() {
                     <ThousandInput
                       value={detail[`difficulty_${d.toLowerCase()}` as keyof NeracaDetailType] as any}
                       onChange={val => updateDetail(`difficulty_${d.toLowerCase()}` as keyof NeracaDetailType, val)}
-                      className="flex-1 min-w-0 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="flex-1 min-w-0 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={isLocked}
                     />
                   </div>
                 ))}
@@ -384,7 +404,7 @@ export default function NeracaDetail() {
             </div>
 
             {/* Save settings */}
-            <Button onClick={saveDetailHandler} loading={saveDetail.isPending} className="w-full" variant={detailDirty ? 'primary' : 'secondary'}>
+            <Button onClick={saveDetailHandler} loading={saveDetail.isPending} disabled={isLocked || !detailDirty} className="w-full" variant={detailDirty ? 'primary' : 'secondary'}>
               <Save className="w-4 h-4" /> Simpan Pengaturan
             </Button>
           </div>
@@ -393,9 +413,19 @@ export default function NeracaDetail() {
           <div className="xl:col-span-3 space-y-4">
             {/* Items Table */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              {/* Lock Alert */}
+              {isLocked && (
+                <div className="flex items-start gap-3 px-5 py-3 bg-amber-50 border-b border-amber-200">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <span className="font-semibold">Neraca Terkunci</span> — Neraca ini sudah memiliki {hasQuotation && 'Quotation'}{hasQuotation && hasPO && ' dan '}{hasPO && 'Purchase Order'}. Hapus Quotation & PO terlebih dahulu untuk dapat mengedit item.
+                  </div>
+                  <Lock className="w-4 h-4 text-amber-600 ml-auto flex-shrink-0" />
+                </div>
+              )}
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-800">Daftar Item</h3>
-                <Button size="sm" onClick={openCreate}>
+                <Button size="sm" onClick={openCreate} disabled={isLocked}>
                   <Plus className="w-3.5 h-3.5" /> Tambah Item
                 </Button>
               </div>
@@ -472,10 +502,10 @@ export default function NeracaDetail() {
                                 <button onClick={() => setViewingItem(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Lihat Resume Item">
                                   <Eye className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => openEdit(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Edit Item">
+                                <button onClick={() => openEdit(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="Edit Item" disabled={isLocked}>
                                   <Edit2 className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => deleteItem.mutate({ id: item.id, neraca_id: item.neraca_id })} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" disabled={deleteItem.isPending} title="Hapus Item">
+                                <button onClick={() => deleteItem.mutate({ id: item.id, neraca_id: item.neraca_id })} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-30 disabled:cursor-not-allowed" disabled={deleteItem.isPending || isLocked} title="Hapus Item">
                                   {deleteItem.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                                 </button>
                               </div>
@@ -505,7 +535,8 @@ export default function NeracaDetail() {
                       isFloat
                       value={detail.disc as any}
                       onChange={val => updateDetail('disc', val)}
-                      className="w-20 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-20 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={isLocked}
                     />
                   </div>
                   <div className="flex justify-between">
@@ -518,7 +549,8 @@ export default function NeracaDetail() {
                       isFloat
                       value={detail.ppn ?? 11}
                       onChange={val => updateDetail('ppn', val)}
-                      className="w-20 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-20 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={isLocked}
                     />
                   </div>
                   <div className="flex justify-between">
@@ -538,7 +570,8 @@ export default function NeracaDetail() {
                       isFloat
                       value={detail.un_cost as any}
                       onChange={val => updateDetail('un_cost', val)}
-                      className="w-20 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-20 text-right px-2 py-1 rounded border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+                      disabled={isLocked}
                     />
                   </div>
                   <div className="flex justify-between">
@@ -563,7 +596,7 @@ export default function NeracaDetail() {
                   </div>
                 </div>
               </div>
-              {detailDirty && (
+              {detailDirty && !isLocked && (
                 <div className="px-5 pb-4 border-t border-gray-100">
                   <Button onClick={saveDetailHandler} loading={saveDetail.isPending} className="w-full" size="sm">
                     <Save className="w-3.5 h-3.5" /> Simpan Perubahan
@@ -879,7 +912,28 @@ export default function NeracaDetail() {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-4 border-t border-gray-100">
+              {/* PO Info */}
+              <div className="border-t border-gray-100 pt-4 mt-2">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Informasi Purchase Order (PO)</h4>
+                <div className="grid gap-4">
+                  <FormField label="Subject PO">
+                    <input type="text" value={vdForm.subject} onChange={e => setVdForm({ ...vdForm, subject: e.target.value })} placeholder="Cth: Filter Element" className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />
+                  </FormField>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Tanggal Surat (Letter Date)">
+                      <input type="date" value={vdForm.letter_date} onChange={e => setVdForm({ ...vdForm, letter_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />
+                    </FormField>
+                    <FormField label="Waktu Pengiriman (PO)">
+                      <select value={vdForm.delivery_time_disc} onChange={e => setVdForm({ ...vdForm, delivery_time_disc: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm bg-white">
+                        <option value="">- Pilih Waktu -</option>
+                        {DELIVERY_TIMES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
+                      </select>
+                    </FormField>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between pt-4 border-t border-gray-100 mt-2">
                 <Button variant="danger" type="button" onClick={handleDeleteVd} loading={deleteVd.isPending} disabled={!(vendorDiscounts || []).find(d => d.vendor_id === vendorDiscountModalId)}>
                   Hapus Diskon
                 </Button>

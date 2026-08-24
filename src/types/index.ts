@@ -30,6 +30,9 @@ export interface Vendor {
   address: string;
   npwp: string;
   products: string; // Long text
+  bank_name?: string;
+  bank_account_name?: string;
+  bank_account_number?: string;
   status: 'Active' | 'Inactive';
   created_date: string;
   updated_date: string;
@@ -145,6 +148,24 @@ export interface VendorDiscount {
   vendor_name: string;
   discount_pct: number;   // discount as percentage
   discount_cash: number;  // discount as cash (Rp)
+  subject?: string;
+  delivery_time_disc?: string;
+  letter_date?: string;
+  updated_date: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  neraca_id: string;
+  quotation_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  jumlah_item: number;
+  total_nilai: number;
+  dokumen: string; // JSON array string
+  status: 'Active' | 'Deleted';
+  created_date: string;
   updated_date: string;
 }
 
@@ -268,6 +289,7 @@ export interface Company {
   address: string;        // Alamat lengkap
   email: string;
   phone: string;
+  leader_name?: string;   // Nama pimpinan / penandatangan
   admin_position: string; // Posisi admin untuk tanda tangan quotation
   updated_date: string;
 }

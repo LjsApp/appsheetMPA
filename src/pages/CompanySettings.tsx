@@ -10,6 +10,7 @@ interface CompanyForm {
   address: string;
   email: string;
   phone: string;
+  leader_name: string;
   admin_position: string;
 }
 
@@ -28,6 +29,7 @@ export default function CompanySettings() {
       address: '',
       email: '',
       phone: '',
+      leader_name: '',
       admin_position: ''
     }
   });
@@ -40,6 +42,7 @@ export default function CompanySettings() {
         address: company.address || '',
         email: company.email || '',
         phone: company.phone || '',
+        leader_name: company.leader_name || '',
         admin_position: company.admin_position || ''
       });
       setLogoUrl(company.logo_url || '');
@@ -190,7 +193,16 @@ export default function CompanySettings() {
                 />
               </FormField>
 
-              <FormField label="Posisi Admin (Penandatangan Quotation)" required>
+              <FormField label="Nama Pimpinan (Penandatangan Quotation)" required>
+                <Controller
+                  name="leader_name"
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => <input {...field} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Budi Santoso" />}
+                />
+              </FormField>
+
+              <FormField label="Posisi Pimpinan / Admin" required>
                 <Controller
                   name="admin_position"
                   control={control}

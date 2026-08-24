@@ -359,7 +359,7 @@ export default function QuotationDetail() {
                       <p>Regards,</p>
                       <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
                       <div style={{ height: '110px' }}></div>
-                      <p className="font-bold text-gray-900 underline">Admin</p>
+                      <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
                       <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
                     </div>
                   </div>
