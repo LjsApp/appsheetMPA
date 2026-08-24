@@ -13,7 +13,9 @@ import {
   ChevronDown,
   ChevronRight,
   FolderOpen,
-  ShoppingCart
+  ShoppingCart,
+  Download,
+  Send
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -34,8 +36,16 @@ const MENU_ITEMS = [
     icon: FolderOpen, 
     path: '#',
     submenus: [
-      { label: 'Quotation', icon: FileCheck2, path: '/quotations' },
-      { label: 'Purchase Order (PO)', icon: ShoppingCart, path: '/po' }
+      { label: 'Quotation', icon: FileCheck2, path: '/quotations' }
+    ]
+  },
+  {
+    label: 'Purchase',
+    icon: ShoppingCart,
+    path: '#',
+    submenus: [
+      { label: 'PO In', icon: Download, path: '/po-in' },
+      { label: 'Purchase Order (PO)', icon: Send, path: '/po' }
     ]
   },
 ];
@@ -44,7 +54,8 @@ export default function MainLayout() {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
-    'Dokumen': true
+    'Dokumen': true,
+    'Purchase': true
   });
 
   const toggleMenu = (label: string) => {

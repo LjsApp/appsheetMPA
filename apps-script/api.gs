@@ -101,6 +101,11 @@ function routeRequest(action, method, body, params) {
           var pos = getRecords('purchase_orders').filter(function(r){ return r.neraca_id === neracaId; });
           pos.forEach(function(r){ try { deleteRecord('purchase_orders', 'id', r.id); } catch(e){} });
         } catch(e){}
+        // 4b. Delete po_in
+        try {
+          var poins = getRecords('po_in').filter(function(r){ return r.neraca_id === neracaId; });
+          poins.forEach(function(r){ try { deleteRecord('po_in', 'id', r.id); } catch(e){} });
+        } catch(e){}
         // 5. Delete neraca_quotations
         try {
           var quotes = getRecords('neraca_quotations').filter(function(r){ return r.neraca_id === neracaId; });
@@ -178,6 +183,10 @@ function routeRequest(action, method, body, params) {
         var pos = getRecords('purchase_orders').filter(function(r){ return r.quotation_id === qtId; });
         pos.forEach(function(r){ try { deleteRecord('purchase_orders', 'id', r.id); } catch(e){} });
       } catch(e){ Logger.log('Cascade delete quotation POs error: ' + e); }
+      try {
+        var poins = getRecords('po_in').filter(function(r){ return r.quotation_id === qtId; });
+        poins.forEach(function(r){ try { deleteRecord('po_in', 'id', r.id); } catch(e){} });
+      } catch(e){ Logger.log('Cascade delete quotation PO In error: ' + e); }
       return deleteRecord('neraca_quotations', 'id', qtId);
     }
 
@@ -245,6 +254,18 @@ function routeRequest(action, method, body, params) {
         return '1/PO/MPA/' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear(); 
       }
     }
+
+    // PO In
+    case 'getPoIns':
+      return getRecords('po_in');
+    case 'savePoIn':
+      if (body.id) {
+        try { return updateRecord('po_in', 'id', body); }
+        catch (e) { return addRecord('po_in', body); }
+      }
+      return addRecord('po_in', body);
+    case 'deletePoIn':
+      return deleteRecord('po_in', 'id', body.id);
 
     // Initialize Neraca Sheets (add missing columns / create new sheets)
     case 'initNeracaSheets': {
@@ -336,6 +357,14 @@ function routeRequest(action, method, body, params) {
         poSheet = ss.insertSheet('purchase_orders');
         poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','created_date','updated_date']);
         results.push('Created sheet: purchase_orders');
+      }
+
+      // 7. Create po_in sheet if not exists
+      var poinSheet = ss.getSheetByName('po_in');
+      if (!poinSheet) {
+        poinSheet = ss.insertSheet('po_in');
+        poinSheet.appendRow(['id','quotation_id','neraca_id','customer_id','customer_name','po_in_number','judul','tanggal','alamat_pengiriman','pic_id','pic_name','tanggal_batas','dokumen','created_date','updated_date']);
+        results.push('Created sheet: po_in');
       }
 
       return results.length > 0 ? results.join('; ') : 'All sheets already up to date';

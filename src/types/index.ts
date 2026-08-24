@@ -169,6 +169,24 @@ export interface PurchaseOrder {
   updated_date: string;
 }
 
+export interface POIn {
+  id: string;
+  quotation_id: string;
+  neraca_id: string;
+  customer_id: string;
+  customer_name: string;
+  po_in_number: string;
+  judul: string;
+  tanggal: string;
+  alamat_pengiriman: string;
+  pic_id: string;
+  pic_name: string;
+  tanggal_batas: string;
+  dokumen: string; // JSON array string
+  created_date: string;
+  updated_date: string;
+}
+
 export type NeracaQuotationStatus = 'Draft' | 'Send' | 'PO' | 'Invoice' | 'Tracking' | 'Selesai';
 
 export interface NeracaQuotation {

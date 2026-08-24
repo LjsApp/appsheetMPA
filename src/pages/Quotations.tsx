@@ -58,7 +58,7 @@ export default function Quotations() {
 
   const handlePoGenerated = async () => {
     setGeneratingPoQt(null);
-    navigate('/po');
+    navigate('/po-in');
   };
 
   return (

@@ -13,6 +13,7 @@ import Quotations from './pages/Quotations';
 import QuotationDetail from './pages/QuotationDetail';
 import PurchaseOrders from './pages/PurchaseOrders';
 import PODetail from './pages/PODetail';
+import POInList from './pages/POInList';
 import CompanySettings from './pages/CompanySettings';
 
 const Placeholder = ({ title }: { title: string }) => (
@@ -39,6 +40,7 @@ function App() {
         <Route path="quotations/:quotationId" element={<QuotationDetail />} />
         <Route path="po" element={<PurchaseOrders />} />
         <Route path="po/:poId" element={<PODetail />} />
+        <Route path="po-in" element={<POInList />} />
         <Route path="settings/company" element={<CompanySettings />} />
         <Route path="*" element={<Placeholder title="Coming Soon" />} />
       </Route>

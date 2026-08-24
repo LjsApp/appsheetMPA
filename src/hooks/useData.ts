@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
-import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder } from '../types';
+import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn } from '../types';
 
 
 // ==================== Customers ====================
@@ -390,6 +390,35 @@ export function useSaveCompany() {
     mutationFn: (data: Partial<Company>) => fetchApi('saveCompany', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
+    },
+  });
+}
+
+// ==================== PO In ====================
+
+export function usePoIns() {
+  return useQuery<POIn[]>({
+    queryKey: ['po_ins'],
+    queryFn: () => fetchApi('getPoIns'),
+  });
+}
+
+export function useSavePoIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<POIn>) => fetchApi('savePoIn', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['po_ins'] });
+    },
+  });
+}
+
+export function useDeletePoIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deletePoIn', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['po_ins'] });
     },
   });
 }
