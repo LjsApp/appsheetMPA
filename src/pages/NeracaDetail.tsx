@@ -418,7 +418,7 @@ export default function NeracaDetail() {
                 <div className="flex items-start gap-3 px-5 py-3 bg-amber-50 border-b border-amber-200">
                   <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-amber-800">
-                    <span className="font-semibold">Neraca Terkunci</span> — Neraca ini sudah memiliki {hasQuotation && 'Quotation'}{hasQuotation && hasPO && ' dan '}{hasPO && 'Purchase Order'}. Hapus Quotation & PO terlebih dahulu untuk dapat mengedit item.
+                    <span className="font-semibold">Neraca Terkunci</span> — Neraca ini sudah memiliki {hasQuotation && 'Quotation'}{hasQuotation && hasPO && ' dan '}{hasPO && 'PO Out'}. Hapus Quotation &amp; PO Out terlebih dahulu untuk dapat mengedit item.
                   </div>
                   <Lock className="w-4 h-4 text-amber-600 ml-auto flex-shrink-0" />
                 </div>
@@ -914,7 +914,7 @@ export default function NeracaDetail() {
 
               {/* PO Info */}
               <div className="border-t border-gray-100 pt-4 mt-2">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Informasi Purchase Order (PO)</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Informasi PO Out</h4>
                 <div className="grid gap-4">
                   <FormField label="Subject PO">
                     <input type="text" value={vdForm.subject} onChange={e => setVdForm({ ...vdForm, subject: e.target.value })} placeholder="Cth: Filter Element" className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />

@@ -194,7 +194,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess }: Gener
   const isLoading = loadingItems || loadingVds;
 
   return (
-    <Modal isOpen={!!quotation} onClose={onClose} title="Buat Purchase Order" size="lg">
+    <Modal isOpen={!!quotation} onClose={onClose} title="Buat PO Out" size="lg">
       <div className="space-y-5">
         {isLoading ? (
           <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>

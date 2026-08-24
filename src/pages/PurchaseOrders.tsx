@@ -19,8 +19,8 @@ export default function PurchaseOrders() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Purchase Orders"
-        subtitle={`${purchaseOrders.length} purchase order`}
+        title="PO Out"
+        subtitle={`${purchaseOrders.length} PO Out`}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -30,7 +30,7 @@ export default function PurchaseOrders() {
           </div>
         ) : purchaseOrders.length === 0 ? (
           <div className="flex h-32 items-center justify-center text-gray-500">
-            Belum ada data Purchase Order
+            Belum ada data PO Out
           </div>
         ) : (
           <div className="overflow-x-auto">

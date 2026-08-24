@@ -96,10 +96,10 @@ function routeRequest(action, method, body, params) {
           var vds = getRecords('neraca_vendor_discounts').filter(function(r){ return r.neraca_id === neracaId; });
           vds.forEach(function(r){ try { deleteRecord('neraca_vendor_discounts', 'id', r.id); } catch(e){} });
         } catch(e){}
-        // 4. Delete purchase_orders
+        // 4. Delete po_out
         try {
-          var pos = getRecords('purchase_orders').filter(function(r){ return r.neraca_id === neracaId; });
-          pos.forEach(function(r){ try { deleteRecord('purchase_orders', 'id', r.id); } catch(e){} });
+          var pos = getRecords('po_out').filter(function(r){ return r.neraca_id === neracaId; });
+          pos.forEach(function(r){ try { deleteRecord('po_out', 'id', r.id); } catch(e){} });
         } catch(e){}
         // 4b. Delete po_in
         try {
@@ -180,8 +180,8 @@ function routeRequest(action, method, body, params) {
       var qtId = body.id;
       // Cascading delete — remove all POs linked to this quotation
       try {
-        var pos = getRecords('purchase_orders').filter(function(r){ return r.quotation_id === qtId; });
-        pos.forEach(function(r){ try { deleteRecord('purchase_orders', 'id', r.id); } catch(e){} });
+        var pos = getRecords('po_out').filter(function(r){ return r.quotation_id === qtId; });
+        pos.forEach(function(r){ try { deleteRecord('po_out', 'id', r.id); } catch(e){} });
       } catch(e){ Logger.log('Cascade delete quotation POs error: ' + e); }
       try {
         var poins = getRecords('po_in').filter(function(r){ return r.quotation_id === qtId; });
@@ -222,19 +222,19 @@ function routeRequest(action, method, body, params) {
 
     // Purchase Orders
     case 'getPurchaseOrders':
-      return getRecords('purchase_orders');
+      return getRecords('po_out');
     case 'savePurchaseOrder':
       if (body.id) {
-        try { return updateRecord('purchase_orders', 'id', body); }
-        catch (e) { return addRecord('purchase_orders', body); }
+        try { return updateRecord('po_out', 'id', body); }
+        catch (e) { return addRecord('po_out', body); }
       }
-      return addRecord('purchase_orders', body);
+      return addRecord('po_out', body);
     case 'deletePurchaseOrder':
-      return deleteRecord('purchase_orders', 'id', body.id);
+      return deleteRecord('po_out', 'id', body.id);
 
     case 'getNextPoNumber': {
       try {
-        const all = getRecords('purchase_orders');
+        const all = getRecords('po_out');
         const nextNum = all.length + 1; // "berdasarkan semua po yang perna ada"
         const date = new Date();
         const year = date.getFullYear();
@@ -351,12 +351,18 @@ function routeRequest(action, method, body, params) {
         }
       }
 
-      // 6. Create purchase_orders sheet if not exists
-      var poSheet = ss.getSheetByName('purchase_orders');
-      if (!poSheet) {
-        poSheet = ss.insertSheet('purchase_orders');
+      // 6. Create po_out sheet if not exists (or rename from purchase_orders)
+      var poSheet = ss.getSheetByName('po_out');
+      var oldPoSheet = ss.getSheetByName('purchase_orders');
+      
+      if (!poSheet && oldPoSheet) {
+        oldPoSheet.setName('po_out');
+        poSheet = oldPoSheet;
+        results.push('Renamed sheet: purchase_orders to po_out');
+      } else if (!poSheet) {
+        poSheet = ss.insertSheet('po_out');
         poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','created_date','updated_date']);
-        results.push('Created sheet: purchase_orders');
+        results.push('Created sheet: po_out');
       }
 
       // 7. Create po_in sheet if not exists

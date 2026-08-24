@@ -296,11 +296,11 @@ export function useGetNextQuotationNumber() {
   });
 }
 
-// ==================== Purchase Orders ====================
+// ==================== PO Out ====================
 
 export function usePurchaseOrders() {
   return useQuery<PurchaseOrder[]>({
-    queryKey: ['purchase_orders'],
+    queryKey: ['po_out'],
     queryFn: async () => {
       const data: PurchaseOrder[] = await fetchApi('getPurchaseOrders');
       return data.map((po, idx) => ({
@@ -316,7 +316,7 @@ export function useSavePurchaseOrder() {
   return useMutation({
     mutationFn: (data: Partial<PurchaseOrder>) => fetchApi('savePurchaseOrder', 'POST', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
+      queryClient.invalidateQueries({ queryKey: ['po_out'] });
     },
   });
 }
@@ -326,7 +326,7 @@ export function useDeletePurchaseOrder() {
   return useMutation({
     mutationFn: (id: string) => fetchApi('deletePurchaseOrder', 'POST', { id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
+      queryClient.invalidateQueries({ queryKey: ['po_out'] });
     },
   });
 }

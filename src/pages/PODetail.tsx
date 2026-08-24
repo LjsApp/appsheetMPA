@@ -33,7 +33,7 @@ export default function PODetail() {
   }
 
   if (!po) {
-    return <div className="p-8 text-center text-red-600 font-medium">Purchase Order tidak ditemukan.</div>;
+    return <div className="p-8 text-center text-red-600 font-medium">PO Out tidak ditemukan.</div>;
   }
 
   // Get vendor discount for this vendor
@@ -99,7 +99,7 @@ export default function PODetail() {
 
       <div className="no-print">
         <PageHeader
-          title={`Purchase Order ${po.po_number}`}
+          title={`PO Out ${po.po_number}`}
           subtitle={`${po.vendor_name}`}
           action={
             <div className="flex items-center gap-2">
@@ -134,7 +134,7 @@ export default function PODetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt]">PURCHASE ORDER</h2>
+                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt]">PO OUT</h2>
                     </div>
                   </div>
                 </div>
@@ -180,7 +180,7 @@ export default function PODetail() {
                   {/* Greeting */}
                   <div className="mb-4 text-gray-800 text-[12pt]">
                     <p>Dear Sir/Madam,</p>
-                    <p className="mt-1">Here we submit the Purchase Order for <span className="font-medium">{subject}</span> as per our agreement:</p>
+                    <p className="mt-1">Here we submit the PO Out for <span className="font-medium">{subject}</span> as per our agreement:</p>
                   </div>
 
                   {/* Items Table — from vendor discount data */}

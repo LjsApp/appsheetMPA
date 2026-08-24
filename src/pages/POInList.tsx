@@ -121,7 +121,7 @@ export default function POInList() {
                           <Download className="w-7 h-7 text-purple-300" />
                         </div>
                         <p className="text-gray-500 text-sm">{search ? 'Tidak ada hasil pencarian.' : 'Belum ada data PO In.'}</p>
-                        <p className="text-gray-400 text-xs">PO In dibuat otomatis saat Anda membuat Purchase Order dari halaman Quotation.</p>
+                        <p className="text-gray-400 text-xs">PO In dibuat otomatis saat Anda membuat PO Out dari halaman Quotation.</p>
                       </div>
                     </td>
                   </tr>
