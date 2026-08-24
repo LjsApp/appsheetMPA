@@ -1,4 +1,4 @@
-import { NeracaItem, NeracaDetail } from '@/types';
+import type { NeracaItem, NeracaDetail } from '@/types';
 
 // ==================== Constants ====================
 export const DEFAULT_DETAIL: Partial<NeracaDetail> = {

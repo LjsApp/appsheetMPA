@@ -6,7 +6,8 @@ import Modal from '@/components/Modal';
 import type { NeracaDetail as NeracaDetailType, NeracaItem } from '@/types';
 import { useForm, Controller } from 'react-hook-form';
 import { 
-  DEFAULT_DETAIL, calcBaseHargaJual 
+  DEFAULT_DETAIL, calcBaseHargaJual,
+  getOngkirVK, getOngkirKC, getDifficultyValue
 } from '@/lib/neracaUtils';
 import {
   useNeracas, useNeracaDetail, useSaveNeracaDetail,
