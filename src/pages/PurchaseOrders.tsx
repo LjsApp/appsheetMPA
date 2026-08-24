@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui';
@@ -9,9 +10,17 @@ export default function PurchaseOrders() {
   const navigate = useNavigate();
   const { data: purchaseOrders = [], isLoading: loadingPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
-  const deletePurchaseOrder = useDeletePurchaseOrder();
-  
   const isLoading = loadingPOs || loadingPoIns;
+
+  const groupedPOs = useMemo(() => {
+    const groups = new Map<string, PurchaseOrder[]>();
+    purchaseOrders.forEach(po => {
+      const key = po.quotation_id || po.id;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(po);
+    });
+    return Array.from(groups.values());
+  }, [purchaseOrders]);
 
   const handleDeletePo = async (po: PurchaseOrder) => {
     if (confirm(`Hapus PO ${po.po_number}?`)) {
@@ -50,75 +59,79 @@ export default function PurchaseOrders() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {purchaseOrders.map((po) => {
-                  let docs: any[] = [];
-                  if (po.dokumen) {
-                    try {
-                      docs = JSON.parse(po.dokumen);
-                    } catch {}
-                  }
+                {groupedPOs.map((group) => {
+                  return group.map((po, index) => {
+                    let docs: any[] = [];
+                    if (po.dokumen) {
+                      try {
+                        docs = JSON.parse(po.dokumen);
+                      } catch {}
+                    }
 
-                  const poIn = poIns.find(p => p.quotation_id === po.quotation_id);
+                    const poIn = poIns.find(p => p.quotation_id === po.quotation_id);
 
-                  return (
-                    <tr key={po.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-gray-900">{poIn?.customer_name || '—'}</span>
-                          <span className="text-xs text-gray-500 font-medium truncate max-w-[200px]" title={poIn?.judul}>{poIn?.judul || '—'}</span>
-                          <span className="text-[11px] text-gray-400 font-mono mt-0.5">{poIn?.po_in_number || '—'}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs font-semibold text-violet-700">
-                        {po.po_number}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        {po.vendor_name}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-600">
-                        {po.jumlah_item}
-                      </td>
-                      <td className="px-6 py-4 text-right font-semibold text-gray-900">
-                        Rp {formatCurrency(Number(po.total_nilai))}
-                      </td>
-                      <td className="px-6 py-4">
-                        {docs.length > 0 ? (
-                          <div className="flex gap-2 flex-wrap">
-                            {docs.map((d: any, idx: number) => (
-                              <a
-                                key={`${po.id}-doc-${idx}`}
-                                href={d.url || d}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                              >
-                                Dok.{idx + 1}
-                              </a>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>
+                    return (
+                      <tr key={po.id} className="hover:bg-gray-50/50 transition-colors">
+                        {index === 0 && (
+                          <td rowSpan={group.length} className="px-6 py-4 align-top border-r border-gray-100 bg-white">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-gray-900">{poIn?.customer_name || '—'}</span>
+                              <span className="text-xs text-gray-500 font-medium truncate max-w-[200px]" title={poIn?.judul}>{poIn?.judul || '—'}</span>
+                              <span className="text-[11px] text-gray-400 font-mono mt-0.5">{poIn?.po_in_number || '—'}</span>
+                            </div>
+                          </td>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() => navigate(`/po/${po.id}`)}
-                            className="text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
-                          >
-                            Detail →
-                          </button>
-                          <button
-                            onClick={() => handleDeletePo(po)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Hapus PO"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
+                        <td className="px-6 py-4 font-mono text-xs font-semibold text-violet-700">
+                          {po.po_number}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          {po.vendor_name}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-600">
+                          {po.jumlah_item}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-gray-900">
+                          Rp {formatCurrency(Number(po.total_nilai))}
+                        </td>
+                        <td className="px-6 py-4">
+                          {docs.length > 0 ? (
+                            <div className="flex gap-2 flex-wrap">
+                              {docs.map((d: any, idx: number) => (
+                                <a
+                                  key={`${po.id}-doc-${idx}`}
+                                  href={d.url || d}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                                >
+                                  Dok.{idx + 1}
+                                </a>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <button
+                              onClick={() => navigate(`/po/${po.id}`)}
+                              className="text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
+                            >
+                              Detail →
+                            </button>
+                            <button
+                              onClick={() => handleDeletePo(po)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              title="Hapus PO"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  });
                 })}
               </tbody>
             </table>
