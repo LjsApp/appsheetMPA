@@ -5,6 +5,13 @@ import { PageHeader, Button } from '@/components/ui';
 import { usePurchaseOrders, useVendors, useVendorDiscounts, useNeracaItems, useCompany } from '@/hooks/useData';
 import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'pagi';
+  if (hour >= 12 && hour < 18) return 'siang';
+  return 'malam';
+}
+
 
 export default function PODetail() {
   const { poId } = useParams<{ poId: string }>();
@@ -66,7 +73,9 @@ export default function PODetail() {
   const dueDate = itemRows.length > 0 && itemRows[0].delivery_time_vk ? itemRows[0].delivery_time_vk : '-';
 
   const companyName = company?.name || 'SourceQuo System';
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`PO:${po.po_number}`)}`;
+  const waPhone = company?.phone || '6281328213968';
+  const waMessage = `Halo selamat ${getGreeting()}, izin bertanya terkait Purchase Order ${po.po_number} kepada ${vendor?.vendor_name || ''}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://wa.me/${waPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMessage)}`)}`;
 
   // Letter date — formatted
   const letterDate = vd?.letter_date ? formatDate(vd.letter_date) : formatDate(po.created_date);

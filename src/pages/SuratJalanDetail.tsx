@@ -11,6 +11,13 @@ import {
 } from '@/hooks/useData';
 import { getDriveImageUrl, formatDate } from '@/lib/utils';
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'pagi';
+  if (hour >= 12 && hour < 18) return 'siang';
+  return 'malam';
+}
+
 export default function SuratJalanDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -57,7 +64,9 @@ export default function SuratJalanDetail() {
   }
 
   const companyName = company?.name || 'PT. Morgan Powerindo Amerta';
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SJ:${sj.sj_number}`)}`;
+  const waPhone = company?.phone || '6281328213968';
+  const waMessage = `Halo selamat ${getGreeting()}, izin bertanya terkait Surat Jalan ${sj.sj_number} untuk ${po?.customer_name || ''}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://wa.me/${waPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMessage)}`)}`;
 
   return (
     <div className="space-y-5 pb-20">
@@ -104,7 +113,7 @@ export default function SuratJalanDetail() {
           <thead>
             <tr>
               <td style={{padding:0}}>
-                <div className="px-10 pt-8 pb-4">
+                <div className="px-10 pt-8 pb-4 border-b border-gray-200">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                       {company?.logo_url ? (
@@ -115,11 +124,11 @@ export default function SuratJalanDetail() {
                         <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
                       )}
                       <div>
-                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt] italic">{companyName}</h1>
+                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>
                       </div>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt] italic">Delivery Order</h2>
+                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt] uppercase">Delivery Order</h2>
                     </div>
                   </div>
                   
@@ -198,17 +207,17 @@ export default function SuratJalanDetail() {
                     <tbody>
                       {items.map((item, idx) => (
                         <tr key={item.id} className="border border-black">
-                          <td className="border-r border-black py-3 px-3 text-center align-middle">{idx + 1}</td>
-                          <td className="border-r border-black py-3 px-3 align-middle text-justify">
-                            <div className="font-semibold">{item.item_customer}</div>
+                          <td className="border-r border-black py-3 px-3 text-center text-gray-600 align-top">{idx + 1}</td>
+                          <td className="border-r border-black py-3 px-3 align-top text-justify">
+                            <div className="text-gray-900">{item.item_customer}</div>
                             {item.item_vendor && item.item_vendor !== item.item_customer && (
-                              <div className="whitespace-pre-wrap mt-1 leading-snug text-gray-900">
-                                <span className="font-bold">Offer to:</span><br />
-                                {item.item_vendor}
-                              </div>
+                              <>
+                                <div className="h-3"></div>
+                                <div className="text-gray-900"><span className="font-bold">Offer to:</span><br/>{item.item_vendor}</div>
+                              </>
                             )}
                           </td>
-                          <td className="py-3 px-3 text-center align-middle">{item.qty || 1}</td>
+                          <td className="py-3 px-3 text-center text-gray-800 align-top">{item.qty || 1}</td>
                         </tr>
                       ))}
                       {items.length === 0 && (
@@ -219,24 +228,29 @@ export default function SuratJalanDetail() {
                     </tbody>
                   </table>
 
-                  <p className="text-[10pt] leading-snug mb-12 text-justify">
-                    Dokumen ini dikeluarkan oleh Sistem Integrasi Data {companyName} dan dinyatakan Sah dan Otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code
+                  <p className="text-[10pt] text-gray-600 italic mb-8 break-inside-avoid leading-relaxed">
+                    Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
                   </p>
 
-                  <div className="flex justify-between items-start pb-8">
+                  <div className="flex justify-between items-end break-inside-avoid text-[12pt]">
                     <div className="w-64 text-center">
                       <div className="text-left mb-1">Diterima,</div>
                       <div className="text-left mb-2">Tanggal : ______________________ .</div>
-                      <div className="mb-24">{po?.customer_name || 'Customer'}</div>
+                      <div className="mb-20">{po?.customer_name || 'Customer'}</div>
                       <div>(__________________________)</div>
                     </div>
-                    <div className="w-64 text-center flex flex-col items-center">
-                      <div className="mb-2">Hormat kami,</div>
-                      <div className="font-semibold mb-4">{companyName}</div>
-                      <img src={qrUrl} alt="QR Code" className="w-24 h-24 mb-1" />
-                      <div className="text-[9pt] italic mb-4">Surat Jalan</div>
-                      <div className="font-bold border-b border-black inline-block px-2">Erick P. M</div>
-                      <div className="font-bold italic text-sm mt-0.5">Direktur</div>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
+                        <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+                      </div>
+                      <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                    </div>
+                    <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
+                      <p>Hormat kami,</p>
+                      <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
+                      <div style={{ height: '110px' }}></div>
+                      <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
+                      <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
                     </div>
                   </div>
                 </div>

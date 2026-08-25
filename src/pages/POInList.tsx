@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Loader2, FileText, Package, Search, Plus, Download, Edit, Truck } from 'lucide-react';
+import { Trash2, Loader2, FileText, Package, Search, Plus, Download, Edit } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
-import { usePoIns, useDeletePoIn, useSuratJalan, useSaveSuratJalan, fetchApi } from '@/hooks/useData';
+import { usePoIns, useDeletePoIn, fetchApi } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import type { POIn } from '@/types';
 
@@ -14,7 +14,6 @@ export default function POInList() {
   const { data: suratJalanList = [] } = useSuratJalan();
   
   const deletePoIn = useDeletePoIn();
-  const saveSJ = useSaveSuratJalan();
   
   const [search, setSearch] = useState('');
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string }>({ isOpen: false, id: null, title: '' });
@@ -23,7 +22,6 @@ export default function POInList() {
   const [editModal, setEditModal] = useState<{ isOpen: boolean; poIn: POIn | null }>({ isOpen: false, poIn: null });
   const [editForm, setEditForm] = useState<Partial<POIn>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [creatingSJId, setCreatingSJId] = useState<string | null>(null);
 
   const handleDelete = (id: string, poInNumber: string) => {
     setDeleteModal({ isOpen: true, id, title: `Hapus PO In ${poInNumber}` });
@@ -50,37 +48,6 @@ export default function POInList() {
       alert('Gagal menyimpan PO In');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleCreateSJ = async (poIn: POIn) => {
-    const existing = suratJalanList.find(s => s.po_in_id === poIn.id);
-    if (existing) {
-      navigate(`/surat-jalan/${existing.id}`);
-      return;
-    }
-
-    setCreatingSJId(poIn.id);
-    try {
-      const sjNumber = await fetchApi('getNextSuratJalanNumber');
-      const data = {
-        id: `SJ-${Date.now()}`,
-        po_in_id: poIn.id,
-        sj_number: sjNumber,
-        ekspedisi: '',
-        created_date: new Date().toISOString(),
-        updated_date: new Date().toISOString(),
-      };
-      const saved = await saveSJ.mutateAsync(data);
-      if (saved && saved.id) {
-         navigate(`/surat-jalan/${saved.id}`);
-      } else {
-         navigate(`/surat-jalan/${data.id}`);
-      }
-    } catch (e) {
-      alert('Gagal membuat Surat Jalan');
-    } finally {
-      setCreatingSJId(null);
     }
   };
 
@@ -168,14 +135,13 @@ export default function POInList() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tanggal PO</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Alamat Pengiriman</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Dokumen</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Surat Jalan</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-16 text-center">
+                    <td colSpan={7} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center">
                           <Download className="w-7 h-7 text-purple-300" />
@@ -189,8 +155,6 @@ export default function POInList() {
                   filtered.map(p => {
                     const docs = getDocs(p);
                     const isBatas = p.tanggal_batas && new Date(p.tanggal_batas) < new Date();
-                    const sj = suratJalanList.find(s => s.po_in_id === p.id);
-                    const isCreatingSJ = creatingSJId === p.id;
                     
                     return (
                       <tr key={p.id} className="hover:bg-gray-50 transition-colors">
@@ -215,18 +179,6 @@ export default function POInList() {
                           ) : (
                             <span className="text-gray-300 text-xs">—</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Button 
-                            variant={sj ? "secondary" : "primary"} 
-                            size="sm" 
-                            className="text-[11px] h-7 px-2"
-                            onClick={() => handleCreateSJ(p)}
-                            disabled={isCreatingSJ}
-                          >
-                            {isCreatingSJ ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Truck className="w-3 h-3 mr-1" />}
-                            {sj ? 'Lihat SJ' : 'Buat SJ'}
-                          </Button>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
