@@ -2,28 +2,25 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { useSuratJalan, usePoIns, useNeracaQuotations } from '@/hooks/useData';
+import { useSuratJalan, usePoIns } from '@/hooks/useData';
 
 export default function SuratJalanList() {
   const navigate = useNavigate();
   const { data: suratJalanList = [], isLoading: loadingSJ } = useSuratJalan();
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
-  const { data: quotations = [], isLoading: loadingQuotations } = useNeracaQuotations();
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isLoading = loadingSJ || loadingPo || loadingQuotations;
+  const isLoading = loadingSJ || loadingPo;
 
   const dataWithDetails = useMemo(() => {
     return suratJalanList.map(sj => {
       const po = poIns.find(p => p.id === sj.po_in_id);
-      const quotation = quotations.find(q => q.id === po?.quotation_id);
       return {
         ...sj,
         customer_name: po?.customer_name || '-',
         judul_po: po?.judul || '-',
         no_po: po?.po_in_number || '-',
-        qty_item: quotation?.jumlah_item || 0,
       };
     }).filter(item => {
       if (!searchTerm) return true;
@@ -35,7 +32,7 @@ export default function SuratJalanList() {
         item.no_po.toLowerCase().includes(term)
       );
     });
-  }, [suratJalanList, poIns, quotations, searchTerm]);
+  }, [suratJalanList, poIns, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -71,7 +68,6 @@ export default function SuratJalanList() {
                   <th className="px-6 py-4">NO. SURAT JALAN</th>
                   <th className="px-6 py-4">TANGGAL</th>
                   <th className="px-6 py-4">CUSTOMER</th>
-                  <th className="px-6 py-4 text-center">JML ITEM</th>
                   <th className="px-6 py-4 text-right">AKSI</th>
                 </tr>
               </thead>
@@ -92,9 +88,6 @@ export default function SuratJalanList() {
                         <span className="text-xs text-gray-500 truncate max-w-[200px]" title={item.judul_po}>{item.judul_po}</span>
                         <span className="text-[11px] text-gray-400 font-mono mt-0.5">{item.no_po}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      {item.qty_item}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Button variant="secondary" onClick={() => navigate(`/surat-jalan/${item.id}`)}>
