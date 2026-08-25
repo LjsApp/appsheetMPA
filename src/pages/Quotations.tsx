@@ -1,15 +1,67 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileCheck2, Loader2, Trash2, ShoppingCart } from 'lucide-react';
+import { FileCheck2, Loader2, Trash2, ShoppingCart, Plus, X, Printer } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import type { NeracaQuotation } from '@/types';
 import {
   useNeracaQuotations, useDeleteNeracaQuotation,
-  useInquiries, usePurchaseOrders
+  useInquiries, usePurchaseOrders,
+  useNeracas, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi,
+  useNeracaItems, useNeracaDetail
 } from '@/hooks/useData';
+import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import GeneratePoModal from '@/components/GeneratePoModal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+
+// Helper component to render a single neraca row in the modal
+function NeracaSelectionRow({ 
+  neraca, 
+  isUsed, 
+  isSelected, 
+  onToggle 
+}: { 
+  neraca: any; 
+  isUsed: boolean; 
+  isSelected: boolean; 
+  onToggle: (id: string) => void;
+}) {
+  const { data: items } = useNeracaItems(neraca.id);
+  const { data: detail } = useNeracaDetail(neraca.id);
+  
+  const total = items ? calculateNeracaGrandTotal(items, detail || undefined) : 0;
+
+  return (
+    <tr className="bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
+      <td className="px-4 py-2 border-b border-gray-100"></td>
+      <td colSpan={3} className="px-4 py-2 border-b border-gray-100">
+        <div className="flex items-center justify-between w-full">
+          <label className="flex items-center gap-2 cursor-pointer w-fit">
+            <input 
+              type="checkbox" 
+              disabled={isUsed} 
+              checked={isUsed || isSelected} 
+              onChange={() => onToggle(neraca.id)} 
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <span className={`text-sm ${isUsed ? 'text-gray-400' : 'text-gray-700'}`}>
+              {neraca.name || neraca.id}
+            </span>
+          </label>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="font-medium text-gray-700">
+              {total > 0 ? formatCurrency(total) : '-'}
+            </span>
+            {isUsed && (
+              <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">✓ Sudah Jadi Quotation</span>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 
 
@@ -21,6 +73,89 @@ export default function Quotations() {
 
   const [generatingPoQt, setGeneratingPoQt] = useState<NeracaQuotation | null>(null);
   const deleteQuotation = useDeleteNeracaQuotation();
+  const { data: neracas = [] } = useNeracas();
+  const { data: allQuotations } = useNeracaQuotations();
+  const saveQuotation = useSaveNeracaQuotation();
+  const getNextQtNumber = useGetNextQuotationNumber();
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedNeracaIds, setSelectedNeracaIds] = useState<Set<string>>(new Set());
+  const [expandedInq, setExpandedInq] = useState<Record<string, boolean>>({});
+  const [isCreatingQt, setIsCreatingQt] = useState(false);
+
+  const toggleNeracaSelection = (id: string) => {
+    setSelectedNeracaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleInqExpand = (id: string) => {
+    setExpandedInq(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // neraca IDs that already have a quotation
+  const usedNeracaIds = useMemo(() => new Set((allQuotations || []).map(q => q.neraca_id).filter(Boolean)), [allQuotations]);
+
+  const handleAddQuotation = async () => {
+    if (selectedNeracaIds.size === 0) return;
+    setIsCreatingQt(true);
+    try {
+      const baseQtNumber = await getNextQtNumber.mutateAsync();
+      // If baseQtNumber looks like 1/QT/MPA/08.2026, we can try to increment it for multiple, 
+      // but to be safe we just fetch once and add an index if multiple.
+      // Alternatively, we just create them with Date.now() based IDs and base numbers.
+      let counter = 0;
+
+      for (const neracaId of Array.from(selectedNeracaIds)) {
+        const neraca = neracas.find(n => n.id === neracaId);
+        if (!neraca) continue;
+        const inquiry = inquiries.find(i => i.id === neraca.inquiry_id);
+        if (!inquiry) continue;
+
+        const items = await fetchApi(`getNeracaItems&neraca_id=${neraca.id}`);
+        const detail = await fetchApi(`getNeracaDetail&neraca_id=${neraca.id}`);
+        const grandTotal = calculateNeracaGrandTotal(items || [], detail || undefined);
+        
+        let qtNum = baseQtNumber || `QT-${new Date().getFullYear()}-${Date.now()}`;
+        if (counter > 0 && baseQtNumber) {
+           // simple increment logic if possible, else just append counter
+           const parts = String(baseQtNumber).split('/');
+           if (parts.length > 1) {
+             const num = parseInt(parts[0], 10) + counter;
+             qtNum = `${num}/${parts.slice(1).join('/')}`;
+           } else {
+             qtNum = `${baseQtNumber}-${counter}`;
+           }
+        }
+
+        const payload = {
+          id: `QT-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          quotation_number: qtNum,
+          neraca_id: neraca.id,
+          inquiry_id: inquiry.id,
+          customer_id: inquiry.customer_id || '',
+          customer_name: inquiry.customer_name || '',
+          request_title: inquiry.request_title || '',
+          nilai: grandTotal,
+          dokumen: '',
+          status: 'Draft' as const,
+          created_date: new Date().toISOString().split('T')[0],
+          updated_date: new Date().toISOString().split('T')[0],
+        };
+        await saveQuotation.mutateAsync(payload);
+        counter++;
+      }
+      setShowAddModal(false);
+      setSelectedNeracaIds(new Set());
+    } catch (e: any) {
+      alert('Gagal membuat quotation: ' + e.message);
+    } finally {
+      setIsCreatingQt(false);
+    }
+  };
 
   // Deduplicate: keep only one (latest) quotation per neraca_id
   const uniqueQuotations = useMemo(() => {
@@ -73,7 +208,16 @@ export default function Quotations() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Customer Quotations" subtitle={`${uniqueQuotations.length} quotation`} />
+      <PageHeader
+        title="Customer Quotations"
+        subtitle={`${uniqueQuotations.length} quotation`}
+        action={
+          <Button variant="primary" onClick={() => setShowAddModal(true)}>
+            <Plus className="w-4 h-4" />
+            Tambah Quotation
+          </Button>
+        }
+      />
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -159,9 +303,13 @@ export default function Quotations() {
                             <button onClick={() => handleDelete(q)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                            <Button variant="secondary" size="sm" onClick={() => navigate(`/quotations/${q.id}`)}>
-                              Detail
-                            </Button>
+                            <button
+                              onClick={() => navigate(`/quotations/${q.id}`)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Cetak / Detail Quotation"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -192,6 +340,72 @@ export default function Quotations() {
         description="Yakin ingin menghapus quotation ini?"
         isLoading={deleteQuotation.isPending}
       />
+
+      {/* Add Quotation Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h2 className="text-lg font-bold text-gray-900">Tambah Quotation</h2>
+              <button onClick={() => { setShowAddModal(false); setSelectedNeracaIds(new Set()); }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+            
+            <div className="p-0 max-h-[60vh] overflow-y-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 sticky top-0 shadow-sm z-10">
+                  <tr>
+                    <th className="w-10 px-4 py-3"></th>
+                    <th className="px-4 py-3 font-semibold text-gray-600">No. Permintaan</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600">Customer</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600">Judul</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {inquiries.filter(i => i.status === 'Neraca').length === 0 && (
+                     <tr><td colSpan={4} className="p-8 text-center text-gray-500">Belum ada inquiry di tahap Neraca.</td></tr>
+                  )}
+                  {inquiries.filter(i => i.status === 'Neraca').map(inq => {
+                    const inqNeracas = neracas.filter(n => n.inquiry_id === inq.id);
+                    if (inqNeracas.length === 0) return null;
+                    const isExpanded = expandedInq[inq.id];
+                    return (
+                      <React.Fragment key={inq.id}>
+                        <tr className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => toggleInqExpand(inq.id)}>
+                          <td className="px-4 py-3 text-gray-400">
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-blue-600">{inq.request_number}</td>
+                          <td className="px-4 py-3 text-gray-800">{inq.customer_name}</td>
+                          <td className="px-4 py-3 text-gray-700 truncate max-w-[200px]" title={inq.request_title}>{inq.request_title}</td>
+                        </tr>
+                        {isExpanded && inqNeracas.map(n => (
+                          <NeracaSelectionRow 
+                            key={n.id}
+                            neraca={n}
+                            isUsed={usedNeracaIds.has(n.id)}
+                            isSelected={selectedNeracaIds.has(n.id)}
+                            onToggle={toggleNeracaSelection}
+                          />
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-between items-center p-5 border-t bg-gray-50 rounded-b-2xl">
+              <span className="text-sm font-medium text-gray-600">{selectedNeracaIds.size} neraca dipilih</span>
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={() => { setShowAddModal(false); setSelectedNeracaIds(new Set()); }}>Batal</Button>
+                <Button onClick={handleAddQuotation} loading={isCreatingQt} disabled={selectedNeracaIds.size === 0}>
+                  Buat Quotation
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

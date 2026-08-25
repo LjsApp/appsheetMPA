@@ -1,16 +1,27 @@
+import { useState } from 'react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { PageHeader } from '@/components/ui';
+import { Loader2, Printer, Plus } from 'lucide-react';
+import { PageHeader, Button } from '@/components/ui';
 import { usePurchaseOrders, usePoIns } from '@/hooks/useData';
-import type { PurchaseOrder } from '@/types';
+import type { PurchaseOrder, NeracaQuotation } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import AddPoOutModal from '@/components/AddPoOutModal';
+import GeneratePoModal from '@/components/GeneratePoModal';
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
-  const { data: purchaseOrders = [], isLoading: loadingPOs } = usePurchaseOrders();
+  const { data: purchaseOrders = [], isLoading: loadingPOs, refetch: refetchPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
   const isLoading = loadingPOs || loadingPoIns;
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [generatingPoQt, setGeneratingPoQt] = useState<NeracaQuotation | null>(null);
+
+  const handleContinueAdd = (qt: NeracaQuotation) => {
+    setShowAddModal(false);
+    setGeneratingPoQt(qt);
+  };
 
   const groupedPOs = useMemo(() => {
     const groups = new Map<string, PurchaseOrder[]>();
@@ -24,10 +35,16 @@ export default function PurchaseOrders() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="PO Out"
-        subtitle={`${purchaseOrders.length} PO Out`}
-      />
+      <div className="flex justify-between items-center">
+        <PageHeader
+          title="PO Out"
+          subtitle={`${purchaseOrders.length} PO Out`}
+        />
+        <Button onClick={() => setShowAddModal(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Tambah PO Out
+        </Button>
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
@@ -110,9 +127,10 @@ export default function PurchaseOrders() {
                           <div className="flex items-center justify-end gap-3">
                             <button
                               onClick={() => navigate(`/po/${po.id}`)}
-                              className="text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                              title="Cetak / Detail PO"
                             >
-                              Detail →
+                              <Printer className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -125,6 +143,22 @@ export default function PurchaseOrders() {
           </div>
         )}
       </div>
+
+      <AddPoOutModal 
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onContinue={handleContinueAdd}
+      />
+
+      <GeneratePoModal 
+        quotation={generatingPoQt}
+        skipPoInForm={true}
+        onClose={() => setGeneratingPoQt(null)}
+        onSuccess={() => {
+          refetchPOs();
+          setGeneratingPoQt(null);
+        }}
+      />
     </div>
   );
 }

@@ -242,14 +242,22 @@ function routeRequest(action, method, body, params) {
       return addRecord('neraca_quotations', body);
     case 'deleteNeracaQuotation': {
       var qtId = body.id;
-      // Cascading delete — remove all POs linked to this quotation
+      // Cascading delete - remove all POs linked to this quotation
       try {
         var pos = getRecords('po_out').filter(function(r){ return r.quotation_id === qtId; });
         pos.forEach(function(r){ try { deleteRecord('po_out', 'id', r.id); } catch(e){} });
       } catch(e){ Logger.log('Cascade delete quotation POs error: ' + e); }
       try {
         var poins = getRecords('po_in').filter(function(r){ return r.quotation_id === qtId; });
-        poins.forEach(function(r){ try { deleteRecord('po_in', 'id', r.id); } catch(e){} });
+        poins.forEach(function(r){ 
+          try { 
+            // Cascade delete Surat Jalan connected to this PO In
+            var sjs = getRecords('surat_jalan').filter(function(sj){ return sj.po_in_id === r.id; });
+            sjs.forEach(function(sj){ try { deleteRecord('surat_jalan', 'id', sj.id); } catch(e){} });
+            
+            deleteRecord('po_in', 'id', r.id); 
+          } catch(e){} 
+        });
       } catch(e){ Logger.log('Cascade delete quotation PO In error: ' + e); }
       return deleteRecord('neraca_quotations', 'id', qtId);
     }
@@ -340,7 +348,10 @@ function routeRequest(action, method, body, params) {
           var poOuts = getRecords('po_out').filter(function(r){ return r.quotation_id === poIn.quotation_id; });
           poOuts.forEach(function(r){ try { deleteRecord('po_out', 'id', r.id); } catch(e){} });
         }
-      } catch(e) { Logger.log('Cascade delete PO Out error: ' + e); }
+        // Cascade delete Surat Jalan
+        var sjs = getRecords('surat_jalan').filter(function(sj){ return sj.po_in_id === poInId; });
+        sjs.forEach(function(sj){ try { deleteRecord('surat_jalan', 'id', sj.id); } catch(e){} });
+      } catch(e) { Logger.log('Cascade delete PO In error: ' + e); }
       return deleteRecord('po_in', 'id', poInId);
     }
     case 'getSuratJalan':

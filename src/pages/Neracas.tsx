@@ -281,19 +281,10 @@ export default function Neracas() {
                                               {(() => {
                                                 const qt = allQuotations.find(q => q.neraca_id === n.id);
                                                 return qt ? (
-                                                  <button onClick={() => alert('Sudah jadi quotation!')} className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1.5 rounded-md font-medium transition-colors" title="Lihat Quotation">
+                                                  <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-md font-medium">
                                                     <FileCheck2 className="w-3.5 h-3.5" /> Sudah Jadi Quotation
-                                                  </button>
-                                                ) : (
-                                                  <button 
-                                                    onClick={() => handleCreateQuotation(n, inq)} 
-                                                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 px-2 py-1.5 rounded-md transition-colors disabled:opacity-50" 
-                                                    disabled={creatingQtId === n.id}
-                                                  >
-                                                    {creatingQtId === n.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCheck2 className="w-3.5 h-3.5" />}
-                                                    Buat Quotation
-                                                  </button>
-                                                );
+                                                  </span>
+                                                ) : null;
                                               })()}
                                               <button onClick={() => openEdit(n)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
                                                 <Edit2 className="w-4 h-4" />

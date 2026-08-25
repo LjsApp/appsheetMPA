@@ -3,12 +3,15 @@ import { Trash2, Loader2, FileText, Package, Search, Plus, Download, Edit } from
 import { PageHeader, Button } from '@/components/ui';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
-import { usePoIns, useDeletePoIn, fetchApi } from '@/hooks/useData';
+import AddPoInModal from '@/components/AddPoInModal';
+import { usePoIns, useDeletePoIn, useSuratJalan, fetchApi } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import type { POIn } from '@/types';
 
 export default function POInList() {
   const { data: poIns = [], isLoading, refetch } = usePoIns();
+  const { data: suratJalanList = [] } = useSuratJalan();
+  const usedPoIds = new Set(suratJalanList.map(sj => sj.po_in_id).filter(Boolean));
   
   const deletePoIn = useDeletePoIn();
   
@@ -19,6 +22,9 @@ export default function POInList() {
   const [editModal, setEditModal] = useState<{ isOpen: boolean; poIn: POIn | null }>({ isOpen: false, poIn: null });
   const [editForm, setEditForm] = useState<Partial<POIn>>({});
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const usedPoInQuotationIds = new Set(poIns.map(p => p.quotation_id).filter(Boolean));
 
   const handleDelete = (id: string, poInNumber: string) => {
     setDeleteModal({ isOpen: true, id, title: `Hapus PO In ${poInNumber}` });
@@ -61,10 +67,16 @@ export default function POInList() {
 
   return (
     <div className="p-6 space-y-6">
-      <PageHeader
-        title="PO In"
-        subtitle="Daftar Purchase Order dari Customer"
-      />
+      <div className="flex justify-between items-center">
+        <PageHeader
+          title="PO In"
+          subtitle="Daftar Purchase Order dari Customer"
+        />
+        <Button onClick={() => setShowAddModal(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Tambah PO In
+        </Button>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
@@ -132,6 +144,7 @@ export default function POInList() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tanggal PO</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Alamat Pengiriman</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Dokumen</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -172,6 +185,15 @@ export default function POInList() {
                                 </a>
                               ))}
                             </div>
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {usedPoIds.has(p.id) ? (
+                            <span className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full font-medium">
+                              ✓ Sudah SJ
+                            </span>
                           ) : (
                             <span className="text-gray-300 text-xs">—</span>
                           )}
@@ -275,6 +297,13 @@ export default function POInList() {
           </div>
         </div>
       </Modal>
+
+      <AddPoInModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+        onSuccess={() => refetch()} 
+        usedQuotationIds={usedPoInQuotationIds}
+      />
     </div>
   );
 }

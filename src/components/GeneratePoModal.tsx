@@ -12,9 +12,10 @@ interface GeneratePoModalProps {
   quotation: NeracaQuotation | null;
   onClose: () => void;
   onSuccess: (quotation: NeracaQuotation) => void;
+  skipPoInForm?: boolean;
 }
 
-export default function GeneratePoModal({ quotation, onClose, onSuccess }: GeneratePoModalProps) {
+export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoInForm }: GeneratePoModalProps) {
   const { data: items = [], isLoading: loadingItems } = useNeracaItems(quotation?.neraca_id || '');
   const { data: vds = [], isLoading: loadingVds } = useVendorDiscounts(quotation?.neraca_id || '');
   const { data: customers = [] } = useCustomers();
@@ -83,7 +84,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess }: Gener
 
   const handleGenerate = async () => {
     if (!quotation) return;
-    if (!poInNumber.trim() || !judul.trim() || !picId || !tanggalBatas) {
+    if (!skipPoInForm && (!poInNumber.trim() || !judul.trim() || !picId || !tanggalBatas)) {
       alert('Harap lengkapi semua field yang wajib diisi (Nomor PO Customer, Judul PO, PIC, dan Batas Waktu Pengerjaan).');
       return;
     }
@@ -91,38 +92,40 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess }: Gener
     setIsGenerating(true);
 
     try {
-      // 1. Upload PO In documents
-      const uploadedDocs: { name: string; url: string }[] = [];
-      for (const file of poInFiles) {
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
-          reader.readAsDataURL(file);
-        });
-        const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-        if (res?.url) uploadedDocs.push({ name: file.name, url: res.url });
-      }
+      if (!skipPoInForm) {
+        // 1. Upload PO In documents
+        const uploadedDocs: { name: string; url: string }[] = [];
+        for (const file of poInFiles) {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.readAsDataURL(file);
+          });
+          const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+          if (res?.url) uploadedDocs.push({ name: file.name, url: res.url });
+        }
 
-      // 2. Save PO In record
-      const selectedPic = pics.find(p => p.id === picId);
-      const poInId = `POIN-${Date.now()}`;
-      await savePoIn.mutateAsync({
-        id: poInId,
-        quotation_id: quotation.id,
-        neraca_id: quotation.neraca_id,
-        customer_id: quotation.customer_id,
-        customer_name: quotation.customer_name,
-        po_in_number: poInNumber,
-        judul,
-        tanggal,
-        alamat_pengiriman: selectedAlamat || customAlamat,
-        pic_id: picId,
-        pic_name: selectedPic?.name || '',
-        tanggal_batas: tanggalBatas,
-        dokumen: JSON.stringify(uploadedDocs),
-        created_date: new Date().toISOString(),
-        updated_date: new Date().toISOString(),
-      });
+        // 2. Save PO In record
+        const selectedPic = pics.find(p => p.id === picId);
+        const poInId = `POIN-${Date.now()}`;
+        await savePoIn.mutateAsync({
+          id: poInId,
+          quotation_id: quotation.id,
+          neraca_id: quotation.neraca_id,
+          customer_id: quotation.customer_id,
+          customer_name: quotation.customer_name,
+          po_in_number: poInNumber,
+          judul,
+          tanggal,
+          alamat_pengiriman: selectedAlamat || customAlamat,
+          pic_id: picId,
+          pic_name: selectedPic?.name || '',
+          tanggal_batas: tanggalBatas,
+          dokumen: JSON.stringify(uploadedDocs),
+          created_date: new Date().toISOString(),
+          updated_date: new Date().toISOString(),
+        });
+      }
 
       // 3. Create PO Out records (one per vendor)
       const nextNumRes = await getNextPoNumber.mutateAsync();
@@ -213,6 +216,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess }: Gener
             </div>
 
             {/* PO In Form */}
+            {!skipPoInForm && (
             <div className="border border-gray-200 rounded-xl overflow-hidden">
               <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-800">Data PO In (dari Customer)</h3>
@@ -343,11 +347,12 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess }: Gener
                 </div>
               </div>
             </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <Button variant="secondary" onClick={onClose} disabled={isGenerating}>Batal</Button>
               <Button onClick={handleGenerate} loading={isGenerating} disabled={uniqueVendors.length === 0}>
-                Buat PO In + {uniqueVendors.length} PO Out
+                {skipPoInForm ? `Buat ${uniqueVendors.length} PO Out` : `Buat PO In + ${uniqueVendors.length} PO Out`}
               </Button>
             </div>
           </>

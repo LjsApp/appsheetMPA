@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, FileText, Plus, X, Trash2 } from 'lucide-react';
+import { Loader2, Search, FileText, Plus, X, Trash2, Printer } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi } from '@/hooks/useData';
@@ -147,9 +147,13 @@ export default function SuratJalanList() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => navigate(`/surat-jalan/${item.id}`)}>
-                          Detail →
-                        </Button>
+                        <button
+                          onClick={() => navigate(`/surat-jalan/${item.id}`)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Cetak / Detail Surat Jalan"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDelete(item.id, item.sj_number || 'Tanpa Nomor')}
                           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
