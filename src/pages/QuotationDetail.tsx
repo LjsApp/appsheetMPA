@@ -361,17 +361,15 @@ export default function QuotationDetail() {
 
                   {/* Signature & QR */}
                   <div className="flex justify-between items-end break-inside-avoid text-[12pt]">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
-                        <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
-                      </div>
-                      <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                    <div className="w-64 text-center">
                     </div>
-
-                    <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
+                    <div className="text-gray-800 text-center flex flex-col items-center" style={{ minWidth: '200px' }}>
                       <p>Regards,</p>
                       <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
-                      <div style={{ height: '110px' }}></div>
+                      <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden my-2">
+                        <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+                      </div>
+                      <p className="text-[10pt] text-gray-400 mb-2">Scan untuk verifikasi</p>
                       <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
                       <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
                     </div>
