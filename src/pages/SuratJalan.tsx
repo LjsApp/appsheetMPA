@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, FileText, Plus, X } from 'lucide-react';
+import { Loader2, Search, FileText, Plus, X, Trash2 } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { useSuratJalan, usePoIns, useSaveSuratJalan, fetchApi } from '@/hooks/useData';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi } from '@/hooks/useData';
 import type { POIn } from '@/types';
 
 export default function SuratJalanList() {
@@ -10,13 +11,25 @@ export default function SuratJalanList() {
   const { data: suratJalanList = [], isLoading: loadingSJ } = useSuratJalan();
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const saveSJ = useSaveSuratJalan();
+  const deleteSJ = useDeleteSuratJalan();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string }>({ isOpen: false, id: null, title: '' });
 
   const isLoading = loadingSJ || loadingPo;
+
+  const handleDelete = (id: string, sjNumber: string) => {
+    setDeleteModal({ isOpen: true, id, title: `Hapus Surat Jalan ${sjNumber}` });
+  };
+
+  const executeDelete = () => {
+    if (deleteModal.id) {
+      deleteSJ.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+    }
+  };
 
   // Set of PO In IDs that already have a surat jalan
   const usedPoIds = useMemo(
@@ -133,9 +146,18 @@ export default function SuratJalanList() {
                       })}
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <Button variant="secondary" size="sm" onClick={() => navigate(`/surat-jalan/${item.id}`)}>
-                        Detail →
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => navigate(`/surat-jalan/${item.id}`)}>
+                          Detail →
+                        </Button>
+                        <button
+                          onClick={() => handleDelete(item.id, item.sj_number || 'Tanpa Nomor')}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Hapus Surat Jalan"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -203,6 +225,15 @@ export default function SuratJalanList() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeDelete}
+        title={deleteModal.title}
+        description="Yakin ingin menghapus Surat Jalan ini? Aksi ini tidak dapat dibatalkan."
+        isLoading={deleteSJ.isPending}
+      />
     </div>
   );
 }

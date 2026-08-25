@@ -42,7 +42,7 @@ export default function SuratJalanDetail() {
   useEffect(() => {
     if (sj && company) {
       const cName = company.name || 'SourceQuo';
-      document.title = `${cName}_${sj.sj_number.replace(/\//g, '_')}`;
+      document.title = `${cName}_${String(sj.sj_number).replace(/\//g, '_')}`;
       return () => { document.title = 'Vite + React + TS'; };
     }
   }, [company?.name, sj?.sj_number]);
@@ -232,15 +232,22 @@ export default function SuratJalanDetail() {
                     Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
                   </p>
 
-                  <div className="flex justify-between items-end break-inside-avoid text-[12pt]">
-                    <div className="w-64 text-center">
-                      <div className="text-left mb-1">Diterima,</div>
-                      <div className="text-left mb-2">Tanggal : ______________________ .</div>
-                      <div className="mb-20">{po?.customer_name || 'Customer'}</div>
-                      <div>(__________________________)</div>
+                  <div className="flex justify-between break-inside-avoid text-[12pt] mb-2">
+                    <div className="w-64 text-left">
+                      <div className="mb-1">Diterima,</div>
+                      <div>Tanggal : ______________________ .</div>
+                    </div>
+                    <div className="text-center" style={{ minWidth: '200px' }}>
+                      <p>Hormat kami,</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-stretch break-inside-avoid text-[12pt]">
+                    <div className="w-64 text-center flex flex-col justify-between">
+                      <div className="mt-0.5">{po?.customer_name || 'Customer'}</div>
+                      <div className="pb-8">(__________________________)</div>
                     </div>
                     <div className="text-gray-800 text-center flex flex-col items-center" style={{ minWidth: '200px' }}>
-                      <p>Hormat kami,</p>
                       <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
                       <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden my-2">
                         <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
