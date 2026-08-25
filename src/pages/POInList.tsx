@@ -10,6 +10,7 @@ import type { POIn } from '@/types';
 
 export default function POInList() {
   const { data: poIns = [], isLoading, refetch } = usePoIns();
+  console.log("ALL PO INS:", poIns);
   const { data: suratJalanList = [] } = useSuratJalan();
   const usedPoIds = new Set(suratJalanList.map(sj => sj.po_in_id).filter(Boolean));
   

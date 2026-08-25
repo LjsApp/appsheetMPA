@@ -156,7 +156,8 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
           reader.readAsDataURL(file);
         });
         const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-        if (res?.url) uploadedDocs.push({ name: file.name, url: res.url });
+        const fileUrl = typeof res === 'string' ? res : res?.url;
+        if (fileUrl) uploadedDocs.push({ name: file.name, url: fileUrl });
       }
 
       const selectedPic = pics.find(p => p.id === picId);

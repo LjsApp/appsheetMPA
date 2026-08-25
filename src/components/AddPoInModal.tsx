@@ -84,7 +84,8 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
           reader.readAsDataURL(file);
         });
         const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-        if (res?.url) uploadedDocs.push({ name: file.name, url: res.url });
+        const fileUrl = typeof res === 'string' ? res : res?.url;
+        if (fileUrl) uploadedDocs.push({ name: file.name, url: fileUrl });
       }
 
       // 2. Save PO In record
