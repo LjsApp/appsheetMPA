@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Trash2, Loader2, FileText, Package, Search, Plus, Download, Edit } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import AddPoInModal from '@/components/AddPoInModal';
-import { usePoIns, useDeletePoIn, useSuratJalan, fetchApi } from '@/hooks/useData';
+import EditPoInModal from '@/components/EditPoInModal';
+import { usePoIns, useDeletePoIn, useSuratJalan } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import type { POIn } from '@/types';
 
@@ -20,9 +20,7 @@ export default function POInList() {
   
   // Edit Modal State
   const [editModal, setEditModal] = useState<{ isOpen: boolean; poIn: POIn | null }>({ isOpen: false, poIn: null });
-  const [editForm, setEditForm] = useState<Partial<POIn>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const usedPoInQuotationIds = new Set(poIns.map(p => p.quotation_id).filter(Boolean));
 
@@ -37,21 +35,7 @@ export default function POInList() {
   };
 
   const handleEdit = (po: POIn) => {
-    setEditForm({ ...po });
     setEditModal({ isOpen: true, poIn: po });
-  };
-
-  const saveEdit = async () => {
-    setIsSaving(true);
-    try {
-      await fetchApi('savePoIn', 'POST', editForm);
-      refetch();
-      setEditModal({ isOpen: false, poIn: null });
-    } catch (e) {
-      alert('Gagal menyimpan PO In');
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const filtered = poIns.filter(p =>
@@ -237,66 +221,12 @@ export default function POInList() {
       />
 
       {/* Edit Modal */}
-      <Modal isOpen={editModal.isOpen} onClose={() => setEditModal({ isOpen: false, poIn: null })} title="Edit PO In">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Nomor PO Customer</label>
-              <input
-                type="text"
-                value={editForm.po_in_number || ''}
-                onChange={e => setEditForm({ ...editForm, po_in_number: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Judul PO</label>
-              <input
-                type="text"
-                value={editForm.judul || ''}
-                onChange={e => setEditForm({ ...editForm, judul: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Tanggal PO</label>
-              <input
-                type="date"
-                value={editForm.tanggal ? editForm.tanggal.split('T')[0] : ''}
-                onChange={e => setEditForm({ ...editForm, tanggal: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Batas Pengerjaan</label>
-              <input
-                type="date"
-                value={editForm.tanggal_batas ? editForm.tanggal_batas.split('T')[0] : ''}
-                onChange={e => setEditForm({ ...editForm, tanggal_batas: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Alamat Pengiriman</label>
-            <textarea
-              value={editForm.alamat_pengiriman || ''}
-              onChange={e => setEditForm({ ...editForm, alamat_pengiriman: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400"
-            />
-          </div>
-
-          <div className="pt-4 border-t flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setEditModal({ isOpen: false, poIn: null })}>Batal</Button>
-            <Button onClick={saveEdit} loading={isSaving}>Simpan Perubahan</Button>
-          </div>
-        </div>
-      </Modal>
+      <EditPoInModal
+        isOpen={editModal.isOpen}
+        onClose={() => setEditModal({ isOpen: false, poIn: null })}
+        onSuccess={() => { refetch(); setEditModal({ isOpen: false, poIn: null }); }}
+        poIn={editModal.poIn}
+      />
 
       <AddPoInModal 
         isOpen={showAddModal} 
