@@ -236,6 +236,7 @@ export default function POInList() {
         onClose={() => setEditModal({ isOpen: false, poIn: null })}
         onSuccess={() => { refetch(); setEditModal({ isOpen: false, poIn: null }); }}
         poIn={editModal.poIn}
+        usedQuotationIds={usedPoInQuotationIds}
       />
 
       <AddPoInModal 
