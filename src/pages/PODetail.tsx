@@ -62,8 +62,8 @@ export default function PODetail() {
   const totalAfterDisc = totalBeli - totalDiscVal;
   const discPct = vd?.discount_pct || 0;
 
-  // Due date: delivery_time_disc from VD
-  const dueDate = vd?.delivery_time_disc || '-';
+  // Due date: delivery_time_vk of the first item
+  const dueDate = itemRows.length > 0 && itemRows[0].delivery_time_vk ? itemRows[0].delivery_time_vk : '-';
 
   const companyName = company?.name || 'SourceQuo System';
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`PO:${po.po_number}`)}`;
@@ -134,7 +134,7 @@ export default function PODetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt]">PO OUT</h2>
+                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt]">PURCHASE ORDER</h2>
                     </div>
                   </div>
                 </div>
@@ -205,7 +205,7 @@ export default function PODetail() {
                             <td className="py-3 px-3 align-top text-justify border-x border-black">
                               <div className="text-gray-900">{item.item_vendor}</div>
                             </td>
-                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{vd?.delivery_time_disc || item.delivery_time || '-'}</td>
+                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{item.delivery_time_vk || '-'}</td>
                             <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{item.qty}</td>
                             <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{formatCurrency(item.unitPrice)}</td>
                             <td className="py-3 px-3 text-right font-semibold text-gray-900 align-top border-x border-black">{formatCurrency(item.totalBeli)}</td>

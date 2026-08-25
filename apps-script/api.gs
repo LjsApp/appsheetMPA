@@ -81,6 +81,70 @@ function routeRequest(action, method, body, params) {
         catch (e) { return addRecord('neracas', body); }
       }
       return addRecord('neracas', body);
+    case 'duplicateNeraca': {
+      var sourceId = body.source_neraca_id;
+      if (!sourceId) throw new Error('Missing source_neraca_id');
+      
+      var neracas = getRecords('neracas');
+      var sourceNeraca = null;
+      for (var i = 0; i < neracas.length; i++) {
+        if (neracas[i].id === sourceId) { sourceNeraca = neracas[i]; break; }
+      }
+      if (!sourceNeraca) throw new Error('Source neraca not found');
+
+      var newNeracaId = 'NER-' + Date.now() + Math.floor(Math.random()*1000);
+      var newDate = new Date().toISOString().split('T')[0];
+      
+      var newNeraca = {
+        id: newNeracaId,
+        inquiry_id: sourceNeraca.inquiry_id,
+        name: 'Duplikat ' + (sourceNeraca.name || 'Neraca'),
+        created_date: newDate,
+        updated_date: newDate
+      };
+      addRecord('neracas', newNeraca);
+
+      // Copy Details
+      var details = getRecords('neraca_details');
+      for (var i = 0; i < details.length; i++) {
+        if (details[i].neraca_id === sourceId) {
+          var newDetail = JSON.parse(JSON.stringify(details[i]));
+          newDetail.id = 'DET-' + Date.now() + Math.floor(Math.random()*1000);
+          newDetail.neraca_id = newNeracaId;
+          addRecord('neraca_details', newDetail);
+          break; // only 1 detail per neraca
+        }
+      }
+
+      // Copy Items
+      var items = getRecords('neraca_items');
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].neraca_id === sourceId) {
+          var newItem = JSON.parse(JSON.stringify(items[i]));
+          newItem.id = 'ITM-' + Date.now() + Math.floor(Math.random()*10000);
+          newItem.neraca_id = newNeracaId;
+          newItem.created_date = newDate;
+          newItem.updated_date = newDate;
+          addRecord('neraca_items', newItem);
+        }
+      }
+
+      // Copy Vendor Discounts
+      try {
+        var vds = getRecords('neraca_vendor_discounts');
+        for (var i = 0; i < vds.length; i++) {
+          if (vds[i].neraca_id === sourceId) {
+            var newVd = JSON.parse(JSON.stringify(vds[i]));
+            newVd.id = 'VD-' + Date.now() + Math.floor(Math.random()*10000);
+            newVd.neraca_id = newNeracaId;
+            newVd.updated_date = newDate;
+            addRecord('neraca_vendor_discounts', newVd);
+          }
+        }
+      } catch(e) {}
+
+      return newNeraca;
+    }
     case 'deleteNeraca': {
       var neracaId = body.id;
       // Cascading delete — remove all related records first
@@ -264,8 +328,54 @@ function routeRequest(action, method, body, params) {
         catch (e) { return addRecord('po_in', body); }
       }
       return addRecord('po_in', body);
-    case 'deletePoIn':
-      return deleteRecord('po_in', 'id', body.id);
+    case 'deletePoIn': {
+      var poInId = body.id;
+      try {
+        var poIns = getRecords('po_in');
+        var poIn = null;
+        for (var i = 0; i < poIns.length; i++) {
+          if (poIns[i].id === poInId) { poIn = poIns[i]; break; }
+        }
+        if (poIn && poIn.quotation_id) {
+          var poOuts = getRecords('po_out').filter(function(r){ return r.quotation_id === poIn.quotation_id; });
+          poOuts.forEach(function(r){ try { deleteRecord('po_out', 'id', r.id); } catch(e){} });
+        }
+      } catch(e) { Logger.log('Cascade delete PO Out error: ' + e); }
+      return deleteRecord('po_in', 'id', poInId);
+    }
+    case 'getSuratJalan':
+      return getRecords('surat_jalan');
+    case 'saveSuratJalan':
+      if (body.id) {
+        try { return updateRecord('surat_jalan', 'id', body); }
+        catch (e) { return addRecord('surat_jalan', body); }
+      }
+      return addRecord('surat_jalan', body);
+    case 'deleteSuratJalan':
+      return deleteRecord('surat_jalan', 'id', body.id);
+    
+    case 'getNextSuratJalanNumber': {
+      try {
+        const all = getRecords('surat_jalan');
+        const nextNum = all.length + 1;
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        
+        let shortName = 'MPA';
+        try {
+          const comp = getRecords('company');
+          if (comp && comp.length > 0 && comp[0].short_name) {
+            shortName = comp[0].short_name;
+          }
+        } catch(e){}
+
+        return nextNum + '/SJ/' + shortName + '/' + month + '.' + year;
+      } catch(e) { 
+        const d = new Date();
+        return '1/SJ/MPA/' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear(); 
+      }
+    }
 
     // Initialize Neraca Sheets (add missing columns / create new sheets)
     case 'initNeracaSheets': {
@@ -291,7 +401,15 @@ function routeRequest(action, method, body, params) {
         });
       }
 
-      // 1b. Add bank columns to vendors sheet if missing
+      // 1b. Create surat_jalan sheet if not exists
+      var sjSheet = ss.getSheetByName('surat_jalan');
+      if (!sjSheet) {
+        sjSheet = ss.insertSheet('surat_jalan');
+        sjSheet.appendRow(['id','po_in_id','sj_number','ekspedisi','created_date','updated_date']);
+        results.push('Created sheet: surat_jalan');
+      }
+
+      // 1c. Add bank columns to vendors sheet if missing
       var vendSheet = ss.getSheetByName('vendors');
       if (vendSheet) {
         var vendHeaders = vendSheet.getRange(1, 1, 1, vendSheet.getLastColumn()).getValues()[0];
@@ -306,15 +424,17 @@ function routeRequest(action, method, body, params) {
         });
       }
 
-      // 2. Add delivery_time column to neraca_items if missing
+      // 2. Add delivery_time and delivery_time_vk column to neraca_items if missing
       var niSheet = ss.getSheetByName('neraca_items');
       if (niSheet) {
         var niHeaders = niSheet.getRange(1, 1, 1, niSheet.getLastColumn()).getValues()[0];
-        if (niHeaders.indexOf('delivery_time') === -1) {
-          var niLastCol = niSheet.getLastColumn();
-          niSheet.getRange(1, niLastCol + 1).setValue('delivery_time');
-          results.push('Added column delivery_time to neraca_items');
-        }
+        ['delivery_time', 'delivery_time_vk'].forEach(function(col) {
+          if (niHeaders.indexOf(col) === -1) {
+            var niLastCol = niSheet.getLastColumn();
+            niSheet.getRange(1, niLastCol + 1).setValue(col);
+            results.push('Added column ' + col + ' to neraca_items');
+          }
+        });
       }
 
       // 3. Add un_cost column to neraca_details if missing

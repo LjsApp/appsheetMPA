@@ -4,6 +4,7 @@ import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import type { Customer, PIC } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useCustomers, useSaveCustomer, useDeleteCustomer, usePics, useSavePic, useDeletePic, useUploadFile } from '@/hooks/useData';
@@ -116,23 +117,25 @@ export default function Customers() {
     });
   };
 
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'customer' | 'pic'; id: string | null; title: string; desc: string }>({ isOpen: false, type: 'customer', id: null, title: '', desc: '' });
+
   const handleDeleteCustomer = (id: string) => {
-    // Cari PIC yang terhubung dengan customer ini
     const relatedPics = pics.filter(p => p.customer_id === id);
-    
     if (relatedPics.length > 0) {
-      if (confirm(`Peringatan: Terdapat ${relatedPics.length} PIC yang terhubung dengan customer ini.\n\nMenghapus customer akan menghapus PIC tersebut juga. Anda yakin?`)) {
-        // Hapus semua PIC yang terkait
-        relatedPics.forEach(pic => {
-          deletePic.mutate(pic.id);
-        });
-        // Hapus customernya
-        deleteCustomer.mutate(id);
-      }
+      setDeleteModal({ isOpen: true, type: 'customer', id, title: 'Hapus Customer', desc: `Peringatan: Terdapat ${relatedPics.length} PIC yang terhubung dengan customer ini.\n\nMenghapus customer akan menghapus PIC tersebut juga. Anda yakin?` });
     } else {
-      if (confirm("Yakin ingin menghapus customer ini?")) {
-        deleteCustomer.mutate(id);
-      }
+      setDeleteModal({ isOpen: true, type: 'customer', id, title: 'Hapus Customer', desc: 'Yakin ingin menghapus customer ini?' });
+    }
+  };
+
+  const executeDelete = () => {
+    if (!deleteModal.id) return;
+    if (deleteModal.type === 'customer') {
+      const relatedPics = pics.filter(p => p.customer_id === deleteModal.id);
+      relatedPics.forEach(pic => deletePic.mutate(pic.id));
+      deleteCustomer.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+    } else if (deleteModal.type === 'pic') {
+      deletePic.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
     }
   };
 
@@ -171,9 +174,7 @@ export default function Customers() {
   };
 
   const handleDeletePic = (id: string) => {
-    if (confirm("Yakin ingin menghapus PIC ini?")) {
-      deletePic.mutate(id);
-    }
+    setDeleteModal({ isOpen: true, type: 'pic', id, title: 'Hapus PIC', desc: 'Yakin ingin menghapus PIC ini?' });
   };
 
   const customerColumns = [
@@ -390,6 +391,14 @@ export default function Customers() {
         </form>
       </Modal>
 
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeDelete}
+        title={deleteModal.title}
+        description={deleteModal.desc}
+        isLoading={deleteModal.type === 'customer' ? deleteCustomer.isPending : deletePic.isPending}
+      />
     </div>
   );
 }

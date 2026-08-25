@@ -4,11 +4,12 @@ import { Plus, Search, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink,
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import Modal from '@/components/Modal';
 import { useForm } from 'react-hook-form';
-import { FileCheck2 } from 'lucide-react';
-import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi } from '@/hooks/useData';
+import { FileCheck2, Copy } from 'lucide-react';
+import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi, useDuplicateNeraca, usePurchaseOrders } from '@/hooks/useData';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 import type { Neraca } from '@/types';
 import { formatDate } from '@/lib/utils';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 
 export default function Neracas() {
   const navigate = useNavigate();
@@ -25,8 +26,19 @@ export default function Neracas() {
   const deleteInquiry = useDeleteInquiry();
   const initSheets = useInitNeracaSheets();
   const { data: allQuotations = [] } = useNeracaQuotations();
+  const { data: allPos = [] } = usePurchaseOrders();
   const saveQuotation = useSaveNeracaQuotation();
   const getNextQtNumber = useGetNextQuotationNumber();
+  const duplicateNeraca = useDuplicateNeraca();
+
+  const [creatingQtId, setCreatingQtId] = useState<string | null>(null);
+  
+  // For DeleteConfirmModal
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'inquiry' | 'neraca'; id: string | null; title: string }>({ isOpen: false, type: 'inquiry', id: null, title: '' });
+
+  // For DuplicateModal
+  const [duplicateModal, setDuplicateModal] = useState<{ isOpen: boolean; inquiryId: string | null }>({ isOpen: false, inquiryId: null });
+  const [duplicateSourceId, setDuplicateSourceId] = useState<string>('');
 
   const handleCreateQuotation = async (neraca: any, inq: any) => {
     // Check if quotation already exists for this neraca
@@ -35,6 +47,7 @@ export default function Neracas() {
       alert('Sudah jadi quotation!');
       return;
     }
+    setCreatingQtId(neraca.id);
     try {
       const qtNumber = await getNextQtNumber.mutateAsync();
       const items = await fetchApi(`getNeracaItems&neraca_id=${neraca.id}`);
@@ -58,6 +71,8 @@ export default function Neracas() {
       await saveQuotation.mutateAsync(payload);
     } catch (e: any) {
       alert('Gagal membuat quotation: ' + e.message);
+    } finally {
+      setCreatingQtId(null);
     }
   };
 
@@ -118,9 +133,27 @@ export default function Neracas() {
 
 
   const handleDeleteInquiry = (id: string) => {
-    if (confirm('Yakin ingin menghapus seluruh inquiry ini beserta data di dalamnya?')) {
-      deleteInquiry.mutate(id);
+    setDeleteModal({ isOpen: true, type: 'inquiry', id, title: 'Hapus Permintaan' });
+  };
+
+  const executeDelete = () => {
+    if (!deleteModal.id) return;
+    if (deleteModal.type === 'inquiry') {
+      deleteInquiry.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+    } else if (deleteModal.type === 'neraca') {
+      deleteNeraca.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
     }
+  };
+
+  const handleDuplicate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!duplicateSourceId) return;
+    duplicateNeraca.mutate(duplicateSourceId, {
+      onSuccess: () => {
+        setDuplicateModal({ isOpen: false, inquiryId: null });
+        setDuplicateSourceId('');
+      }
+    });
   };
 
   return (
@@ -194,9 +227,21 @@ export default function Neracas() {
                             <div className="pl-14 pr-4 py-4 bg-gradient-to-r from-transparent to-blue-50/20">
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Daftar Neraca</h4>
-                                <Button size="sm" variant="secondary" onClick={() => openCreate(inq.id)}>
-                                  <Plus className="w-3.5 h-3.5" /> Tambah Neraca
-                                </Button>
+                                <div className="flex gap-2">
+                                  {inqNeracas.length > 0 && (
+                                    <Button size="sm" variant="secondary" onClick={() => { setDuplicateModal({ isOpen: true, inquiryId: inq.id }); setDuplicateSourceId(inqNeracas[0].id); }}>
+                                      <Copy className="w-3.5 h-3.5" /> Duplikat
+                                    </Button>
+                                  )}
+                                  {(() => {
+                                    const hasPO = inqNeracas.some(n => allPos.some(po => po.neraca_id === n.id));
+                                    return (
+                                      <Button size="sm" variant="secondary" onClick={() => openCreate(inq.id)} disabled={hasPO} title={hasPO ? "Tidak bisa menambah neraca baru karena inquiry ini sudah memiliki PO" : ""}>
+                                        <Plus className="w-3.5 h-3.5" /> Tambah Neraca
+                                      </Button>
+                                    );
+                                  })()}
+                                </div>
                               </div>
 
                               {isLoadingNeracas ? (
@@ -240,15 +285,20 @@ export default function Neracas() {
                                                     <FileCheck2 className="w-3.5 h-3.5" /> Sudah Jadi Quotation
                                                   </button>
                                                 ) : (
-                                                  <button onClick={() => handleCreateQuotation(n, inq)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 px-2 py-1.5 rounded-md transition-colors" disabled={getNextQtNumber.isPending || saveQuotation.isPending}>
-                                                    <FileCheck2 className="w-3.5 h-3.5" /> Buat Quotation
+                                                  <button 
+                                                    onClick={() => handleCreateQuotation(n, inq)} 
+                                                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 px-2 py-1.5 rounded-md transition-colors disabled:opacity-50" 
+                                                    disabled={creatingQtId === n.id}
+                                                  >
+                                                    {creatingQtId === n.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCheck2 className="w-3.5 h-3.5" />}
+                                                    Buat Quotation
                                                   </button>
                                                 );
                                               })()}
                                               <button onClick={() => openEdit(n)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
                                                 <Edit2 className="w-4 h-4" />
                                               </button>
-                                              <button onClick={() => deleteNeraca.mutate(n.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+                                              <button onClick={() => setDeleteModal({ isOpen: true, type: 'neraca', id: n.id, title: `Hapus Neraca` })} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
                                                 <Trash2 className="w-4 h-4" />
                                               </button>
                                             </div>
@@ -286,6 +336,39 @@ export default function Neracas() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal Duplikat */}
+      <Modal isOpen={duplicateModal.isOpen} onClose={() => setDuplicateModal({ isOpen: false, inquiryId: null })} title="Duplikat Neraca">
+        <form onSubmit={handleDuplicate} className="space-y-4">
+          <FormField label="Pilih Neraca yang Ingin Diduplikat" required>
+            <select
+              value={duplicateSourceId}
+              onChange={(e) => setDuplicateSourceId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-shadow bg-white text-gray-900"
+              required
+            >
+              {duplicateModal.inquiryId && neracas.filter(n => n.inquiry_id === duplicateModal.inquiryId).map(n => (
+                <option key={n.id} value={n.id}>{n.name || 'Neraca Tanpa Nama'}</option>
+              ))}
+            </select>
+          </FormField>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" type="button" onClick={() => setDuplicateModal({ isOpen: false, inquiryId: null })} disabled={duplicateNeraca.isPending}>Batal</Button>
+            <Button type="submit" loading={duplicateNeraca.isPending}>
+              Proses Duplikat
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeDelete}
+        title={deleteModal.title}
+        description={deleteModal.type === 'inquiry' ? 'Yakin ingin menghapus seluruh permintaan (inquiry) ini beserta semua neraca di dalamnya?' : 'Yakin ingin menghapus neraca ini beserta item dan detailnya?'}
+        isLoading={deleteModal.type === 'inquiry' ? deleteInquiry.isPending : deleteNeraca.isPending}
+      />
     </div>
   );
 }

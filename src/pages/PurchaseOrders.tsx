@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui';
-import { usePurchaseOrders, useDeletePurchaseOrder, usePoIns } from '@/hooks/useData';
+import { usePurchaseOrders, usePoIns } from '@/hooks/useData';
 import type { PurchaseOrder } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -21,12 +21,6 @@ export default function PurchaseOrders() {
     });
     return Array.from(groups.values());
   }, [purchaseOrders]);
-
-  const handleDeletePo = async (po: PurchaseOrder) => {
-    if (confirm(`Hapus PO ${po.po_number}?`)) {
-      await deletePurchaseOrder.mutateAsync(po.id);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -119,13 +113,6 @@ export default function PurchaseOrders() {
                               className="text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
                             >
                               Detail →
-                            </button>
-                            <button
-                              onClick={() => handleDeletePo(po)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                              title="Hapus PO"
-                            >
-                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>

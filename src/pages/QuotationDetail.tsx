@@ -67,6 +67,14 @@ function getDeliveryWeeks(dt: string) {
   return 0;
 }
 
+const DEFAULT_DETAIL = {
+  disc: 0,
+  ppn: 11,
+  un_cost: 0,
+  shipping_cost: 0,
+  profit: 0
+};
+
 export default function QuotationDetail() {
   const { quotationId } = useParams<{ quotationId: string }>();
   const navigate = useNavigate();
@@ -89,15 +97,14 @@ export default function QuotationDetail() {
   const pic = pics.find(p => p.id === inquiry?.pic_id);
 
   const calculatedItems = useMemo(() => {
-    if (!items.length) return [];
-    
-    const unCostPct = Number(detail.un_cost) || 0;
-    const baseJualTotal = items.reduce((sum, item) => sum + calcBaseHargaJual(item, items, detail), 0);
+    const d = detail || DEFAULT_DETAIL;
+    const baseJualTotal = items.reduce((sum, item) => sum + calcBaseHargaJual(item, items, d), 0);
+    const unCostPct = Number(d.un_cost) || 0;
     const totalUnCost = baseJualTotal * (unCostPct / 100);
     const unCostPerItem = items.length > 0 ? totalUnCost / items.length : 0;
     
     return items.map(item => {
-      const baseHj = calcBaseHargaJual(item, items, detail);
+      const baseHj = calcBaseHargaJual(item, items, d);
       const totalHj = baseHj + unCostPerItem;
       const qty = Number(item.qty) || 1;
       const unitPrice = qty > 0 ? totalHj / qty : totalHj;
@@ -105,12 +112,18 @@ export default function QuotationDetail() {
     });
   }, [items, detail]);
 
-  const subtotal = calculatedItems.reduce((sum, item) => sum + item.total, 0);
-  const discPct = Number(detail.disc) || 0;
-  const jualAfterDisc = subtotal * (1 - discPct / 100);
-  const ppn = detail.ppn ?? 11;
-  const tax_amount = jualAfterDisc * (ppn / 100);
-  const grand_total = jualAfterDisc + tax_amount;
+  const resume = useMemo(() => {
+    const d = detail || DEFAULT_DETAIL;
+    const subtotal = calculatedItems.reduce((sum, item) => sum + item.total, 0);
+    const discPct = Number(d.disc) || 0;
+    const jualAfterDisc = subtotal * (1 - discPct / 100);
+    const ppn = Number(d.ppn) ?? 11;
+    const tax_amount = jualAfterDisc * (ppn / 100);
+    const grand_total = jualAfterDisc + tax_amount;
+    return { subtotal, discPct, jualAfterDisc, ppn, tax_amount, grand_total };
+  }, [calculatedItems, detail]);
+
+  const { subtotal, discPct, jualAfterDisc, ppn, tax_amount, grand_total } = resume;
 
   const hasSaved = useRef(false);
   useEffect(() => {

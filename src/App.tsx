@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
@@ -14,6 +14,8 @@ import QuotationDetail from './pages/QuotationDetail';
 import PurchaseOrders from './pages/PurchaseOrders';
 import PODetail from './pages/PODetail';
 import POInList from './pages/POInList';
+import SuratJalan from './pages/SuratJalan';
+import SuratJalanDetail from './pages/SuratJalanDetail';
 import CompanySettings from './pages/CompanySettings';
 
 const Placeholder = ({ title }: { title: string }) => (
@@ -41,6 +43,8 @@ function App() {
         <Route path="po" element={<PurchaseOrders />} />
         <Route path="po/:poId" element={<PODetail />} />
         <Route path="po-in" element={<POInList />} />
+        <Route path="surat-jalan" element={<SuratJalan />} />
+        <Route path="surat-jalan/:id" element={<SuratJalanDetail />} />
         <Route path="settings/company" element={<CompanySettings />} />
         <Route path="*" element={<Placeholder title="Coming Soon" />} />
       </Route>

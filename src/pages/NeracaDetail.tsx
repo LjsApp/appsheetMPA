@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Loader2, Save, FileText, Upload, X, Edit2, Eye, Settings, Lock, AlertTriangle } from 'lucide-react';
 import { Button, FormField } from '@/components/ui';
 import Modal from '@/components/Modal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import type { NeracaDetail as NeracaDetailType, NeracaItem } from '@/types';
 import { useForm, Controller } from 'react-hook-form';
 import { 
@@ -126,10 +127,12 @@ export default function NeracaDetail() {
   // --- Vendor Discount Modal ---
   const { data: vendorDiscounts = [] } = useVendorDiscounts(neracaId!);
   const [vendorDiscountModalId, setVendorDiscountModalId] = useState<string | null>(null);
-  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', subject: string, delivery_time_disc: string, letter_date: string}>({ pct: '', cash: '', subject: '', delivery_time_disc: '', letter_date: '' });
+  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', subject: string, letter_date: string}>({ pct: '', cash: '', subject: '', letter_date: '' });
   const [vdFormType, setVdFormType] = useState<'pct' | 'cash'>('pct');
   const saveVd = useSaveVendorDiscount();
   const deleteVd = useDeleteVendorDiscount();
+
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'item' | 'vd'; id: string | null; title: string }>({ isOpen: false, type: 'item', id: null, title: '' });
 
   const openVendorDiscount = (vendorId: string) => {
     const existing = (vendorDiscounts || []).find(d => d.vendor_id === vendorId);
@@ -138,12 +141,11 @@ export default function NeracaDetail() {
         pct: existing.discount_pct || '', 
         cash: existing.discount_cash || '',
         subject: existing.subject || '',
-        delivery_time_disc: existing.delivery_time_disc || '',
         letter_date: existing.letter_date || ''
       });
       setVdFormType(existing.discount_cash > 0 && !existing.discount_pct ? 'cash' : 'pct');
     } else {
-      setVdForm({ pct: '', cash: '', subject: '', delivery_time_disc: '', letter_date: '' });
+      setVdForm({ pct: '', cash: '', subject: '', letter_date: '' });
       setVdFormType('pct');
     }
     setVendorDiscountModalId(vendorId);
@@ -162,7 +164,6 @@ export default function NeracaDetail() {
       discount_pct: vdFormType === 'pct' ? (Number(vdForm.pct) || 0) : 0,
       discount_cash: vdFormType === 'cash' ? (Number(vdForm.cash) || 0) : 0,
       subject: vdForm.subject,
-      delivery_time_disc: vdForm.delivery_time_disc,
       letter_date: vdForm.letter_date,
       updated_date: new Date().toISOString().split('T')[0]
     };
@@ -171,12 +172,25 @@ export default function NeracaDetail() {
     setVendorDiscountModalId(null);
   };
 
-  const handleDeleteVd = async () => {
+  const handleDeleteVd = () => {
     const existing = (vendorDiscounts || []).find(d => d.vendor_id === vendorDiscountModalId);
     if (existing) {
-      await deleteVd.mutateAsync({ id: existing.id, neraca_id: neracaId! });
+      setDeleteModal({ isOpen: true, type: 'vd', id: existing.id, title: 'Hapus Diskon Vendor' });
     }
-    setVendorDiscountModalId(null);
+  };
+
+  const executeDelete = () => {
+    if (!deleteModal.id) return;
+    if (deleteModal.type === 'item') {
+      deleteItem.mutate({ id: deleteModal.id, neraca_id: neracaId! }, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+    } else if (deleteModal.type === 'vd') {
+      deleteVd.mutate({ id: deleteModal.id, neraca_id: neracaId! }, { 
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          setVendorDiscountModalId(null);
+        }
+      });
+    }
   };
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<NeracaItem>();
@@ -274,13 +288,31 @@ export default function NeracaDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/neraca')} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+      <div className="flex items-start gap-3">
+        <button onClick={() => navigate('/neraca')} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors mt-1">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-gray-900">{neraca?.name || 'Detail Neraca'}</h1>
           <p className="text-sm text-gray-500 mt-0.5">Kalkulasi harga dan evaluasi penawaran</p>
+          {/* Neraca tabs */}
+          {neraca && neracas.filter(n => n.inquiry_id === neraca.inquiry_id).length > 1 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {neracas.filter(n => n.inquiry_id === neraca.inquiry_id).map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => navigate(`/neraca/${neraca.inquiry_id}/${n.id}`)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                    n.id === neracaId
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  {n.name || 'Neraca'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -389,6 +421,7 @@ export default function NeracaDetail() {
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Cat KC</th>
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Difficulty</th>
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Delivery</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">DT V-K</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Qty</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Harga Beli</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Total Beli</th>
@@ -400,7 +433,7 @@ export default function NeracaDetail() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {calculatedItems.length === 0 ? (
-                      <tr><td colSpan={14} className="px-4 py-8 text-center text-gray-500 text-sm">Belum ada item di neraca ini</td></tr>
+                      <tr><td colSpan={15} className="px-4 py-8 text-center text-gray-500 text-sm">Belum ada item di neraca ini</td></tr>
                     ) : (
                       calculatedItems.map((item, idx) => {
                         let docs: any[] = [];
@@ -433,6 +466,9 @@ export default function NeracaDetail() {
                             <td className="px-3 py-2.5 text-center whitespace-nowrap">
                               {item.delivery_time ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">{item.delivery_time}</span> : <span className="text-gray-300 text-xs">-</span>}
                             </td>
+                            <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                              {item.delivery_time_vk ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{item.delivery_time_vk}</span> : <span className="text-gray-300 text-xs">-</span>}
+                            </td>
                             <td className="px-3 py-2.5 text-right text-gray-800">{item.qty}</td>
                             <td className="px-3 py-2.5 text-right text-gray-800">{fmt(Number(item.harga_beli))}</td>
                             <td className="px-3 py-2.5 text-right font-semibold text-gray-800">{fmt((Number(item.harga_beli) || 0) * (Number(item.qty) || 1))}</td>
@@ -450,12 +486,16 @@ export default function NeracaDetail() {
                                 <button onClick={() => setViewingItem(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Lihat Resume Item">
                                   <Eye className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => openEdit(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="Edit Item" disabled={isLocked}>
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => deleteItem.mutate({ id: item.id, neraca_id: item.neraca_id })} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-30 disabled:cursor-not-allowed" disabled={deleteItem.isPending || isLocked} title="Hapus Item">
-                                  {deleteItem.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                                </button>
+                                {!isLocked && (
+                                  <>
+                                    <button onClick={() => openEdit(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Edit Item">
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => setDeleteModal({ isOpen: true, type: 'item', id: item.id, title: 'Hapus Item' })} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Hapus Item">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -598,7 +638,7 @@ export default function NeracaDetail() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <FormField label="Difficulty" required>
               <select {...register('difficulty', { required: true })}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
@@ -608,6 +648,13 @@ export default function NeracaDetail() {
             </FormField>
             <FormField label="Delivery Time">
               <select {...register('delivery_time')}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
+                <option value="">--</option>
+                {DELIVERY_TIMES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Delivery Time V-K">
+              <select {...register('delivery_time_vk')}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
                 <option value="">--</option>
                 {DELIVERY_TIMES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
@@ -867,22 +914,16 @@ export default function NeracaDetail() {
                   <FormField label="Subject PO">
                     <input type="text" value={vdForm.subject} onChange={e => setVdForm({ ...vdForm, subject: e.target.value })} placeholder="Cth: Filter Element" className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />
                   </FormField>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-4">
                     <FormField label="Tanggal Surat (Letter Date)">
                       <input type="date" value={vdForm.letter_date} onChange={e => setVdForm({ ...vdForm, letter_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />
-                    </FormField>
-                    <FormField label="Waktu Pengiriman (PO)">
-                      <select value={vdForm.delivery_time_disc} onChange={e => setVdForm({ ...vdForm, delivery_time_disc: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm bg-white">
-                        <option value="">- Pilih Waktu -</option>
-                        {DELIVERY_TIMES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
-                      </select>
                     </FormField>
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-between pt-4 border-t border-gray-100 mt-2">
-                <Button variant="danger" type="button" onClick={handleDeleteVd} loading={deleteVd.isPending} disabled={!(vendorDiscounts || []).find(d => d.vendor_id === vendorDiscountModalId)}>
+                <Button variant="danger" type="button" onClick={handleDeleteVd} disabled={!(vendorDiscounts || []).find(d => d.vendor_id === vendorDiscountModalId)}>
                   Hapus Diskon
                 </Button>
                 <div className="flex gap-2">
@@ -894,6 +935,15 @@ export default function NeracaDetail() {
           );
         })()}
       </Modal>
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeDelete}
+        title={deleteModal.title}
+        description={deleteModal.type === 'item' ? 'Yakin ingin menghapus item ini dari neraca?' : 'Yakin ingin menghapus diskon untuk vendor ini?'}
+        isLoading={deleteModal.type === 'item' ? deleteItem.isPending : deleteVd.isPending}
+      />
     </div>
   );
 }

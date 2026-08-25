@@ -3,7 +3,7 @@ import { FileText, Search, Package, FileCheck2, TrendingUp, DollarSign, Clock, C
 import { StatCard, PageHeader } from '@/components/ui';
 import StatusBadge from '@/components/StatusBadge';
 import { useNavigate } from 'react-router-dom';
-import { useInquiries, useCustomers } from '@/hooks/useData';
+import { useInquiries } from '@/hooks/useData';
 
 const CHART_DATA = [
   { month: 'Mar', inquiries: 8, quotations: 6, won: 3 },
@@ -17,12 +17,11 @@ const CHART_DATA = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: inquiries = [], isLoading: isLoadingInq } = useInquiries();
-  const { data: customers = [], isLoading: isLoadingCus } = useCustomers();
 
   const totalInquiries = inquiries.length;
-  const activeSourcing = inquiries.filter(i => i.status === 'Sourcing').length;
-  const quoted = inquiries.filter(i => i.status === 'Quoted').length;
-  const won = inquiries.filter(i => i.status === 'PO Received').length;
+  const inqActive = inquiries.filter(i => i.status === 'Jalan').length;
+  const inqLost = inquiries.filter(i => i.status === 'Batal').length;
+  const inqLate = inquiries.filter(i => i.status === 'Telat').length;
 
   return (
     <div className="space-y-6">
@@ -32,16 +31,16 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Inquiry" value={isLoadingInq ? '...' : totalInquiries.toString()} sub="Semua waktu" color="blue"
           icon={<FileText className="w-6 h-6" />} />
-        <StatCard label="Active Sourcing" value={isLoadingInq ? '...' : activeSourcing.toString()} sub="Menunggu vendor" color="amber"
+        <StatCard label="Active Sourcing" value={isLoadingInq ? '...' : inqActive.toString()} sub="Sedang berjalan" color="amber"
           icon={<Search className="w-6 h-6" />} />
-        <StatCard label="Quotation Sent" value={isLoadingInq ? '...' : quoted.toString()} sub="Menunggu response" color="blue"
+        <StatCard label="Batal" value={isLoadingInq ? '...' : inqLost.toString()} sub="Inquiry batal" color="red"
           icon={<FileCheck2 className="w-6 h-6" />} />
-        <StatCard label="Won" value={isLoadingInq ? '...' : won.toString()} sub="PO Diterima" color="green"
+        <StatCard label="Telat" value={isLoadingInq ? '...' : inqLate.toString()} sub="Melewati deadline" color="green"
           icon={<CheckCircle2 className="w-6 h-6" />} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Lost" value={isLoadingInq ? '...' : inquiries.filter(i => i.status === 'Lost').length.toString()} sub="Harga & lead time" color="red"
+        <StatCard label="Total Aktif" value={inqActive.toString()} sub="Jalan" color="red"
           icon={<Package className="w-6 h-6" />} />
         <StatCard label="Pending Vendor" value="-" sub="Belum merespons" color="red"
           icon={<Clock className="w-6 h-6" />} />
@@ -79,18 +78,17 @@ export default function Dashboard() {
             <button onClick={() => navigate('/inquiries')} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</button>
           </div>
           <div className="space-y-3">
-            {isLoadingInq || isLoadingCus ? (
+            {isLoadingInq ? (
                <div className="flex justify-center p-6 text-gray-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
-            ) : inquiries.slice(0, 4).map((item, i) => {
-              const customer = customers.find(c => c.id === item.customer_id);
+            ) : inquiries.slice(0, 4).map((i, idx) => {
               return (
-                <div key={i} className="p-3 rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => navigate('/inquiries')}>
+                <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => navigate('/inquiries')}>
                   <div className="flex items-start justify-between mb-1">
-                    <p className="text-xs font-semibold text-gray-900 truncate">{customer?.company_name || 'Loading...'}</p>
-                    <StatusBadge label={item.status} />
+                    <p className="text-xs font-semibold text-gray-900 truncate">{i.customer_name || 'Loading...'}</p>
+                    <StatusBadge label={i.status} />
                   </div>
-                  <p className="text-xs text-gray-500 mb-1">{item.project_name}</p>
-                  <p className="text-xs font-medium text-blue-600">{item.inquiry_number}</p>
+                  <p className="font-medium text-gray-900">{i.request_title || '-'}</p>
+                  <p className="text-xs text-gray-500">{i.request_number || '-'} • {i.customer_name}</p>
                 </div>
               );
             })}

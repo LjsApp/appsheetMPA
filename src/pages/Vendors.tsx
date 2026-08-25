@@ -4,6 +4,7 @@ import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import type { Vendor, PicVendor } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useVendors, useSaveVendor, useDeleteVendor, usePicVendors, useSavePicVendor, useDeletePicVendor, useUploadFile } from '@/hooks/useData';
@@ -114,20 +115,25 @@ export default function Vendors() {
     });
   };
 
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'vendor' | 'pic'; id: string | null; title: string; desc: string }>({ isOpen: false, type: 'vendor', id: null, title: '', desc: '' });
+
   const handleDeleteVendor = (id: string) => {
     const relatedPics = pics.filter(p => p.vendor_id === id);
-    
     if (relatedPics.length > 0) {
-      if (confirm(`Peringatan: Terdapat ${relatedPics.length} PIC yang terhubung dengan vendor ini.\n\nMenghapus vendor akan menghapus PIC tersebut juga. Anda yakin?`)) {
-        relatedPics.forEach(pic => {
-          deletePic.mutate(pic.id);
-        });
-        deleteVendor.mutate(id);
-      }
+      setDeleteModal({ isOpen: true, type: 'vendor', id, title: 'Hapus Vendor', desc: `Peringatan: Terdapat ${relatedPics.length} PIC yang terhubung dengan vendor ini.\n\nMenghapus vendor akan menghapus PIC tersebut juga. Anda yakin?` });
     } else {
-      if (confirm("Yakin ingin menghapus vendor ini?")) {
-        deleteVendor.mutate(id);
-      }
+      setDeleteModal({ isOpen: true, type: 'vendor', id, title: 'Hapus Vendor', desc: 'Yakin ingin menghapus vendor ini?' });
+    }
+  };
+
+  const executeDelete = () => {
+    if (!deleteModal.id) return;
+    if (deleteModal.type === 'vendor') {
+      const relatedPics = pics.filter(p => p.vendor_id === deleteModal.id);
+      relatedPics.forEach(pic => deletePic.mutate(pic.id));
+      deleteVendor.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+    } else if (deleteModal.type === 'pic') {
+      deletePic.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
     }
   };
 
@@ -165,9 +171,7 @@ export default function Vendors() {
   };
 
   const handleDeletePic = (id: string) => {
-    if (confirm("Yakin ingin menghapus PIC ini?")) {
-      deletePic.mutate(id);
-    }
+    setDeleteModal({ isOpen: true, type: 'pic', id, title: 'Hapus PIC', desc: 'Yakin ingin menghapus PIC ini?' });
   };
 
   const vendorColumns = [
@@ -434,6 +438,15 @@ export default function Vendors() {
           </div>
         </form>
       </Modal>
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeDelete}
+        title={deleteModal.title}
+        description={deleteModal.desc}
+        isLoading={deleteModal.type === 'vendor' ? deleteVendor.isPending : deletePic.isPending}
+      />
     </div>
   );
 }

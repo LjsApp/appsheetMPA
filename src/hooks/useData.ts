@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
 export { fetchApi };
-import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn } from '../types';
+import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan } from '../types';
 
 
 // ==================== Customers ====================
@@ -10,6 +10,8 @@ export function useCustomers() {
   return useQuery<Customer[]>({
     queryKey: ['customers'],
     queryFn: () => fetchApi('getCustomers'),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
@@ -39,6 +41,8 @@ export function useVendors() {
   return useQuery<Vendor[]>({
     queryKey: ['vendors'],
     queryFn: () => fetchApi('getVendors'),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
@@ -68,6 +72,7 @@ export function usePicVendors() {
   return useQuery<PicVendor[]>({
     queryKey: ['pic_vendors'],
     queryFn: () => fetchApi('getPicVendors'),
+    staleTime: 10 * 60 * 1000,
   });
 }
 
@@ -97,6 +102,7 @@ export function useProducts() {
   return useQuery<Product[]>({
     queryKey: ['products'],
     queryFn: () => fetchApi('getProducts'),
+    staleTime: 10 * 60 * 1000,
   });
 }
 
@@ -126,6 +132,7 @@ export function useInquiries() {
   return useQuery<Inquiry[]>({
     queryKey: ['inquiries'],
     queryFn: () => fetchApi('getInquiries'),
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -155,6 +162,7 @@ export function useNeracas() {
   return useQuery<Neraca[]>({
     queryKey: ['neracas'],
     queryFn: () => fetchApi('getNeracas'),
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -162,6 +170,16 @@ export function useSaveNeraca() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<Neraca>) => fetchApi('saveNeraca', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['neracas'] });
+    },
+  });
+}
+
+export function useDuplicateNeraca() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sourceNeracaId: string) => fetchApi('duplicateNeraca', 'POST', { source_neraca_id: sourceNeracaId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['neracas'] });
     },
@@ -185,6 +203,7 @@ export function useNeracaDetail(neracaId: string) {
     queryKey: ['neraca_detail', neracaId],
     queryFn: () => fetchApi(`getNeracaDetail&neraca_id=${neracaId}`),
     enabled: !!neracaId,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -203,6 +222,7 @@ export function useNeracaItems(neracaId: string) {
     queryKey: ['neraca_items', neracaId],
     queryFn: () => fetchApi(`getNeracaItems&neraca_id=${neracaId}`),
     enabled: !!neracaId,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -231,6 +251,7 @@ export function useVendorDiscounts(neracaId: string) {
     queryKey: ['vendor_discounts', neracaId],
     queryFn: () => fetchApi(`getVendorDiscounts&neraca_id=${neracaId}`),
     enabled: !!neracaId,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -268,6 +289,7 @@ export function useNeracaQuotations(neracaId?: string) {
     queryFn: () => neracaId
       ? fetchApi(`getNeracaQuotations&neraca_id=${neracaId}`)
       : fetchApi('getNeracaQuotations'),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -277,6 +299,7 @@ export function useSaveNeracaQuotation() {
     mutationFn: (data: Partial<NeracaQuotation>) => fetchApi('saveNeracaQuotation', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['neraca_quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
@@ -287,6 +310,7 @@ export function useDeleteNeracaQuotation() {
     mutationFn: (id: string) => fetchApi('deleteNeracaQuotation', 'POST', { id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['neraca_quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
@@ -301,14 +325,15 @@ export function useGetNextQuotationNumber() {
 
 export function usePurchaseOrders() {
   return useQuery<PurchaseOrder[]>({
-    queryKey: ['po_out'],
+    queryKey: ['purchase_orders'],
     queryFn: async () => {
       const data: PurchaseOrder[] = await fetchApi('getPurchaseOrders');
-      return data.map((po, idx) => ({
+      return data.filter(po => po.status !== 'Deleted').map((po, idx) => ({
         ...po,
         id: po.id || `fallback-po-${po.po_number?.replace(/\//g, '-')}-${idx}`
       }));
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -317,7 +342,7 @@ export function useSavePurchaseOrder() {
   return useMutation({
     mutationFn: (data: Partial<PurchaseOrder>) => fetchApi('savePurchaseOrder', 'POST', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['po_out'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
@@ -327,7 +352,7 @@ export function useDeletePurchaseOrder() {
   return useMutation({
     mutationFn: (id: string) => fetchApi('deletePurchaseOrder', 'POST', { id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['po_out'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
@@ -344,6 +369,7 @@ export function usePics() {
   return useQuery<PIC[]>({
     queryKey: ['pics'],
     queryFn: () => fetchApi('getPics'),
+    staleTime: 10 * 60 * 1000,
   });
 }
 
@@ -382,6 +408,7 @@ export function useCompany() {
   return useQuery<Company | null>({
     queryKey: ['company'],
     queryFn: () => fetchApi('getCompany'),
+    staleTime: 30 * 60 * 1000,
   });
 }
 
@@ -401,6 +428,7 @@ export function usePoIns() {
   return useQuery<POIn[]>({
     queryKey: ['po_ins'],
     queryFn: () => fetchApi('getPoIns'),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -423,3 +451,33 @@ export function useDeletePoIn() {
     },
   });
 }
+
+// ==================== SURAT JALAN ====================
+
+export const useSuratJalan = () => {
+  return useQuery<SuratJalan[]>({
+    queryKey: ['suratJalan'],
+    queryFn: () => fetchApi('getSuratJalan'),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useSaveSuratJalan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<SuratJalan>) => fetchApi('saveSuratJalan', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suratJalan'] });
+    },
+  });
+};
+
+export const useDeleteSuratJalan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteSuratJalan', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suratJalan'] });
+    },
+  });
+};

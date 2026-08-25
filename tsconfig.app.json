@@ -7,7 +7,6 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "useDefineForClassFields": true,
-    "ignoreDeprecations": "5.0",
     "skipLibCheck": true,
 
     /* Bundler mode */

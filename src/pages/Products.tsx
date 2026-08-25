@@ -4,6 +4,7 @@ import { PageHeader, Button, FormField, Input, Select } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import type { Product } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useProducts, useSaveProduct, useDeleteProduct } from '@/hooks/useData';
@@ -57,9 +58,15 @@ export default function Products() {
     });
   };
 
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string }>({ isOpen: false, id: null, title: '' });
+
   const handleDelete = (id: string) => {
-    if (confirm("Yakin ingin menghapus produk ini?")) {
-      deleteProduct.mutate(id);
+    setDeleteModal({ isOpen: true, id, title: 'Hapus Produk' });
+  };
+
+  const executeDelete = () => {
+    if (deleteModal.id) {
+      deleteProduct.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
     }
   };
 
@@ -165,6 +172,15 @@ export default function Products() {
           </div>
         </form>
       </Modal>
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeDelete}
+        title={deleteModal.title}
+        description="Yakin ingin menghapus produk ini?"
+        isLoading={deleteProduct.isPending}
+      />
     </div>
   );
 }

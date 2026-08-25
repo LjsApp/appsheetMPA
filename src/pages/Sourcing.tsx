@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Check, X, AlertTriangle, TrendingDown, TrendingUp, Clock } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { MOCK_VENDOR_QUOTATIONS } from '@/data/mockData';
 import type { VendorQuotation } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+
+const MOCK_VENDOR_QUOTATIONS: VendorQuotation[] = [];
 
 type CompRow = VendorQuotation & {
   total_landed_cost: number;
@@ -28,13 +29,13 @@ export default function Sourcing() {
     is_best_total: false,
   }));
 
-  const minPrice = Math.min(...rows.map(r => r.unit_price));
-  const minLT = rows.reduce((a, b) => Number(a.lead_time.match(/\d+/)?.[0] ?? 99) < Number(b.lead_time.match(/\d+/)?.[0] ?? 99) ? a : b);
-  const minTotal = Math.min(...rows.map(r => r.total_landed_cost));
+  const minPrice = rows.length ? Math.min(...rows.map(r => r.unit_price)) : 0;
+  const minLT = rows.length ? rows.reduce((a, b) => Number((a.lead_time || '').match(/\d+/)?.[0] ?? 99) < Number((b.lead_time || '').match(/\d+/)?.[0] ?? 99) ? a : b) : null;
+  const minTotal = rows.length ? Math.min(...rows.map(r => r.total_landed_cost)) : 0;
 
   rows.forEach(r => {
     r.is_best_price = r.unit_price === minPrice;
-    r.is_best_delivery = r.id === minLT.id;
+    r.is_best_delivery = minLT ? r.id === minLT.id : false;
     r.is_best_total = r.total_landed_cost === minTotal;
   });
 

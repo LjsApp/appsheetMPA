@@ -42,6 +42,7 @@ const MENU_ITEMS: MenuItem[] = [
     icon: FolderOpen,
     submenus: [
       { label: 'Quotation', icon: FileCheck2, path: '/quotations' },
+      { label: 'Surat Jalan', icon: FileText, path: '/surat-jalan' },
       {
         label: 'Purchase',
         icon: ShoppingCart,

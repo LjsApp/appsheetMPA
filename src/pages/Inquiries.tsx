@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, Loader2, FileText, Upload, X, Bell, AlertT
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
@@ -192,19 +193,29 @@ export default function Inquiries() {
     });
   };
 
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; type: 'delete' | 'moveToNeraca'; id: string | null; title: string; desc: string }>({ isOpen: false, type: 'delete', id: null, title: '', desc: '' });
+
   const handleDelete = (id: string) => {
-    if (confirm("Yakin ingin menghapus inquiry ini?")) {
-      deleteInquiry.mutate(id);
-    }
+    setConfirmModal({ isOpen: true, type: 'delete', id, title: 'Hapus Permintaan', desc: 'Yakin ingin menghapus permintaan ini?' });
   };
 
   const handleMoveToNeraca = (i: Inquiry) => {
-    if (confirm("Yakin ingin memproses inquiry ini ke tahap Neraca?\nData akan dipindahkan dari halaman ini.")) {
-      saveInquiry.mutate({
-        ...i,
-        status: 'Neraca',
-        updated_date: new Date().toISOString().split('T')[0],
-      });
+    setConfirmModal({ isOpen: true, type: 'moveToNeraca', id: i.id, title: 'Pindah ke Neraca', desc: 'Yakin ingin memproses permintaan ini ke tahap Neraca?\nData akan dipindahkan dari halaman ini.' });
+  };
+
+  const executeConfirm = () => {
+    if (!confirmModal.id) return;
+    if (confirmModal.type === 'delete') {
+      deleteInquiry.mutate(confirmModal.id, { onSuccess: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) });
+    } else if (confirmModal.type === 'moveToNeraca') {
+      const i = inquiries.find(x => x.id === confirmModal.id);
+      if (i) {
+        saveInquiry.mutate({
+          ...i,
+          status: 'Neraca',
+          updated_date: new Date().toISOString().split('T')[0],
+        }, { onSuccess: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) });
+      }
     }
   };
 
@@ -459,6 +470,15 @@ export default function Inquiries() {
           </div>
         </form>
       </Modal>
+
+      <DeleteConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={executeConfirm}
+        title={confirmModal.title}
+        description={confirmModal.desc}
+        isLoading={confirmModal.type === 'delete' ? deleteInquiry.isPending : saveInquiry.isPending}
+      />
     </div>
   );
 }
