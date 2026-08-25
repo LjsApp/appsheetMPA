@@ -62,35 +62,33 @@ export default function SuratJalanList() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+            <table className="min-w-full text-sm divide-y divide-gray-100">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4">NO. SURAT JALAN</th>
-                  <th className="px-6 py-4">TANGGAL</th>
-                  <th className="px-6 py-4">CUSTOMER</th>
-                  <th className="px-6 py-4 text-right">AKSI</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Surat Jalan</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {dataWithDetails.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-medium text-blue-700">
+                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-4 align-top border-r border-gray-100 bg-white">
+                      <div className="font-semibold text-gray-900">{item.customer_name}</div>
+                      <div className="font-mono text-xs text-gray-500 mt-0.5">{item.no_po}</div>
+                      <div className="text-xs text-gray-400 max-w-[160px] truncate mt-0.5" title={item.judul_po}>{item.judul_po}</div>
+                    </td>
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
                       {item.sj_number}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap text-xs">
                       {new Date(item.created_date).toLocaleDateString('id-ID', {
                         day: 'numeric', month: 'short', year: 'numeric'
                       })}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-900">{item.customer_name}</span>
-                        <span className="text-xs text-gray-500 truncate max-w-[200px]" title={item.judul_po}>{item.judul_po}</span>
-                        <span className="text-[11px] text-gray-400 font-mono mt-0.5">{item.no_po}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Button variant="secondary" onClick={() => navigate(`/surat-jalan/${item.id}`)}>
+                    <td className="px-5 py-4 text-right">
+                      <Button variant="secondary" size="sm" onClick={() => navigate(`/surat-jalan/${item.id}`)}>
                         Detail →
                       </Button>
                     </td>

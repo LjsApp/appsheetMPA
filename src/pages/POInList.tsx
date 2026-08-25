@@ -199,13 +199,8 @@ export default function POInList() {
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-900 max-w-[180px] truncate" title={p.judul}>{p.judul || '—'}</td>
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{p.customer_name || '—'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-xs">
-                          {p.tanggal_batas ? (
-                            <span className={isBatas ? 'text-red-600 font-semibold' : 'text-gray-700'}>
-                              {isBatas && '⚠ '}{formatDate(p.tanggal_batas)}
-                            </span>
-                          ) : '—'}
-                        </td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{p.tanggal ? formatDate(p.tanggal) : '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[150px] truncate" title={p.alamat_pengiriman}>{p.alamat_pengiriman || '—'}</td>
                         <td className="px-4 py-3">
                           {docs.length > 0 ? (
                             <div className="flex flex-wrap gap-1">

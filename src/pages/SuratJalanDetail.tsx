@@ -108,14 +108,14 @@ export default function SuratJalanDetail() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                       {company?.logo_url ? (
-                        <div className="w-32 h-20 overflow-hidden flex items-center justify-start">
-                          <img src={getDriveImageUrl(company.logo_url)} alt="Logo" className="w-full h-full object-contain object-left" />
+                        <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
+                          <img src={getDriveImageUrl(company.logo_url)} alt="Logo" className="w-full h-full object-contain" />
                         </div>
                       ) : (
-                        <div className="w-24 h-16 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
+                        <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
                       )}
                       <div>
-                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[14pt] italic">{companyName}</h1>
+                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt] italic">{companyName}</h1>
                       </div>
                     </div>
                     <div className="text-right">
@@ -198,14 +198,17 @@ export default function SuratJalanDetail() {
                     <tbody>
                       {items.map((item, idx) => (
                         <tr key={item.id} className="border border-black">
-                          <td className="border-r border-black py-3 px-3 text-center align-top">{idx + 1}</td>
-                          <td className="border-r border-black py-3 px-3 align-top">
+                          <td className="border-r border-black py-3 px-3 text-center align-middle">{idx + 1}</td>
+                          <td className="border-r border-black py-3 px-3 align-middle text-justify">
                             <div className="font-semibold">{item.item_customer}</div>
                             {item.item_vendor && item.item_vendor !== item.item_customer && (
-                              <div className="whitespace-pre-wrap mt-1 leading-snug text-gray-600">{item.item_vendor}</div>
+                              <div className="whitespace-pre-wrap mt-1 leading-snug text-gray-900">
+                                <span className="font-bold">Offer to:</span><br />
+                                {item.item_vendor}
+                              </div>
                             )}
                           </td>
-                          <td className="py-3 px-3 text-center align-top">{item.qty || 1}</td>
+                          <td className="py-3 px-3 text-center align-middle">{item.qty || 1}</td>
                         </tr>
                       ))}
                       {items.length === 0 && (
@@ -220,15 +223,15 @@ export default function SuratJalanDetail() {
                     Dokumen ini dikeluarkan oleh Sistem Integrasi Data {companyName} dan dinyatakan Sah dan Otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code
                   </p>
 
-                  <div className="flex justify-between items-end pb-8">
+                  <div className="flex justify-between items-start pb-8">
                     <div className="w-64 text-center">
                       <div className="text-left mb-1">Diterima,</div>
-                      <div className="text-left mb-8">Tanggal : ______________________ .</div>
-                      <div className="font-semibold mb-20">{po?.customer_name || 'Customer'}</div>
+                      <div className="text-left mb-2">Tanggal : ______________________ .</div>
+                      <div className="mb-24">{po?.customer_name || 'Customer'}</div>
                       <div>(__________________________)</div>
                     </div>
                     <div className="w-64 text-center flex flex-col items-center">
-                      <div className="mb-1">Hormat kami,</div>
+                      <div className="mb-2">Hormat kami,</div>
                       <div className="font-semibold mb-4">{companyName}</div>
                       <img src={qrUrl} alt="QR Code" className="w-24 h-24 mb-1" />
                       <div className="text-[9pt] italic mb-4">Surat Jalan</div>
