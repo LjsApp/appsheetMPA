@@ -12,6 +12,23 @@ interface EditPoInModalProps {
   poIn: POIn | null;
 }
 
+function parseDocs(raw: string | undefined | null): { name: string; url: string }[] {
+  if (!raw) return [];
+  if (typeof raw === 'string') {
+    // may be double-encoded
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+      // double-encoded
+      if (typeof parsed === 'string') return JSON.parse(parsed) || [];
+      return [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: EditPoInModalProps) {
   const { data: customers = [] } = useCustomers();
   const { data: pics = [] } = usePics();
@@ -33,20 +50,17 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
 
   // Pre-fill form when poIn changes
   useEffect(() => {
-    if (!poIn) return;
+    if (!poIn || !isOpen) return;
     setPoInNumber(poIn.po_in_number || '');
     setJudul(poIn.judul || '');
-    setTanggal(poIn.tanggal ? poIn.tanggal.split('T')[0] : '');
-    setTanggalBatas(poIn.tanggal_batas ? poIn.tanggal_batas.split('T')[0] : '');
+    setTanggal(poIn.tanggal ? String(poIn.tanggal).split('T')[0] : '');
+    setTanggalBatas(poIn.tanggal_batas ? String(poIn.tanggal_batas).split('T')[0] : '');
     setPicId(poIn.pic_id || '');
+    setAlamatType('custom');
     setCustomAlamat(poIn.alamat_pengiriman || '');
     setNewFiles([]);
-    try {
-      setExistingDocs(JSON.parse(poIn.dokumen || '[]') || []);
-    } catch {
-      setExistingDocs([]);
-    }
-  }, [poIn]);
+    setExistingDocs(parseDocs(poIn.dokumen));
+  }, [poIn?.id, isOpen]);
 
   const customer = useMemo(() =>
     customers.find(c => c.id === poIn?.customer_id),
@@ -95,7 +109,6 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
 
     setIsSaving(true);
     try {
-      // Upload new files
       const uploadedDocs = [...existingDocs];
       for (const file of newFiles) {
         const base64 = await new Promise<string>((resolve) => {
@@ -135,28 +148,31 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
     onClose();
   };
 
+  if (!poIn) return null;
+
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Edit PO In" size="lg">
       <div className="space-y-4">
+
         {/* Info customer (read-only) */}
-        {poIn && (
-          <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
-            <div>
-              <span className="text-gray-500 text-xs">Customer</span>
-              <p className="font-semibold text-gray-800">{poIn.customer_name}</p>
-            </div>
-            <div className="text-right">
-              <span className="text-gray-500 text-xs">No. Quotation Terkait</span>
-              <p className="font-mono text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded mt-0.5">{poIn.quotation_id || '—'}</p>
-            </div>
+        <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
+          <div>
+            <span className="text-gray-500 text-xs">Customer</span>
+            <p className="font-semibold text-gray-800">{poIn.customer_name}</p>
           </div>
-        )}
+          <div className="text-right">
+            <span className="text-gray-500 text-xs">No. Quotation Terkait</span>
+            <p className="font-mono text-xs text-purple-700 mt-0.5">{poIn.quotation_id || '—'}</p>
+          </div>
+        </div>
 
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
             <h3 className="text-sm font-semibold text-gray-800">Data PO In (dari Customer)</h3>
           </div>
           <div className="p-4 space-y-3">
+
+            {/* Row 1 */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Nomor PO Customer <span className="text-red-500">*</span></label>
@@ -178,6 +194,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
               </div>
             </div>
 
+            {/* Row 2 */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Tanggal PO</label>
@@ -199,6 +216,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
               </div>
             </div>
 
+            {/* Alamat */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Alamat Pengiriman</label>
               {alamatOptions.length > 0 ? (
@@ -252,6 +270,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
               )}
             </div>
 
+            {/* PIC */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">PIC Customer <span className="text-red-500">*</span></label>
               <select
@@ -269,6 +288,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
               )}
             </div>
 
+            {/* Dokumen */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen PO In</label>
 
@@ -279,13 +299,13 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
                     <li key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-blue-50 rounded px-2 py-1.5">
                       <FileText className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                       <a href={d.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-blue-600 hover:underline">{d.name}</a>
-                      <button onClick={() => removeExistingDoc(i)} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => removeExistingDoc(i)} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
                     </li>
                   ))}
                 </ul>
               )}
 
-              {/* Upload new */}
+              {/* Upload zone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-purple-300 hover:bg-purple-50/30 transition-colors"
@@ -301,12 +321,13 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn }: Edit
                     <li key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded px-2 py-1.5">
                       <FileText className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
                       <span className="flex-1 truncate">{f.name}</span>
-                      <button onClick={() => removeNewFile(i)} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => removeNewFile(i)} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+
           </div>
         </div>
 

@@ -46,7 +46,17 @@ export default function POInList() {
   );
 
   const getDocs = (p: POIn): { name: string; url: string }[] => {
-    try { return JSON.parse(p.dokumen) || []; } catch { return []; }
+    try {
+      if (!p.dokumen) return [];
+      const parsed = JSON.parse(String(p.dokumen));
+      if (Array.isArray(parsed)) return parsed;
+      // double-encoded
+      if (typeof parsed === 'string') {
+        const parsed2 = JSON.parse(parsed);
+        return Array.isArray(parsed2) ? parsed2 : [];
+      }
+      return [];
+    } catch { return []; }
   };
 
   return (
