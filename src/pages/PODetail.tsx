@@ -73,7 +73,7 @@ export default function PODetail() {
   const dueDate = itemRows.length > 0 && itemRows[0].delivery_time_vk ? itemRows[0].delivery_time_vk : '-';
 
   const companyName = company?.name || 'SourceQuo System';
-  const waPhone = company?.phone || '6281328213968';
+  const waPhone = String(company?.phone || '6281328213968');
   const waMessage = `Halo selamat ${getGreeting()}, izin bertanya terkait Purchase Order ${po.po_number} kepada ${vendor?.vendor_name || ''}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://wa.me/${waPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMessage)}`)}`;
 

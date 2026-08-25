@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Trash2, Loader2, FileText, Package, Search, Plus, Download, Edit } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import Modal from '@/components/Modal';
@@ -9,9 +8,7 @@ import { formatDate } from '@/lib/utils';
 import type { POIn } from '@/types';
 
 export default function POInList() {
-  const navigate = useNavigate();
   const { data: poIns = [], isLoading, refetch } = usePoIns();
-  const { data: suratJalanList = [] } = useSuratJalan();
   
   const deletePoIn = useDeletePoIn();
   
@@ -154,7 +151,6 @@ export default function POInList() {
                 ) : (
                   filtered.map(p => {
                     const docs = getDocs(p);
-                    const isBatas = p.tanggal_batas && new Date(p.tanggal_batas) < new Date();
                     
                     return (
                       <tr key={p.id} className="hover:bg-gray-50 transition-colors">
