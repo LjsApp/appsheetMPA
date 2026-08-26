@@ -159,14 +159,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
         const total_nilai = totalBeli - totalDiscVal;
 
         const docs: any[] = [];
-        for (const item of vItems) {
-          if (item.documents) {
-            try {
-              const p = JSON.parse(item.documents);
-              if (Array.isArray(p)) docs.push(...p);
-            } catch {}
-          }
-        }
+        // Removed auto-pulling documents from item.documents per user request
 
         const poId = `PO-${Date.now()}-${currentCounter}`;
         await savePurchaseOrder.mutateAsync({

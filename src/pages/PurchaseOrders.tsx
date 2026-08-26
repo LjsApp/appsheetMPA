@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Printer, Plus } from 'lucide-react';
+import { Loader2, Printer, Plus, Pencil, X, Upload, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, usePoIns } from '@/hooks/useData';
+import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
 import GeneratePoModal from '@/components/GeneratePoModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -13,6 +14,7 @@ export default function PurchaseOrders() {
   const navigate = useNavigate();
   const { data: purchaseOrders = [], isLoading: loadingPOs, refetch: refetchPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
+  const savePO = useSavePurchaseOrder();
   const isLoading = loadingPOs || loadingPoIns;
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -21,9 +23,90 @@ export default function PurchaseOrders() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Edit modal state
+  const [editModal, setEditModal] = useState<{ isOpen: boolean; po: PurchaseOrder | null }>({ isOpen: false, po: null });
+  const [editPoNumber, setEditPoNumber] = useState('');
+  const [editLetterDate, setEditLetterDate] = useState('');
+  const [editPoDate, setEditPoDate] = useState('');
+  const [editSubject, setEditSubject] = useState('');
+  const [editRefDate, setEditRefDate] = useState('');
+  const [existingDocs, setExistingDocs] = useState<any[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const uploadFile = useUploadFile();
+
   const handleContinueAdd = (qt: NeracaQuotation) => {
     setShowAddModal(false);
     setGeneratingPoQt(qt);
+  };
+
+  const openEdit = (po: PurchaseOrder) => {
+    setEditPoNumber(po.po_number || '');
+    setEditLetterDate(po.letter_date || '');
+    setEditPoDate(po.po_date || '');
+    setEditSubject(po.subject || '');
+    setEditRefDate(po.ref_date || '');
+    
+    let docs: any[] = [];
+    if (po.dokumen) {
+      try { docs = JSON.parse(po.dokumen); } catch {}
+    }
+    setExistingDocs(docs);
+    setNewFiles([]);
+
+    setEditModal({ isOpen: true, po });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setNewFiles(prev => [...prev, ...Array.from(e.target.files as FileList)]);
+    }
+  };
+
+  const removeExistingDoc = (idx: number) => {
+    setExistingDocs(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const removeNewFile = (idx: number) => {
+    setNewFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editModal.po) return;
+    setIsSaving(true);
+    try {
+      let finalDocs = [...existingDocs];
+      if (newFiles.length > 0) {
+        for (const file of newFiles) {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.readAsDataURL(file);
+          });
+          const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+          const fileUrl = typeof res === 'string' ? res : (res as any)?.url;
+          if (fileUrl) finalDocs.push({ name: file.name, url: fileUrl });
+        }
+      }
+
+      await savePO.mutateAsync({
+        ...editModal.po,
+        po_number: editPoNumber,
+        letter_date: editLetterDate,
+        po_date: editPoDate,
+        subject: editSubject,
+        ref_date: editRefDate,
+        dokumen: JSON.stringify(finalDocs),
+        updated_date: new Date().toISOString(),
+      });
+      setEditModal({ isOpen: false, po: null });
+      setNewFiles([]);
+    } catch {
+      alert('Gagal menyimpan perubahan PO Out');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const groupedPOs = useMemo(() => {
@@ -119,7 +202,9 @@ export default function PurchaseOrders() {
                           </td>
                         )}
                         <td className="px-6 py-4 font-mono text-xs font-semibold text-violet-700">
-                          {po.po_number}
+                          <div>{po.po_number}</div>
+                          {po.letter_date && <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(po.letter_date)}</div>}
+                          {po.subject && <div className="text-[11px] text-gray-500 font-sans mt-0.5 max-w-[160px] truncate">{po.subject}</div>}
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900">
                           {po.vendor_name}
@@ -152,6 +237,13 @@ export default function PurchaseOrders() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3">
                             <button
+                              onClick={() => openEdit(po)}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                              title="Edit PO Out"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => navigate(`/po/${po.id}`)}
                               className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
                               title="Cetak / Detail PO"
@@ -176,6 +268,124 @@ export default function PurchaseOrders() {
           </div>
         )}
       </div>
+
+      {/* Edit PO Out Modal */}
+      {editModal.isOpen && editModal.po && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Edit PO Out</h2>
+              <button onClick={() => setEditModal({ isOpen: false, po: null })} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-2 text-sm text-gray-600 mb-4">
+                Vendor: <span className="font-semibold text-gray-800">{editModal.po.vendor_name}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* Kolom Kiri */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">No. PO Out</label>
+                    <input
+                      value={editPoNumber}
+                      onChange={e => setEditPoNumber(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      placeholder="No. PO Out"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
+                    <input
+                      type="date"
+                      value={editLetterDate}
+                      onChange={e => setEditLetterDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Due Date</label>
+                    <input
+                      type="date"
+                      value={editPoDate}
+                      onChange={e => setEditPoDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject / Perihal</label>
+                    <input
+                      value={editSubject}
+                      onChange={e => setEditSubject(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      placeholder="Perihal pengadaan..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref Date</label>
+                    <input
+                      type="date"
+                      value={editRefDate}
+                      onChange={e => setEditRefDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Kolom Kanan */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen PO Out</label>
+                  
+                  {/* Existing docs */}
+                  {existingDocs.length > 0 && (
+                    <ul className="mb-2 space-y-1">
+                      {existingDocs.map((d, i) => (
+                        <li key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-blue-50 rounded px-2 py-1.5">
+                          <FileText className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                          <a href={d.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-blue-600 hover:underline">{d.name}</a>
+                          <button type="button" onClick={() => removeExistingDoc(i)} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Upload zone */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-violet-300 hover:bg-violet-50/30 transition-colors"
+                  >
+                    <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500">Klik untuk unggah dokumen</p>
+                    <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
+                  </div>
+
+                  {/* New files list */}
+                  {newFiles.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {newFiles.map((f, i) => (
+                        <li key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded px-2 py-1.5">
+                          <FileText className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                          <span className="flex-1 truncate">{f.name}</span>
+                          <button type="button" onClick={() => removeNewFile(i)} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setEditModal({ isOpen: false, po: null })}>Batal</Button>
+              <Button variant="primary" onClick={handleSaveEdit} disabled={isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AddPoOutModal 
         isOpen={showAddModal}

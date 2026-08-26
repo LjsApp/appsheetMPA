@@ -165,6 +165,10 @@ export interface PurchaseOrder {
   total_nilai: number;
   dokumen: string; // JSON array string
   status: 'Active' | 'Deleted';
+  po_date?: string;
+  letter_date?: string;
+  subject?: string;
+  ref_date?: string;
   created_date: string;
   updated_date: string;
 }

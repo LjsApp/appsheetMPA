@@ -170,7 +170,7 @@ export default function QuotationDetail() {
       {/* Print-only hide action bar */}
       <style>{`
         @media print {
-          @page { size: A4; margin: 1cm; }
+          @page { size: A4; margin: 0; }
 
           body, html, #root {
             margin: 0;
@@ -220,33 +220,54 @@ export default function QuotationDetail() {
       </div>
 
       {/* Quotation Document — outer table makes kop surat repeat on every print page */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[12pt]" id="quotation-doc">
-        <table className="w-full" style={{borderCollapse:'collapse'}}>
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[12pt] relative overflow-hidden" id="quotation-doc">
+        {/* Watermark background */}
+        <div aria-hidden="true" style={{
+          position:'absolute', inset:0, zIndex:0, pointerEvents:'none', overflow:'hidden',
+        }}>
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{position:'absolute',inset:0}}>
+            <defs>
+              <pattern id="wm-qt" width="60" height="60" patternUnits="userSpaceOnUse">
+                <circle cx="30" cy="30" r="1.2" fill="#1e3a8a" opacity="0.06" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#wm-qt)" />
+          </svg>
+          {/* Corner accents */}
+          <div style={{position:'absolute',top:0,right:0,width:'180px',height:'180px',background:'radial-gradient(circle at top right, rgba(30,58,138,0.07), transparent 70%)'}} />
+          <div style={{position:'absolute',bottom:0,left:0,width:'180px',height:'180px',background:'radial-gradient(circle at bottom left, rgba(30,58,138,0.06), transparent 70%)'}} />
+        </div>
+
+        <table className="w-full" style={{borderCollapse:'collapse', position:'relative', zIndex:1}}>
 
           {/* ===== THEAD: only compact kop surat — repeats on every printed page ===== */}
           <thead>
             <tr>
               <td style={{padding:0}}>
-                <div className="px-10 pt-8 pb-4 border-b border-gray-200">
+                {/* Word-style header — tight to top edge */}
+                <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 pt-4 pb-3">
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       {company?.logo_url ? (
-                        <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
+                        <div className="w-16 h-16 overflow-hidden flex items-center justify-center bg-white/10 rounded">
                           <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                         </div>
                       ) : (
-                        <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
+                        <div className="w-16 h-16 border border-white/30 rounded flex items-center justify-center text-white/50 text-xs">Logo</div>
                       )}
                       <div>
-                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>
-                        {company?.address && <p className="text-gray-600 mt-0.5 text-[10pt]">{company.address}</p>}
+                        <h1 className="text-white font-bold tracking-wide leading-tight text-[13pt]">{companyName}</h1>
+                        {company?.address && <p className="text-blue-100 mt-0.5 text-[9pt] leading-tight max-w-xs">{company.address}</p>}
                       </div>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-blue-900 font-extrabold tracking-widest text-[16pt]">QUOTATION</h2>
+                      <div className="text-white/80 text-[8pt] font-medium tracking-widest uppercase mb-0.5">Document</div>
+                      <h2 className="text-white font-extrabold tracking-widest text-[18pt] leading-none">QUOTATION</h2>
                     </div>
                   </div>
                 </div>
+                {/* thin accent line */}
+                <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
               </td>
             </tr>
           </thead>
@@ -381,6 +402,24 @@ export default function QuotationDetail() {
               </td>
             </tr>
           </tbody>
+          </tbody>
+
+          {/* ===== TFOOT: footer repeats on every printed page ===== */}
+          <tfoot>
+            <tr>
+              <td style={{padding:0}}>
+                <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
+                <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 py-2.5 flex justify-between items-center">
+                  <div className="text-blue-200 text-[8pt]">{companyName}</div>
+                  <div className="flex items-center gap-4 text-[8pt] text-blue-100">
+                    {company?.email && <span>✉ {company.email}</span>}
+                    {company?.phone && <span>☎ {company.phone}</span>}
+                    {company?.address && <span className="max-w-[200px] text-right">📍 {company.address}</span>}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

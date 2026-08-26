@@ -25,6 +25,8 @@ export default function Invoices() {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [addressOptions, setAddressOptions] = useState<{ label: string; value: string }[]>([]);
+  const [addressChoice, setAddressChoice] = useState<string>('');
   const [isCreating, setIsCreating] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string }>({ isOpen: false, id: null, title: '' });
 
@@ -33,11 +35,17 @@ export default function Invoices() {
   // auto-fill address when PO In selected
   const handlePoSelect = async (poId: string) => {
     setSelectedPoId(poId);
-    if (!poId) { setDeliveryAddress(''); return; }
+    if (!poId) { setDeliveryAddress(''); setAddressOptions([]); setAddressChoice(''); return; }
     const po = poIns.find(p => p.id === poId);
     if (po) {
       const cust = customers.find(c => c.id === po.customer_id);
-      setDeliveryAddress(cust?.office_address || po.alamat_pengiriman || '');
+      const opts: { label: string; value: string }[] = [];
+      if (cust?.office_address) opts.push({ label: 'Alamat Kantor', value: cust.office_address });
+      if (cust?.warehouse_address) opts.push({ label: 'Alamat Gudang', value: cust.warehouse_address });
+      setAddressOptions(opts);
+      const firstAddr = opts[0]?.value || '';
+      setAddressChoice(firstAddr);
+      setDeliveryAddress(firstAddr);
     }
     // generate invoice number
     try {
@@ -103,6 +111,15 @@ export default function Invoices() {
     setInvoiceNumber(inv.invoice_number);
     setInvoiceDate(inv.invoice_date || new Date().toISOString().split('T')[0]);
     setDeliveryAddress(inv.delivery_address || '');
+    // Rebuild address options from customer
+    const cust = customers.find(c => c.id === inv.customer_id);
+    const opts: { label: string; value: string }[] = [];
+    if (cust?.office_address) opts.push({ label: 'Alamat Kantor', value: cust.office_address });
+    if (cust?.warehouse_address) opts.push({ label: 'Alamat Gudang', value: cust.warehouse_address });
+    setAddressOptions(opts);
+    // match saved address to option
+    const matched = opts.find(o => o.value === inv.delivery_address);
+    setAddressChoice(matched ? matched.value : inv.delivery_address || '');
     setEditModal({ isOpen: true, invoice: inv });
   };
 
@@ -111,6 +128,8 @@ export default function Invoices() {
     setInvoiceNumber('');
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setDeliveryAddress('');
+    setAddressOptions([]);
+    setAddressChoice('');
   };
 
   const dataWithDetails = useMemo(() => {
@@ -194,13 +213,41 @@ export default function Invoices() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Alamat Pengiriman Invoice</label>
-                <textarea
-                  value={deliveryAddress}
-                  onChange={e => setDeliveryAddress(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                  placeholder="Alamat pengiriman..."
-                />
+                {addressOptions.length > 0 ? (
+                  <div className="space-y-2">
+                    {addressOptions.map(opt => (
+                      <label
+                        key={opt.value}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          addressChoice === opt.value
+                            ? 'border-blue-400 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="address_choice"
+                          value={opt.value}
+                          checked={addressChoice === opt.value}
+                          onChange={() => { setAddressChoice(opt.value); setDeliveryAddress(opt.value); }}
+                          className="mt-0.5 accent-blue-600 shrink-0"
+                        />
+                        <div>
+                          <div className="text-xs font-semibold text-gray-800">{opt.label}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{opt.value}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <textarea
+                    value={deliveryAddress}
+                    onChange={e => setDeliveryAddress(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                    placeholder="Alamat pengiriman..."
+                  />
+                )}
               </div>
             </>
           )}

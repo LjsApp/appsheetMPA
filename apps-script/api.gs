@@ -528,8 +528,19 @@ function routeRequest(action, method, body, params) {
         results.push('Renamed sheet: purchase_orders to po_out');
       } else if (!poSheet) {
         poSheet = ss.insertSheet('po_out');
-        poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','created_date','updated_date']);
+        poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','po_date','letter_date','subject','ref_date','created_date','updated_date']);
         results.push('Created sheet: po_out');
+      } else {
+        // Migrate: add new columns if missing
+        var poHeaders = poSheet.getRange(1, 1, 1, poSheet.getLastColumn()).getValues()[0];
+        ['po_date', 'letter_date', 'subject', 'ref_date'].forEach(function(col) {
+          if (poHeaders.indexOf(col) === -1) {
+            var lastCol = poSheet.getLastColumn();
+            poSheet.getRange(1, lastCol + 1).setValue(col);
+            poHeaders.push(col);
+            results.push('Added column ' + col + ' to po_out');
+          }
+        });
       }
 
       // 7. Create po_in sheet if not exists
