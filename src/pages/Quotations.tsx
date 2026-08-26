@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileCheck2, Loader2, Trash2, ShoppingCart, Plus, X, Printer } from 'lucide-react';
+import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import type { NeracaQuotation } from '@/types';
 import {
@@ -11,8 +11,8 @@ import {
 } from '@/hooks/useData';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 import { formatDate, formatCurrency } from '@/lib/utils';
-import GeneratePoModal from '@/components/GeneratePoModal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import TableToolbar from '@/components/TableToolbar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 // Helper component to render a single neraca row in the modal
@@ -183,6 +183,9 @@ export default function Quotations() {
 
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string; quotation: NeracaQuotation | null }>({ isOpen: false, id: null, title: '', quotation: null });
+  const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleDelete = (q: NeracaQuotation) => {
     setDeleteModal({ isOpen: true, id: q.id, title: `Hapus Quotation ${q.quotation_number}`, quotation: q });
@@ -197,6 +200,19 @@ export default function Quotations() {
     }
     setDeleteModal({ isOpen: false, id: null, title: '', quotation: null });
   };
+
+  const filteredQuotations = useMemo(() => {
+    if (!search) return uniqueQuotations;
+    const s = search.toLowerCase();
+    return uniqueQuotations.filter(q =>
+      (q.quotation_number || '').toLowerCase().includes(s) ||
+      (q.customer_name || '').toLowerCase().includes(s) ||
+      (q.request_title || '').toLowerCase().includes(s)
+    );
+  }, [uniqueQuotations, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredQuotations.length / rowsPerPage));
+  const paginatedQuotations = filteredQuotations.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -220,6 +236,14 @@ export default function Quotations() {
       />
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <TableToolbar
+          search={search}
+          onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+          totalRows={filteredQuotations.length}
+          searchPlaceholder="Cari customer, no. quotation..."
+        />
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm divide-y divide-gray-100">
             <thead className="bg-gray-50">
@@ -228,25 +252,25 @@ export default function Quotations() {
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Quotation</th>
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Nilai</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dokumen</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status PO</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td colSpan={8} className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" /></td></tr>
-              ) : uniqueQuotations.length === 0 ? (
+                <tr><td colSpan={7} className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" /></td></tr>
+              ) : paginatedQuotations.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center">
+                  <td colSpan={7} className="p-12 text-center">
                     <FileCheck2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                    <p className="text-gray-400 text-sm">Belum ada quotation. Buat dari halaman Neraca.</p>
+                    <p className="text-gray-400 text-sm">Belum ada quotation.</p>
                   </td>
                 </tr>
               ) : (() => {
                 // Group by inquiry_id
                 const groups = new Map<string, NeracaQuotation[]>();
-                uniqueQuotations.forEach(q => {
+                paginatedQuotations.forEach(q => {
                   const key = q.inquiry_id || q.id;
                   if (!groups.has(key)) groups.set(key, []);
                   groups.get(key)!.push(q);
@@ -260,7 +284,6 @@ export default function Quotations() {
                     const docUrl = getInquiryDocument(q.inquiry_id);
                     return (
                       <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
-                        {/* Customer cell — merged for the whole group */}
                         {idx === 0 && (
                           <td rowSpan={group.length} className="px-5 py-4 align-top border-r border-gray-100 bg-white">
                             <div className="font-semibold text-gray-900">{q.customer_name}</div>
@@ -279,27 +302,22 @@ export default function Quotations() {
                             <span className="text-gray-300 text-xs">-</span>
                           )}
                         </td>
-                        <td className="px-5 py-4 text-xs text-gray-500">{q.status}</td>
+                        <td className="px-5 py-4">
+                          {hasPO ? (
+                            <button
+                              onClick={() => navigate('/po')}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                            >
+                              <ShoppingCart className="w-3 h-3" />
+                              Sudah PO Out ({activePOs.length})
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-500">Belum PO</span>
+                          )}
+                        </td>
                         <td className="px-5 py-4 text-xs text-gray-500">{formatDate(q.created_date)}</td>
                         <td className="px-5 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {!hasPO ? (
-                              <button
-                                onClick={() => { setIsGenerating(true); setGeneratingPoQt(q); }}
-                                disabled={isGenerating && generatingPoQt?.id === q.id}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors disabled:opacity-50"
-                              >
-                                {isGenerating && generatingPoQt?.id === q.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShoppingCart className="w-3 h-3" />}
-                                Buat PO
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => navigate('/po')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
-                              >
-                                Sudah PO ({activePOs.length})
-                              </button>
-                            )}
+                          <div className="flex items-center justify-end gap-1">
                             <button onClick={() => handleDelete(q)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -318,19 +336,19 @@ export default function Quotations() {
                 });
               })()}
             </tbody>
-
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+            <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
+          </div>
+        )}
       </div>
 
-      <GeneratePoModal
-        quotation={generatingPoQt}
-        onClose={() => {
-          setGeneratingPoQt(null);
-          setIsGenerating(false);
-        }}
-        onSuccess={handlePoGenerated}
-      />
+
 
       <DeleteConfirmModal
         isOpen={deleteModal.isOpen}

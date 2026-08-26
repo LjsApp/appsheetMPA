@@ -72,6 +72,18 @@ function routeRequest(action, method, body, params) {
     case 'deleteInquiry':
       return deleteRecord('inquiries', 'id', body.id);
 
+    // Invoices
+    case 'getInvoices':
+      return getRecords('invoices');
+    case 'saveInvoice':
+      if (body.id) {
+        try { return updateRecord('invoices', 'id', body); }
+        catch (e) { return addRecord('invoices', body); }
+      }
+      return addRecord('invoices', body);
+    case 'deleteInvoice':
+      return deleteRecord('invoices', 'id', body.id);
+
     // Neracas
     case 'getNeracas':
       return getRecords('neracas');
@@ -388,6 +400,27 @@ function routeRequest(action, method, body, params) {
       }
     }
 
+    case 'getNextInvoiceNumber': {
+      try {
+        const allInv = getRecords('invoices');
+        const nextInvNum = allInv.length + 1;
+        const dInv = new Date();
+        const monthInv = String(dInv.getMonth() + 1).padStart(2, '0');
+        const yearInv = dInv.getFullYear();
+        let shortNameInv = 'MPA';
+        try {
+          const compInv = getRecords('company');
+          if (compInv && compInv.length > 0 && compInv[0].short_name) {
+            shortNameInv = compInv[0].short_name;
+          }
+        } catch(e){}
+        return nextInvNum + '/INV/' + shortNameInv + '/' + monthInv + '.' + yearInv;
+      } catch(e) {
+        const d = new Date();
+        return '1/INV/MPA/' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+      }
+    }
+
     // Initialize Neraca Sheets (add missing columns / create new sheets)
     case 'initNeracaSheets': {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -471,15 +504,18 @@ function routeRequest(action, method, body, params) {
       var compSheet = ss.getSheetByName('company');
       if (!compSheet) {
         compSheet = ss.insertSheet('company');
-        compSheet.appendRow(['id','name','short_name','logo_url','address','email','phone','leader_name','admin_position','updated_date']);
+        compSheet.appendRow(['id','name','short_name','logo_url','address','email','phone','leader_name','admin_position','bank_name','bank_account_name','bank_account_number','updated_date']);
         results.push('Created sheet: company');
       } else {
         var compHeaders = compSheet.getRange(1, 1, 1, compSheet.getLastColumn()).getValues()[0];
-        if (compHeaders.indexOf('leader_name') === -1) {
-          var compLastCol = compSheet.getLastColumn();
-          compSheet.getRange(1, compLastCol + 1).setValue('leader_name');
-          results.push('Added column leader_name to company');
-        }
+        ['leader_name', 'bank_name', 'bank_account_name', 'bank_account_number'].forEach(function(col) {
+          if (compHeaders.indexOf(col) === -1) {
+            var compLastCol = compSheet.getLastColumn();
+            compSheet.getRange(1, compLastCol + 1).setValue(col);
+            compHeaders.push(col);
+            results.push('Added column ' + col + ' to company');
+          }
+        });
       }
 
       // 6. Create po_out sheet if not exists (or rename from purchase_orders)
@@ -502,6 +538,14 @@ function routeRequest(action, method, body, params) {
         poinSheet = ss.insertSheet('po_in');
         poinSheet.appendRow(['id','quotation_id','neraca_id','customer_id','customer_name','po_in_number','judul','tanggal','alamat_pengiriman','pic_id','pic_name','tanggal_batas','dokumen','created_date','updated_date']);
         results.push('Created sheet: po_in');
+      }
+
+      // 8. Create invoices sheet if not exists
+      var invSheet = ss.getSheetByName('invoices');
+      if (!invSheet) {
+        invSheet = ss.insertSheet('invoices');
+        invSheet.appendRow(['id','po_in_id','invoice_number','invoice_date','customer_id','delivery_address','created_date','updated_date']);
+        results.push('Created sheet: invoices');
       }
 
       return results.length > 0 ? results.join('; ') : 'All sheets already up to date';

@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
 import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import TableToolbar from '@/components/TableToolbar';
 import type { Vendor, PicVendor } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useVendors, useSaveVendor, useDeleteVendor, usePicVendors, useSavePicVendor, useDeletePicVendor, useUploadFile } from '@/hooks/useData';
@@ -12,6 +13,8 @@ import { useVendors, useSaveVendor, useDeleteVendor, usePicVendors, useSavePicVe
 export default function Vendors() {
   const [activeTab, setActiveTab] = useState<'vendors' | 'pics'>('vendors');
   const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Vendor state
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -34,15 +37,19 @@ export default function Vendors() {
   const vendorForm = useForm<Vendor>();
   const picForm = useForm<PicVendor>();
 
-  const filteredVendors = vendors.filter(v =>
+  const filteredVendors = useMemo(() => vendors.filter(v =>
     (v.vendor_name || '').toLowerCase().includes(search.toLowerCase()) ||
     (v.code || '').toLowerCase().includes(search.toLowerCase())
-  );
+  ), [vendors, search]);
 
-  const filteredPics = pics.filter(p =>
+  const filteredPics = useMemo(() => pics.filter(p =>
     (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
     (vendors.find(v => v.id === p.vendor_id)?.vendor_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  ), [pics, vendors, search]);
+
+  const totalPages = Math.max(1, Math.ceil((activeTab === 'vendors' ? filteredVendors.length : filteredPics.length) / rowsPerPage));
+  const paginatedVendors = filteredVendors.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const paginatedPics = filteredPics.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   // --- Vendor Actions ---
   const openCreateVendor = () => {
@@ -244,11 +251,11 @@ export default function Vendors() {
         }
       />
 
-      {/* Tabs & Search */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-auto">
+      {/* Tabs & Toolbar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-fit">
           <button
-            onClick={() => setActiveTab('vendors')}
+            onClick={() => { setActiveTab('vendors'); setCurrentPage(1); }}
             className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
               activeTab === 'vendors' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
             }`}
@@ -256,7 +263,7 @@ export default function Vendors() {
             <Building2 className="w-4 h-4" /> Vendors
           </button>
           <button
-            onClick={() => setActiveTab('pics')}
+            onClick={() => { setActiveTab('pics'); setCurrentPage(1); }}
             className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
               activeTab === 'pics' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
             }`}
@@ -265,46 +272,44 @@ export default function Vendors() {
           </button>
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder={activeTab === 'vendors' ? "Cari vendor..." : "Cari PIC..."}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+          <TableToolbar
+            search={search}
+            onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+            totalRows={activeTab === 'vendors' ? filteredVendors.length : filteredPics.length}
+            searchPlaceholder={activeTab === 'vendors' ? 'Cari vendor...' : 'Cari PIC...'}
           />
+
+          {/* Data Table */}
+          {activeTab === 'vendors' ? (
+            isLoadingVendors ? (
+              <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
+            ) : isErrorVendors ? (
+              <div className="text-red-500 text-center p-4">Gagal memuat data vendor.</div>
+            ) : (
+              <DataTable columns={vendorColumns as any} data={paginatedVendors as any} />
+            )
+          ) : (
+            isLoadingPics ? (
+              <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
+            ) : isErrorPics ? (
+              <div className="text-red-500 text-center p-4">Gagal memuat data PIC vendor.</div>
+            ) : (
+              <DataTable columns={picColumns as any} data={paginatedPics as any} />
+            )
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm bg-white">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+              <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Data Table */}
-      {activeTab === 'vendors' ? (
-        isLoadingVendors ? (
-          <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
-        ) : isErrorVendors ? (
-          <div className="text-red-500 text-center p-4">Gagal memuat data vendor.</div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <DataTable 
-              columns={vendorColumns as any} 
-              data={filteredVendors as any} 
-            />
-          </div>
-        )
-      ) : (
-        isLoadingPics ? (
-          <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
-        ) : isErrorPics ? (
-          <div className="text-red-500 text-center p-4">Gagal memuat data PIC vendor.</div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <DataTable 
-              columns={picColumns as any} 
-              data={filteredPics as any} 
-            />
-          </div>
-        )
-      )}
 
       {/* Modal Form Vendor */}
       <Modal

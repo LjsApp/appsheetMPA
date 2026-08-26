@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, FileText, Plus, X, Trash2, Printer } from 'lucide-react';
+import { Loader2, FileText, Plus, X, Trash2, Printer } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import TableToolbar from '@/components/TableToolbar';
 import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi } from '@/hooks/useData';
 import type { POIn } from '@/types';
 
@@ -14,6 +15,8 @@ export default function SuratJalanList() {
   const deleteSJ = useDeleteSuratJalan();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -58,6 +61,9 @@ export default function SuratJalanList() {
     });
   }, [suratJalanList, poIns, searchTerm]);
 
+  const totalPages = Math.max(1, Math.ceil(dataWithDetails.length / rowsPerPage));
+  const paginatedData = dataWithDetails.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   const handleCreateSJ = async () => {
     if (!selectedPoId) return;
     const poIn = poIns.find(p => p.id === selectedPoId) as POIn | undefined;
@@ -99,22 +105,18 @@ export default function SuratJalanList() {
       />
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative max-w-md">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari No SJ, Customer, PO..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-            />
-          </div>
-        </div>
+        <TableToolbar
+          search={searchTerm}
+          onSearchChange={v => { setSearchTerm(v); setCurrentPage(1); }}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+          totalRows={dataWithDetails.length}
+          searchPlaceholder="Cari No SJ, Customer, PO..."
+        />
 
         {isLoading ? (
           <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-        ) : dataWithDetails.length === 0 ? (
+        ) : paginatedData.length === 0 ? (
           <div className="py-12 flex flex-col items-center justify-center text-gray-500">
             <FileText className="w-12 h-12 text-gray-300 mb-3" />
             <p>Belum ada data Surat Jalan.</p>
@@ -132,7 +134,7 @@ export default function SuratJalanList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {dataWithDetails.map((item) => (
+                {paginatedData.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-4 align-top border-r border-gray-100 bg-white">
                       <div className="font-semibold text-gray-900">{item.customer_name}</div>
@@ -167,6 +169,13 @@ export default function SuratJalanList() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+            <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
           </div>
         )}
       </div>

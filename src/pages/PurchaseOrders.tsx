@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Plus } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -8,6 +7,7 @@ import type { PurchaseOrder, NeracaQuotation } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
 import GeneratePoModal from '@/components/GeneratePoModal';
+import TableToolbar from '@/components/TableToolbar';
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
@@ -17,6 +17,9 @@ export default function PurchaseOrders() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [generatingPoQt, setGeneratingPoQt] = useState<NeracaQuotation | null>(null);
+  const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleContinueAdd = (qt: NeracaQuotation) => {
     setShowAddModal(false);
@@ -33,6 +36,21 @@ export default function PurchaseOrders() {
     return Array.from(groups.values());
   }, [purchaseOrders]);
 
+  const filteredPoIns = useMemo(() => {
+    const s = search.toLowerCase();
+    if (!s) return groupedPOs;
+    return groupedPOs.filter(group =>
+      group.some(po =>
+        (po.po_number || '').toLowerCase().includes(s) ||
+        (po.vendor_name || '').toLowerCase().includes(s) ||
+        (poIns.find(p => p.quotation_id === po.quotation_id)?.customer_name || '').toLowerCase().includes(s)
+      )
+    );
+  }, [groupedPOs, search, poIns]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPoIns.length / rowsPerPage));
+  const paginatedGroups = filteredPoIns.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -47,6 +65,14 @@ export default function PurchaseOrders() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <TableToolbar
+          search={search}
+          onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+          totalRows={filteredPoIns.reduce((acc, g) => acc + g.length, 0)}
+          searchPlaceholder="Cari customer, vendor, no. PO..."
+        />
         {isLoading ? (
           <div className="flex h-32 items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -70,7 +96,7 @@ export default function PurchaseOrders() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {groupedPOs.map((group) => {
+                {paginatedGroups.map((group) => {
                   return group.map((po, index) => {
                     let docs: any[] = [];
                     if (po.dokumen) {
@@ -140,6 +166,13 @@ export default function PurchaseOrders() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+            <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
           </div>
         )}
       </div>

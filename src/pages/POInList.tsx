@@ -1,27 +1,26 @@
-import { useState } from 'react';
-import { Trash2, Loader2, FileText, Package, Search, Plus, Download, Edit } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Trash2, Loader2, FileText, Package, Plus, Download, Edit } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import AddPoInModal from '@/components/AddPoInModal';
 import EditPoInModal from '@/components/EditPoInModal';
+import TableToolbar from '@/components/TableToolbar';
 import { usePoIns, useDeletePoIn, useSuratJalan } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import type { POIn } from '@/types';
 
 export default function POInList() {
   const { data: poIns = [], isLoading, refetch } = usePoIns();
-  console.log("ALL PO INS:", poIns);
   const { data: suratJalanList = [] } = useSuratJalan();
   const usedPoIds = new Set(suratJalanList.map(sj => sj.po_in_id).filter(Boolean));
   
   const deletePoIn = useDeletePoIn();
   
   const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string }>({ isOpen: false, id: null, title: '' });
-  
-  // Edit Modal State
   const [editModal, setEditModal] = useState<{ isOpen: boolean; poIn: POIn | null }>({ isOpen: false, poIn: null });
-
   const [showAddModal, setShowAddModal] = useState(false);
   const usedPoInQuotationIds = new Set(poIns.map(p => p.quotation_id).filter(Boolean));
 
@@ -39,12 +38,19 @@ export default function POInList() {
     setEditModal({ isOpen: true, poIn: po });
   };
 
-  const filtered = poIns.filter(p =>
-    (p.po_in_number || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.judul || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.pic_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const s = search.toLowerCase();
+    return poIns.filter(p =>
+      !s ||
+      (p.po_in_number || '').toLowerCase().includes(s) ||
+      (p.judul || '').toLowerCase().includes(s) ||
+      (p.customer_name || '').toLowerCase().includes(s) ||
+      (p.pic_name || '').toLowerCase().includes(s)
+    );
+  }, [poIns, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const paginated = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const getDocs = (p: POIn): { name: string; url: string }[] => {
     try {
@@ -111,20 +117,16 @@ export default function POInList() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari nomor PO, judul, customer, atau PIC..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
-          </div>
-        </div>
+        <TableToolbar
+          search={search}
+          onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+          totalRows={filtered.length}
+          searchPlaceholder="Cari nomor PO, judul, customer, atau PIC..."
+        />
 
         {isLoading ? (
           <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
@@ -144,7 +146,7 @@ export default function POInList() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {filtered.length === 0 ? (
+                {paginated.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
@@ -152,12 +154,11 @@ export default function POInList() {
                           <Download className="w-7 h-7 text-purple-300" />
                         </div>
                         <p className="text-gray-500 text-sm">{search ? 'Tidak ada hasil pencarian.' : 'Belum ada data PO In.'}</p>
-                        <p className="text-gray-400 text-xs">PO In dibuat otomatis saat Anda membuat PO Out dari halaman Quotation.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  filtered.map(p => {
+                  paginated.map(p => {
                     const docs = getDocs(p);
                     
                     return (
@@ -218,6 +219,13 @@ export default function POInList() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+            <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
 export { fetchApi };
-import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan } from '../types';
+import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan, Invoice } from '../types';
 
 
 // ==================== Customers ====================
@@ -478,6 +478,36 @@ export const useDeleteSuratJalan = () => {
     mutationFn: (id: string) => fetchApi('deleteSuratJalan', 'POST', { id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suratJalan'] });
+    },
+  });
+};
+
+// ==================== INVOICES ====================
+
+export const useInvoices = () => {
+  return useQuery<Invoice[]>({
+    queryKey: ['invoices'],
+    queryFn: () => fetchApi('getInvoices'),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useSaveInvoice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<Invoice>) => fetchApi('saveInvoice', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteInvoice', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
   });
 };

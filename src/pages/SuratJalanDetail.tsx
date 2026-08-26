@@ -118,13 +118,14 @@ export default function SuratJalanDetail() {
                     <div className="flex items-center gap-4">
                       {company?.logo_url ? (
                         <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
-                          <img src={getDriveImageUrl(company.logo_url)} alt="Logo" className="w-full h-full object-contain" />
+                          <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                         </div>
                       ) : (
                         <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
                       )}
                       <div>
                         <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>
+                        {company?.address && <p className="text-gray-600 mt-0.5 text-[10pt]">{company.address}</p>}
                       </div>
                     </div>
                     <div className="text-right">

@@ -16,6 +16,8 @@ import PODetail from './pages/PODetail';
 import POInList from './pages/POInList';
 import SuratJalan from './pages/SuratJalan';
 import SuratJalanDetail from './pages/SuratJalanDetail';
+import Invoices from './pages/Invoices';
+import InvoiceDetail from './pages/InvoiceDetail';
 import CompanySettings from './pages/CompanySettings';
 
 const Placeholder = ({ title }: { title: string }) => (
@@ -45,6 +47,8 @@ function App() {
         <Route path="po-in" element={<POInList />} />
         <Route path="surat-jalan" element={<SuratJalan />} />
         <Route path="surat-jalan/:id" element={<SuratJalanDetail />} />
+        <Route path="invoices" element={<Invoices />} />
+        <Route path="invoices/:id" element={<InvoiceDetail />} />
         <Route path="settings/company" element={<CompanySettings />} />
         <Route path="*" element={<Placeholder title="Coming Soon" />} />
       </Route>

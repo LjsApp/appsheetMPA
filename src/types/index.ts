@@ -178,6 +178,17 @@ export interface SuratJalan {
   updated_date: string;
 }
 
+export interface Invoice {
+  id: string;
+  po_in_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  customer_id: string;
+  delivery_address: string;
+  created_date: string;
+  updated_date: string;
+}
+
 export interface POIn {
   id: string;
   quotation_id: string;
@@ -318,6 +329,9 @@ export interface Company {
   phone: string;
   leader_name?: string;   // Nama pimpinan / penandatangan
   admin_position: string; // Posisi admin untuk tanda tangan quotation
+  bank_name?: string;
+  bank_account_name?: string;
+  bank_account_number?: string;
   updated_date: string;
 }
 

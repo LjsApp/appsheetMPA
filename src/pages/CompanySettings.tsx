@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Building2, Save, Upload, Loader2, X } from 'lucide-react';
 import { PageHeader, Button, FormField } from '@/components/ui';
-import { useCompany, useSaveCompany, useUploadFile } from '@/hooks/useData';
+import { useCompany, useSaveCompany } from '@/hooks/useData';
 import { useForm, Controller } from 'react-hook-form';
 import { getDriveImageUrl } from '@/lib/utils';
 interface CompanyForm {
@@ -12,12 +12,14 @@ interface CompanyForm {
   phone: string;
   leader_name: string;
   admin_position: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
 }
 
 export default function CompanySettings() {
   const { data: company, isLoading } = useCompany();
   const saveCompany = useSaveCompany();
-  const uploadFile = useUploadFile();
 
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
@@ -30,7 +32,10 @@ export default function CompanySettings() {
       email: '',
       phone: '',
       leader_name: '',
-      admin_position: ''
+      admin_position: '',
+      bank_name: '',
+      bank_account_name: '',
+      bank_account_number: ''
     }
   });
 
@@ -43,7 +48,10 @@ export default function CompanySettings() {
         email: company.email || '',
         phone: company.phone || '',
         leader_name: company.leader_name || '',
-        admin_position: company.admin_position || ''
+        admin_position: company.admin_position || '',
+        bank_name: company.bank_name || '',
+        bank_account_name: company.bank_account_name || '',
+        bank_account_number: company.bank_account_number || ''
       });
       setLogoUrl(company.logo_url || '');
     }
@@ -57,19 +65,45 @@ export default function CompanySettings() {
     try {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64Str = (reader.result as string).split(',')[1];
-        const res = await uploadFile.mutateAsync({
-          filename: `logo_${Date.now()}_${file.name}`,
-          mimeType: file.type,
-          base64: base64Str
-        });
-        setLogoUrl(res);
+      reader.onload = () => {
+        const img = new Image();
+        img.src = reader.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 300;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to WebP for better compression
+          const compressedBase64 = canvas.toDataURL('image/webp', 0.8);
+          setLogoUrl(compressedBase64);
+          setIsUploading(false);
+        };
+        img.onerror = () => {
+          alert('Gagal memproses gambar');
+          setIsUploading(false);
+        }
       };
     } catch (error) {
       console.error('Error uploading logo:', error);
-      alert('Gagal mengupload logo');
-    } finally {
+      alert('Gagal memproses logo');
       setIsUploading(false);
     }
   };
@@ -105,7 +139,7 @@ export default function CompanySettings() {
               <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden shrink-0 relative">
                 {logoUrl ? (
                   <>
-                    <img src={getDriveImageUrl(logoUrl)} alt="Company Logo" className="w-full h-full object-contain" />
+                    <img src={getDriveImageUrl(logoUrl)} alt="Company Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                     <button 
                       type="button" 
                       onClick={() => setLogoUrl('')}
@@ -208,6 +242,38 @@ export default function CompanySettings() {
                   control={control}
                   rules={{ required: true }}
                   render={({ field }) => <input {...field} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Staff Operasional" />}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <hr className="border-gray-100" />
+
+          {/* Bank Section */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Informasi Rekening Bank</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField label="Nama Bank">
+                <Controller
+                  name="bank_name"
+                  control={control}
+                  render={({ field }) => <input {...field} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="BNI, BCA, Mandiri..." />}
+                />
+              </FormField>
+
+              <FormField label="Nomor Rekening">
+                <Controller
+                  name="bank_account_number"
+                  control={control}
+                  render={({ field }) => <input {...field} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="0804302077" />}
+                />
+              </FormField>
+
+              <FormField label="Atas Nama Rekening">
+                <Controller
+                  name="bank_account_name"
+                  control={control}
+                  render={({ field }) => <input {...field} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="PT. Nama Perusahaan" />}
                 />
               </FormField>
             </div>

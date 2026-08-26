@@ -14,7 +14,8 @@ import {
   FolderOpen,
   ShoppingCart,
   Download,
-  Send
+  Send,
+  Receipt
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -43,6 +44,7 @@ const MENU_ITEMS: MenuItem[] = [
     submenus: [
       { label: 'Quotation', icon: FileCheck2, path: '/quotations' },
       { label: 'Surat Jalan', icon: FileText, path: '/surat-jalan' },
+      { label: 'Invoice', icon: Receipt, path: '/invoices' },
       {
         label: 'Purchase',
         icon: ShoppingCart,

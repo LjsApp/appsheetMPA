@@ -232,7 +232,7 @@ export default function QuotationDetail() {
                     <div className="flex items-center gap-4">
                       {company?.logo_url ? (
                         <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
-                          <img src={getDriveImageUrl(company.logo_url)} alt="Logo" className="w-full h-full object-contain" />
+                          <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                         </div>
                       ) : (
                         <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>

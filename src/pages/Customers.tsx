@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
 import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import TableToolbar from '@/components/TableToolbar';
 import type { Customer, PIC } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useCustomers, useSaveCustomer, useDeleteCustomer, usePics, useSavePic, useDeletePic, useUploadFile } from '@/hooks/useData';
@@ -12,6 +13,8 @@ import { useCustomers, useSaveCustomer, useDeleteCustomer, usePics, useSavePic, 
 export default function Customers() {
   const [activeTab, setActiveTab] = useState<'customers' | 'pics'>('customers');
   const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Customer state
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -34,17 +37,23 @@ export default function Customers() {
   const customerForm = useForm<Customer>();
   const picForm = useForm<PIC>();
 
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c =>
+      (c.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.code || '').toLowerCase().includes(search.toLowerCase())
+    );
+  }, [customers, search]);
 
+  const filteredPics = useMemo(() => {
+    return pics.filter(p =>
+      (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (customers.find(c => c.id === p.customer_id)?.company_name || '').toLowerCase().includes(search.toLowerCase())
+    );
+  }, [pics, customers, search]);
 
-  const filteredCustomers = customers.filter(c =>
-    (c.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.code || '').toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredPics = pics.filter(p =>
-    (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (customers.find(c => c.id === p.customer_id)?.company_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const totalPages = Math.max(1, Math.ceil((activeTab === 'customers' ? filteredCustomers.length : filteredPics.length) / rowsPerPage));
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const paginatedPics = filteredPics.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   // --- Customer Actions ---
   const openCreateCustomer = () => {
@@ -241,11 +250,11 @@ export default function Customers() {
         }
       />
 
-      {/* Tabs & Search */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-auto">
+      {/* Tabs & Toolbar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-fit">
           <button
-            onClick={() => setActiveTab('customers')}
+            onClick={() => { setActiveTab('customers'); setCurrentPage(1); }}
             className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
               activeTab === 'customers' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
             }`}
@@ -253,7 +262,7 @@ export default function Customers() {
             <Building2 className="w-4 h-4" /> Customers
           </button>
           <button
-            onClick={() => setActiveTab('pics')}
+            onClick={() => { setActiveTab('pics'); setCurrentPage(1); }}
             className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
               activeTab === 'pics' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
             }`}
@@ -262,35 +271,48 @@ export default function Customers() {
           </button>
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={`Cari ${activeTab === 'customers' ? 'customer' : 'PIC'}...`}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+          <TableToolbar
+            search={search}
+            onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+            totalRows={activeTab === 'customers' ? filteredCustomers.length : filteredPics.length}
+            searchPlaceholder={`Cari ${activeTab === 'customers' ? 'customer' : 'PIC'}...`}
           />
+
+          {/* Data Table */}
+          {activeTab === 'customers' ? (
+            isLoadingCustomers ? (
+              <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
+            ) : isErrorCustomers ? (
+              <div className="text-red-500 text-center p-4">Gagal memuat data customer.</div>
+            ) : (
+              <>
+                <DataTable columns={customerColumns as any} data={paginatedCustomers as any} emptyMessage="Tidak ada customer ditemukan." />
+              </>
+            )
+          ) : (
+            isLoadingPics ? (
+              <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
+            ) : isErrorPics ? (
+              <div className="text-red-500 text-center p-4">Gagal memuat data PIC.</div>
+            ) : (
+              <>
+                <DataTable columns={picColumns as any} data={paginatedPics as any} emptyMessage="Tidak ada PIC ditemukan." />
+              </>
+            )
+          )}
+          
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm bg-white">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+              <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Data Table */}
-      {activeTab === 'customers' ? (
-        isLoadingCustomers ? (
-          <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
-        ) : isErrorCustomers ? (
-          <div className="text-red-500 text-center p-4">Gagal memuat data customer.</div>
-        ) : (
-          <DataTable columns={customerColumns as any} data={filteredCustomers as any} emptyMessage="Tidak ada customer ditemukan." />
-        )
-      ) : (
-        isLoadingPics ? (
-          <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
-        ) : isErrorPics ? (
-          <div className="text-red-500 text-center p-4">Gagal memuat data PIC.</div>
-        ) : (
-          <DataTable columns={picColumns as any} data={filteredPics as any} emptyMessage="Tidak ada PIC ditemukan." />
-        )
-      )}
 
       {/* Customer Modal Form */}
       <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title={editingCustomerId ? 'Edit Customer' : 'Tambah Customer'} size="lg">

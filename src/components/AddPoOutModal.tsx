@@ -56,8 +56,8 @@ export default function AddPoOutModal({ isOpen, onClose, onContinue }: AddPoOutM
             {poIns.map(p => {
               const isUsed = usedPoInQuotationIds.has(p.quotation_id);
               return (
-                <option key={p.id} value={p.id}>
-                  {p.po_in_number || p.id} — {p.customer_name} {isUsed ? ' (Sudah PO Out)' : ''}
+                <option key={p.id} value={p.id} disabled={isUsed}>
+                  {p.po_in_number || p.id} — {p.customer_name} {isUsed ? ' ✓ Sudah PO Out' : ''}
                 </option>
               );
             })}

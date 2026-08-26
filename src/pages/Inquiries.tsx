@@ -4,6 +4,7 @@ import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import TableToolbar from '@/components/TableToolbar';
 import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
@@ -40,6 +41,8 @@ interface UploadedDoc { name: string; url: string; }
 
 export default function Inquiries() {
   const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState<'All' | Inquiry['status']>('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,16 +80,21 @@ export default function Inquiries() {
     return data.status || 'Jalan';
   }, []);
 
-  const filtered = inquiries
-    .filter(i => i.status !== 'Neraca')
-    .filter(i => {
-      const matchesSearch =
-        (i.request_number || '').toLowerCase().includes(search.toLowerCase()) ||
-        (i.request_title || '').toLowerCase().includes(search.toLowerCase()) ||
-        (i.customer_name || '').toLowerCase().includes(search.toLowerCase());
-      const matchesTab = activeTab === 'All' || i.status === activeTab;
-      return matchesSearch && matchesTab;
-    });
+  const filtered = useMemo(() => {
+    return inquiries
+      .filter(i => i.status !== 'Neraca')
+      .filter(i => {
+        const matchesSearch =
+          (i.request_number || '').toLowerCase().includes(search.toLowerCase()) ||
+          (i.request_title || '').toLowerCase().includes(search.toLowerCase()) ||
+          (i.customer_name || '').toLowerCase().includes(search.toLowerCase());
+        const matchesTab = activeTab === 'All' || i.status === activeTab;
+        return matchesSearch && matchesTab;
+      });
+  }, [inquiries, search, activeTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const paginated = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   // Normalize any date string to YYYY-MM-DD for <input type="date">
   const toInputDate = (d: string): string => {
@@ -319,33 +327,48 @@ export default function Inquiries() {
         }
       />
 
-      {/* Tabs & Search */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-auto">
+      {/* Tabs & Toolbar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-fit">
           {(['All', ...INQUIRY_STATUSES] as const).map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => { setActiveTab(tab as any); setCurrentPage(1); }}
               className={`px-4 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                 activeTab === tab ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >{tab}</button>
           ))}
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari inquiry..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+          <TableToolbar
+            search={search}
+            onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+            totalRows={filtered.length}
+            searchPlaceholder="Cari inquiry..."
+          />
+
+          {isLoading ? (
+            <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
+          ) : isError ? (
+            <div className="text-red-500 text-center p-4">Gagal memuat data dari Google Sheets.</div>
+          ) : (
+            <>
+              <DataTable columns={columns as any} data={paginated as any} emptyMessage="Tidak ada inquiry ditemukan." />
+              {totalPages > 1 && (
+                <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm bg-white">
+                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+                  <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
-
-      {isLoading ? (
-        <div className="flex justify-center p-12 text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>
-      ) : isError ? (
-        <div className="text-red-500 text-center p-4">Gagal memuat data dari Google Sheets.</div>
-      ) : (
-        <DataTable columns={columns as any} data={filtered as any} emptyMessage="Tidak ada inquiry ditemukan." />
-      )}
 
       {/* Modal Form */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit Inquiry' : 'Buat Inquiry Baru'} size="lg">
