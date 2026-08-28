@@ -75,8 +75,8 @@ export default function PODetail() {
   const waMessage = `Halo selamat ${getGreeting()}, izin bertanya terkait Purchase Order ${po.po_number} kepada ${vendor?.vendor_name || ''}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://wa.me/${waPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMessage)}`)}`;
 
-  // Letter date — from po.letter_date, fallback to created_date
-  const letterDate = po.letter_date ? formatDate(po.letter_date) : formatDate(po.created_date);
+  // Letter date — use created_date
+  const letterDate = formatDate(po.created_date);
   const subject = po.subject || '-';
 
   return (
@@ -94,14 +94,17 @@ export default function PODetail() {
           }
           .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
           .no-print { display: none !important; }
-          #po-doc {
-            box-shadow: none !important; border: none !important;
-            border-radius: 0 !important; max-width: 100% !important; margin: 0 !important;
-          }
+          #po-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
           thead { display: table-header-group; }
-          tfoot { display: table-row-group; }
+          tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
+          /* Fixed watermark and footer on every printed page */
+          .print-wm-tl { display:block !important; position:fixed; top:0; left:0; width:320px; opacity:0.35; transform:translate(-20%, -20%); z-index:0; pointer-events:none; }
+          .print-wm-br { display:block !important; position:fixed; bottom:0; right:0; width:360px; opacity:0.35; transform:translate(20%, 20%); z-index:0; pointer-events:none; }
+          .print-page-footer { display:flex !important; position:fixed; bottom:0; left:0; right:0; background:white; z-index:100; padding:10px 40px; justify-content:flex-end; align-items:center; }
         }
+        /* Hidden in screen, visible in print */
+        .print-wm-tl, .print-wm-br, .print-page-footer { display: none; }
       `}</style>
 
       <div className="no-print">
@@ -117,56 +120,49 @@ export default function PODetail() {
         />
       </div>
 
-      {/* PO Document */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[12pt] relative overflow-hidden" id="po-doc">
-        {/* Watermark background */}
-        <div aria-hidden="true" style={{
-          position:'absolute', inset:0, zIndex:0, pointerEvents:'none', overflow:'hidden',
-        }}>
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{position:'absolute',inset:0}}>
-            <defs>
-              <pattern id="wm-grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <circle cx="30" cy="30" r="1.2" fill="#1e3a8a" opacity="0.06" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#wm-grid)" />
-          </svg>
-          {/* Corner accent top-right */}
-          <div style={{position:'absolute',top:0,right:0,width:'180px',height:'180px',background:'radial-gradient(circle at top right, rgba(30,58,138,0.07), transparent 70%)'}} />
-          {/* Corner accent bottom-left */}
-          <div style={{position:'absolute',bottom:0,left:0,width:'180px',height:'180px',background:'radial-gradient(circle at bottom left, rgba(30,58,138,0.06), transparent 70%)'}} />
+      {/* Fixed watermark & footer — appear on every printed page */}
+      <img className="print-wm-tl" src="/watermark.png" alt="" />
+      <img className="print-wm-br" src="/watermark.png" alt="" />
+      <div className="print-page-footer">
+        <div className="text-right text-[7.5pt] text-gray-500 leading-relaxed">
+          {company?.address && <div>{company.address}</div>}
+          <div className="flex justify-end gap-4">
+            {company?.phone && <span>☎ {company.phone}</span>}
+            {company?.email && <span>✉ {company.email}</span>}
+          </div>
         </div>
+      </div>
 
-        <table className="w-full" style={{borderCollapse:'collapse', position:'relative', zIndex:1}}>
+      {/* PO Document */}
+      <div className="bg-white max-w-[860px] mx-auto text-[12pt]" id="po-doc">
+        <table className="w-full" style={{borderCollapse:'collapse'}}>
 
           {/* ===== THEAD: kop surat - repeats on every printed page ===== */}
           <thead>
             <tr>
               <td style={{padding:0}}>
-                {/* Word-style header — tight to top edge */}
-                <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 pt-4 pb-3">
+                <div className="px-10 pt-8 pb-4">
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       {company?.logo_url ? (
-                        <div className="w-16 h-16 overflow-hidden flex items-center justify-center bg-white/10 rounded">
+                        <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
                           <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                         </div>
                       ) : (
-                        <div className="w-16 h-16 border border-white/30 rounded flex items-center justify-center text-white/50 text-xs">Logo</div>
+                        <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
                       )}
                       <div>
-                        <h1 className="text-white font-bold tracking-wide leading-tight text-[13pt]">{companyName}</h1>
-                        {company?.address && <p className="text-blue-100 mt-0.5 text-[9pt] leading-tight max-w-xs">{company.address}</p>}
+                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>
+                        {company?.address && <p className="text-gray-600 mt-0.5 text-[10pt]">{company.address}</p>}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-white/80 text-[8pt] font-medium tracking-widest uppercase mb-0.5">Document</div>
-                      <h2 className="text-white font-extrabold tracking-widest text-[18pt] leading-none">PURCHASE ORDER</h2>
+                      <span className="inline-block bg-blue-800 text-white font-bold text-[8pt] uppercase tracking-widest px-3 py-1.5 rounded">
+                        PURCHASE ORDER {po.type && po.type !== 'Full' ? `(${po.type})` : ''}
+                      </span>
                     </div>
                   </div>
                 </div>
-                {/* thin accent line */}
-                <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
               </td>
             </tr>
           </thead>
@@ -241,7 +237,7 @@ export default function PODetail() {
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="border-t border-black">
+                      <tbody className="border-t border-black break-inside-avoid">
                         <tr className="border-t border-black">
                           <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Sub Total</td>
                           <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(totalBeli)}</td>
@@ -262,7 +258,7 @@ export default function PODetail() {
                           <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total</td>
                           <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(totalAfterDisc)}</td>
                         </tr>
-                      </tfoot>
+                      </tbody>
                     </table>
                   </div>
 
@@ -270,33 +266,35 @@ export default function PODetail() {
                   <div className="break-inside-avoid mb-5 text-[12pt]">
                     <h3 className="font-bold text-gray-900 mb-2">Term and Condition</h3>
                     <div className="grid grid-cols-[120px_10px_1fr] gap-y-1 text-gray-800">
-                      <div className="font-medium">Due Date</div><div>:</div><div>{po.po_date ? formatDate(po.po_date) : '-'}</div>
+                      <div className="font-medium">Due Date</div><div>:</div><div>{po.due_date ? formatDate(po.due_date) : '-'}</div>
                       <div className="font-medium">Franco</div><div>:</div><div>-</div>
                       <div className="font-medium">Shipping Address</div><div>:</div><div>{company?.address || '-'}</div>
                       <div className="font-medium">Packaging</div><div>:</div><div>Package must be sure to be good, secure and safe, to prevent any damage.</div>
                     </div>
                   </div>
 
-                  {/* Disclaimer */}
-                  <div className="text-[10pt] text-gray-600 italic mb-8 break-inside-avoid leading-relaxed">
-                    Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
-                  </div>
-
-                  {/* Signature & QR */}
-                  <div className="flex justify-between items-end break-inside-avoid text-[12pt]">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
-                        <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
-                      </div>
-                      <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                  <div className="break-inside-avoid">
+                    {/* Disclaimer */}
+                    <div className="text-[10pt] text-gray-600 italic mb-8 leading-relaxed">
+                      Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
                     </div>
 
-                    <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
-                      <p>Regards,</p>
-                      <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
-                      <div style={{ height: '110px' }}></div>
-                      <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
-                      <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
+                    {/* Signature & QR */}
+                    <div className="flex justify-between items-end text-[12pt]">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
+                          <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+                        </div>
+                        <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                      </div>
+
+                      <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
+                        <p>Regards,</p>
+                        <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
+                        <div style={{ height: '110px' }}></div>
+                        <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
+                        <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -304,20 +302,11 @@ export default function PODetail() {
               </td>
             </tr>
           </tbody>
-
-          {/* ===== TFOOT: footer repeats on every printed page ===== */}
+          {/* TFOOT: empty spacer to prevent fixed footer from overlapping content */}
           <tfoot>
             <tr>
-              <td style={{padding:0}}>
-                <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
-                <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 py-2.5 flex justify-between items-center">
-                  <div className="text-blue-200 text-[8pt]">{companyName}</div>
-                  <div className="flex items-center gap-4 text-[8pt] text-blue-100">
-                    {company?.email && <span>✉ {company.email}</span>}
-                    {company?.phone && <span>☎ {company.phone}</span>}
-                    {company?.address && <span className="max-w-[200px] text-right">📍 {company.address}</span>}
-                  </div>
-                </div>
+              <td>
+                <div style={{ height: '50px' }}></div>
               </td>
             </tr>
           </tfoot>

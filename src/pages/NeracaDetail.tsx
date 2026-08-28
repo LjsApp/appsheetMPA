@@ -127,26 +127,29 @@ export default function NeracaDetail() {
   // --- Vendor Discount Modal ---
   const { data: vendorDiscounts = [] } = useVendorDiscounts(neracaId!);
   const [vendorDiscountModalId, setVendorDiscountModalId] = useState<string | null>(null);
-  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', subject: string, letter_date: string}>({ pct: '', cash: '', subject: '', letter_date: '' });
+  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', dpPct: number | '', dpCash: number | ''}>({ pct: '', cash: '', dpPct: '', dpCash: '' });
   const [vdFormType, setVdFormType] = useState<'pct' | 'cash'>('pct');
+  const [dpFormType, setDpFormType] = useState<'pct' | 'cash'>('pct');
   const saveVd = useSaveVendorDiscount();
   const deleteVd = useDeleteVendorDiscount();
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'item' | 'vd'; id: string | null; title: string }>({ isOpen: false, type: 'item', id: null, title: '' });
 
-  const openVendorDiscount = (vendorId: string) => {
+  const handleOpenVdModal = (vendorId: string) => {
     const existing = (vendorDiscounts || []).find(d => d.vendor_id === vendorId);
     if (existing) {
       setVdForm({ 
         pct: existing.discount_pct || '', 
         cash: existing.discount_cash || '',
-        subject: existing.subject || '',
-        letter_date: existing.letter_date || ''
+        dpPct: existing.dp_pct || '',
+        dpCash: existing.dp_nominal || ''
       });
       setVdFormType(existing.discount_cash > 0 && !existing.discount_pct ? 'cash' : 'pct');
+      setDpFormType(existing.dp_nominal && !existing.dp_pct ? 'cash' : 'pct');
     } else {
-      setVdForm({ pct: '', cash: '', subject: '', letter_date: '' });
+      setVdForm({ pct: '', cash: '', dpPct: '', dpCash: '' });
       setVdFormType('pct');
+      setDpFormType('pct');
     }
     setVendorDiscountModalId(vendorId);
   };
@@ -163,8 +166,8 @@ export default function NeracaDetail() {
       vendor_name: vendor?.vendor_name || vendorDiscountModalId,
       discount_pct: vdFormType === 'pct' ? (Number(vdForm.pct) || 0) : 0,
       discount_cash: vdFormType === 'cash' ? (Number(vdForm.cash) || 0) : 0,
-      subject: vdForm.subject,
-      letter_date: vdForm.letter_date,
+      dp_pct: dpFormType === 'pct' ? (Number(vdForm.dpPct) || 0) : 0,
+      dp_nominal: dpFormType === 'cash' ? (Number(vdForm.dpCash) || 0) : 0,
       updated_date: new Date().toISOString().split('T')[0]
     };
     
@@ -446,7 +449,7 @@ export default function NeracaDetail() {
                               <div className="flex items-center gap-1.5">
                                 <span>{item.vendor_name}</span>
                                 {isFirstVendorItem && (
-                                  <button onClick={() => openVendorDiscount(item.vendor_id)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Atur Diskon Vendor">
+                                  <button onClick={() => handleOpenVdModal(item.vendor_id)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Atur Diskon Vendor">
                                     <Settings className="w-3.5 h-3.5" />
                                   </button>
                                 )}
@@ -896,6 +899,33 @@ export default function NeracaDetail() {
                 )}
               </div>
 
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-blue-900 block mb-2">Tipe Down Payment (DP)</span>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer text-blue-900">
+                      <input type="radio" name="dpType" value="pct" checked={dpFormType === 'pct'} onChange={() => setDpFormType('pct')} className="text-blue-600 focus:ring-blue-500" />
+                      Persen (%)
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer text-blue-900">
+                      <input type="radio" name="dpType" value="cash" checked={dpFormType === 'cash'} onChange={() => setDpFormType('cash')} className="text-blue-600 focus:ring-blue-500" />
+                      Tunai (Rp)
+                    </label>
+                  </div>
+                </div>
+
+                {dpFormType === 'pct' && (
+                  <FormField label="DP Persen (%)">
+                    <ThousandInput isFloat value={vdForm.dpPct} onChange={val => setVdForm({ ...vdForm, dpPct: val })} placeholder="Cth: 50" className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </FormField>
+                )}
+                {dpFormType === 'cash' && (
+                  <FormField label="DP Tunai (Rp)">
+                    <ThousandInput value={vdForm.dpCash} onChange={val => setVdForm({ ...vdForm, dpCash: val })} placeholder="Cth: 5000000" className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </FormField>
+                )}
+              </div>
+
               <div className="bg-emerald-50 p-4 rounded-lg flex flex-col gap-2 border border-emerald-100">
                 <div className="flex justify-between items-center text-emerald-800">
                   <span className="font-medium text-sm">Total Nilai Diskon:</span>
@@ -907,20 +937,7 @@ export default function NeracaDetail() {
                 </div>
               </div>
 
-              {/* PO Info */}
-              <div className="border-t border-gray-100 pt-4 mt-2">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Informasi PO Out</h4>
-                <div className="grid gap-4">
-                  <FormField label="Subject PO">
-                    <input type="text" value={vdForm.subject} onChange={e => setVdForm({ ...vdForm, subject: e.target.value })} placeholder="Cth: Filter Element" className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />
-                  </FormField>
-                  <div className="grid gap-4">
-                    <FormField label="Tanggal Surat (Letter Date)">
-                      <input type="date" value={vdForm.letter_date} onChange={e => setVdForm({ ...vdForm, letter_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm" />
-                    </FormField>
-                  </div>
-                </div>
-              </div>
+
 
               <div className="flex justify-between pt-4 border-t border-gray-100 mt-2">
                 <Button variant="danger" type="button" onClick={handleDeleteVd} disabled={!(vendorDiscounts || []).find(d => d.vendor_id === vendorDiscountModalId)}>

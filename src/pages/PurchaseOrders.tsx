@@ -26,8 +26,8 @@ export default function PurchaseOrders() {
   // Edit modal state
   const [editModal, setEditModal] = useState<{ isOpen: boolean; po: PurchaseOrder | null }>({ isOpen: false, po: null });
   const [editPoNumber, setEditPoNumber] = useState('');
-  const [editLetterDate, setEditLetterDate] = useState('');
-  const [editPoDate, setEditPoDate] = useState('');
+  const [editCreatedDate, setEditCreatedDate] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
   const [editSubject, setEditSubject] = useState('');
   const [editRefDate, setEditRefDate] = useState('');
   const [existingDocs, setExistingDocs] = useState<any[]>([]);
@@ -41,12 +41,23 @@ export default function PurchaseOrders() {
     setGeneratingPoQt(qt);
   };
 
+  // Helper: convert any date string to yyyy-MM-dd for input[type=date]
+  const toDateInput = (dateStr?: string | null): string => {
+    if (!dateStr || dateStr === '-' || dateStr === 'null' || dateStr === 'undefined') return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const openEdit = (po: PurchaseOrder) => {
     setEditPoNumber(po.po_number || '');
-    setEditLetterDate(po.letter_date || '');
-    setEditPoDate(po.po_date || '');
+    setEditCreatedDate(toDateInput(po.created_date));
+    setEditDueDate(toDateInput(po.due_date));
     setEditSubject(po.subject || '');
-    setEditRefDate(po.ref_date || '');
+    setEditRefDate(toDateInput(po.ref_date));
     
     let docs: any[] = [];
     if (po.dokumen) {
@@ -93,8 +104,8 @@ export default function PurchaseOrders() {
       await savePO.mutateAsync({
         ...editModal.po,
         po_number: editPoNumber,
-        letter_date: editLetterDate,
-        po_date: editPoDate,
+        created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : editModal.po.created_date,
+        due_date: editDueDate,
         subject: editSubject,
         ref_date: editRefDate,
         dokumen: JSON.stringify(finalDocs),
@@ -202,8 +213,15 @@ export default function PurchaseOrders() {
                           </td>
                         )}
                         <td className="px-6 py-4 font-mono text-xs font-semibold text-violet-700">
-                          <div>{po.po_number}</div>
-                          {po.letter_date && <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(po.letter_date)}</div>}
+                          <div className="flex items-center gap-2">
+                            <span>{po.po_number}</span>
+                            {po.type && po.type !== 'Full' && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide ${po.type === 'DP' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {po.type}
+                              </span>
+                            )}
+                          </div>
+                          {po.created_date && <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(po.created_date)}</div>}
                           {po.subject && <div className="text-[11px] text-gray-500 font-sans mt-0.5 max-w-[160px] truncate">{po.subject}</div>}
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900">
@@ -300,8 +318,8 @@ export default function PurchaseOrders() {
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
                     <input
                       type="date"
-                      value={editLetterDate}
-                      onChange={e => setEditLetterDate(e.target.value)}
+                      value={editCreatedDate}
+                      onChange={e => setEditCreatedDate(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                     />
                   </div>
@@ -309,8 +327,8 @@ export default function PurchaseOrders() {
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">Due Date</label>
                     <input
                       type="date"
-                      value={editPoDate}
-                      onChange={e => setEditPoDate(e.target.value)}
+                      value={editDueDate}
+                      onChange={e => setEditDueDate(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                     />
                   </div>

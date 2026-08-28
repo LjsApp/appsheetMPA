@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart } from 'lucide-react';
+import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart, Edit2, Search, Calendar } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import type { NeracaQuotation } from '@/types';
 import {
@@ -63,7 +63,25 @@ function NeracaSelectionRow({
   );
 }
 
+// Helper: check if date is within this week
+function isThisWeek(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  return d >= startOfWeek && d < endOfWeek;
+}
 
+function isToday(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
 
 export default function Quotations() {
   const navigate = useNavigate();
@@ -71,7 +89,7 @@ export default function Quotations() {
   const { data: quotations = [], isLoading } = useNeracaQuotations();
   const { data: purchaseOrders = [] } = usePurchaseOrders();
 
-  const [generatingPoQt, setGeneratingPoQt] = useState<NeracaQuotation | null>(null);
+
   const deleteQuotation = useDeleteNeracaQuotation();
   const { data: neracas = [] } = useNeracas();
   const { data: allQuotations } = useNeracaQuotations();
@@ -82,6 +100,17 @@ export default function Quotations() {
   const [selectedNeracaIds, setSelectedNeracaIds] = useState<Set<string>>(new Set());
   const [expandedInq, setExpandedInq] = useState<Record<string, boolean>>({});
   const [isCreatingQt, setIsCreatingQt] = useState(false);
+
+  // Modal search + tab states
+  const [modalSearch, setModalSearch] = useState('');
+  const [modalTab, setModalTab] = useState<'all' | 'week' | 'today'>('all');
+
+  // Edit quotation modal state
+  const [editModal, setEditModal] = useState<{ isOpen: boolean; quotation: NeracaQuotation | null }>({ isOpen: false, quotation: null });
+  const [editQtNumber, setEditQtNumber] = useState('');
+  const [editQtDate, setEditQtDate] = useState('');
+  const [editQtSubject, setEditQtSubject] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const toggleNeracaSelection = (id: string) => {
     setSelectedNeracaIds(prev => {
@@ -104,9 +133,6 @@ export default function Quotations() {
     setIsCreatingQt(true);
     try {
       const baseQtNumber = await getNextQtNumber.mutateAsync();
-      // If baseQtNumber looks like 1/QT/MPA/08.2026, we can try to increment it for multiple, 
-      // but to be safe we just fetch once and add an index if multiple.
-      // Alternatively, we just create them with Date.now() based IDs and base numbers.
       let counter = 0;
 
       for (const neracaId of Array.from(selectedNeracaIds)) {
@@ -121,7 +147,6 @@ export default function Quotations() {
         
         let qtNum = baseQtNumber || `QT-${new Date().getFullYear()}-${Date.now()}`;
         if (counter > 0 && baseQtNumber) {
-           // simple increment logic if possible, else just append counter
            const parts = String(baseQtNumber).split('/');
            if (parts.length > 1) {
              const num = parseInt(parts[0], 10) + counter;
@@ -150,10 +175,48 @@ export default function Quotations() {
       }
       setShowAddModal(false);
       setSelectedNeracaIds(new Set());
+      setModalSearch('');
+      setModalTab('all');
     } catch (e: any) {
       alert('Gagal membuat quotation: ' + e.message);
     } finally {
       setIsCreatingQt(false);
+    }
+  };
+
+  // Open edit modal
+  const openEditModal = (q: NeracaQuotation) => {
+    setEditModal({ isOpen: true, quotation: q });
+    setEditQtNumber(q.quotation_number || '');
+    // created_date to yyyy-MM-dd
+    const d = q.created_date ? new Date(q.created_date) : null;
+    if (d && !isNaN(d.getTime())) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      setEditQtDate(`${yyyy}-${mm}-${dd}`);
+    } else {
+      setEditQtDate('');
+    }
+    setEditQtSubject((q as any).subject || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editModal.quotation) return;
+    setIsSavingEdit(true);
+    try {
+      await saveQuotation.mutateAsync({
+        ...editModal.quotation,
+        quotation_number: editQtNumber,
+        created_date: editQtDate ? new Date(editQtDate).toISOString() : editModal.quotation.created_date,
+        subject: editQtSubject,
+        updated_date: new Date().toISOString().split('T')[0],
+      } as any);
+      setEditModal({ isOpen: false, quotation: null });
+    } catch (e: any) {
+      alert('Gagal menyimpan: ' + e.message);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -180,7 +243,6 @@ export default function Quotations() {
       return inq.documents;
     }
   };
-
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string; quotation: NeracaQuotation | null }>({ isOpen: false, id: null, title: '', quotation: null });
   const [search, setSearch] = useState('');
@@ -214,13 +276,21 @@ export default function Quotations() {
   const totalPages = Math.max(1, Math.ceil(filteredQuotations.length / rowsPerPage));
   const paginatedQuotations = filteredQuotations.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handlePoGenerated = async () => {
-    setIsGenerating(false);
-    setGeneratingPoQt(null);
-    navigate('/po-in');
-  };
+  // Filtered inquiries for the modal
+  const modalInquiries = useMemo(() => {
+    let result = inquiries.filter(i => i.status === 'Neraca');
+    if (modalTab === 'today') result = result.filter(i => isToday(i.created_date));
+    else if (modalTab === 'week') result = result.filter(i => isThisWeek(i.created_date));
+    if (modalSearch) {
+      const s = modalSearch.toLowerCase();
+      result = result.filter(i =>
+        (i.request_number || '').toLowerCase().includes(s) ||
+        (i.customer_name || '').toLowerCase().includes(s) ||
+        (i.request_title || '').toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [inquiries, modalSearch, modalTab]);
 
   return (
     <div className="space-y-5">
@@ -291,7 +361,10 @@ export default function Quotations() {
                             <div className="text-xs text-gray-400 max-w-[160px] truncate mt-0.5" title={inquiry?.request_title}>{inquiry?.request_title || '-'}</div>
                           </td>
                         )}
-                        <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">{q.quotation_number}</td>
+                        <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
+                          <div>{q.quotation_number}</div>
+                          {(q as any).subject && <div className="text-[11px] text-gray-400 font-sans mt-0.5 max-w-[160px] truncate">{(q as any).subject}</div>}
+                        </td>
                         <td className="px-5 py-4 text-right font-semibold text-gray-900">
                           {Number(q.nilai) > 0 ? formatCurrency(Number(q.nilai)) : <span className="text-gray-400 font-normal text-xs">-</span>}
                         </td>
@@ -318,6 +391,9 @@ export default function Quotations() {
                         <td className="px-5 py-4 text-xs text-gray-500">{formatDate(q.created_date)}</td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => openEditModal(q)} className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors" title="Edit Quotation">
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
                             <button onClick={() => handleDelete(q)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -348,8 +424,6 @@ export default function Quotations() {
         )}
       </div>
 
-
-
       <DeleteConfirmModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
@@ -359,16 +433,94 @@ export default function Quotations() {
         isLoading={deleteQuotation.isPending}
       />
 
+      {/* Edit Quotation Modal */}
+      {editModal.isOpen && editModal.quotation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h2 className="text-base font-semibold text-gray-900">Edit Quotation</h2>
+              <button onClick={() => setEditModal({ isOpen: false, quotation: null })} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">No. Quotation</label>
+                <input
+                  value={editQtNumber}
+                  onChange={e => setEditQtNumber(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="No. Quotation"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={editQtDate}
+                  onChange={e => setEditQtDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject</label>
+                <input
+                  value={editQtSubject}
+                  onChange={e => setEditQtSubject(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Subject / perihal quotation"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-5 pb-5">
+              <Button variant="secondary" onClick={() => setEditModal({ isOpen: false, quotation: null })}>Batal</Button>
+              <Button onClick={handleSaveEdit} loading={isSavingEdit}>Simpan</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Quotation Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl">
-            <div className="flex items-center justify-between p-5 border-b">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-5 border-b shrink-0">
               <h2 className="text-lg font-bold text-gray-900">Tambah Quotation</h2>
-              <button onClick={() => { setShowAddModal(false); setSelectedNeracaIds(new Set()); }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+              <button onClick={() => { setShowAddModal(false); setSelectedNeracaIds(new Set()); setModalSearch(''); setModalTab('all'); }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+            </div>
+
+            {/* Search + Tabs */}
+            <div className="px-5 pt-4 pb-0 shrink-0 space-y-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  value={modalSearch}
+                  onChange={e => setModalSearch(e.target.value)}
+                  placeholder="Cari no. permintaan, customer, judul..."
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              {/* Tabs */}
+              <div className="flex gap-1">
+                {([['all', 'Semua'], ['week', 'Minggu Ini'], ['today', 'Hari Ini']] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setModalTab(key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      modalTab === key
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {key !== 'all' && <Calendar className="w-3 h-3" />}
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             
-            <div className="p-0 max-h-[60vh] overflow-y-auto">
+            <div className="p-0 overflow-y-auto flex-1 mt-3">
               <table className="w-full text-left text-sm">
                 <thead className="bg-gray-50 sticky top-0 shadow-sm z-10">
                   <tr>
@@ -379,10 +531,12 @@ export default function Quotations() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {inquiries.filter(i => i.status === 'Neraca').length === 0 && (
-                     <tr><td colSpan={4} className="p-8 text-center text-gray-500">Belum ada inquiry di tahap Neraca.</td></tr>
+                  {modalInquiries.length === 0 && (
+                     <tr><td colSpan={4} className="p-8 text-center text-gray-500">
+                       {modalSearch || modalTab !== 'all' ? 'Tidak ada data yang sesuai filter.' : 'Belum ada inquiry di tahap Neraca.'}
+                     </td></tr>
                   )}
-                  {inquiries.filter(i => i.status === 'Neraca').map(inq => {
+                  {modalInquiries.map(inq => {
                     const inqNeracas = neracas.filter(n => n.inquiry_id === inq.id);
                     if (inqNeracas.length === 0) return null;
                     const isExpanded = expandedInq[inq.id];
@@ -412,10 +566,10 @@ export default function Quotations() {
               </table>
             </div>
 
-            <div className="flex justify-between items-center p-5 border-t bg-gray-50 rounded-b-2xl">
+            <div className="flex justify-between items-center p-5 border-t bg-gray-50 rounded-b-2xl shrink-0">
               <span className="text-sm font-medium text-gray-600">{selectedNeracaIds.size} neraca dipilih</span>
               <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => { setShowAddModal(false); setSelectedNeracaIds(new Set()); }}>Batal</Button>
+                <Button variant="secondary" onClick={() => { setShowAddModal(false); setSelectedNeracaIds(new Set()); setModalSearch(''); setModalTab('all'); }}>Batal</Button>
                 <Button onClick={handleAddQuotation} loading={isCreatingQt} disabled={selectedNeracaIds.size === 0}>
                   Buat Quotation
                 </Button>

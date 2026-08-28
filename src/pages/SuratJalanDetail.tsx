@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, RotateCcw, Loader2 } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { 
-  useSuratJalan, 
-  useSaveSuratJalan, 
-  usePoIns, 
-  useNeracaItems, 
-  useCompany 
+import {
+  useSuratJalan,
+  useSaveSuratJalan,
+  usePoIns,
+  useNeracaItems,
+  useCompany,
 } from '@/hooks/useData';
 import { getDriveImageUrl, formatDate } from '@/lib/utils';
 
@@ -24,7 +24,7 @@ export default function SuratJalanDetail() {
 
   const { data: suratJalanList = [], isLoading: loadingSJ } = useSuratJalan();
   const saveSJ = useSaveSuratJalan();
-  
+
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const { data: company, isLoading: loadingCompany } = useCompany();
 
@@ -70,29 +70,26 @@ export default function SuratJalanDetail() {
 
   return (
     <div className="space-y-5 pb-20">
+      {/* Print styles â€” same pattern as QuotationDetail */}
       <style>{`
         @media print {
           @page { size: A4; margin: 0; }
-          body, html, #root {
-            margin: 0; padding: 0;
-            background-color: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            height: auto !important;
-            overflow: visible !important;
-          }
+          body, html, #root { margin:0; padding:0; background:white !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; height:auto !important; overflow:visible !important; }
           .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
           .no-print { display: none !important; }
-          #sj-doc {
-            box-shadow: none !important; border: none !important;
-            border-radius: 0 !important; max-width: 100% !important; margin: 0 !important;
-          }
+          #sj-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
+          thead { display: table-header-group; }
+          tr { page-break-inside: avoid; }
           input { border: none !important; padding: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
           input::placeholder { color: transparent !important; }
-          thead { display: table-header-group; }
-          tfoot { display: table-row-group; }
-          tr { page-break-inside: avoid; }
+          .print-wm-tl { position:fixed !important; opacity:0.35 !important; }
+          .print-wm-br { position:fixed !important; opacity:0.35 !important; }
+          .print-page-footer { position:fixed !important; background:white !important; z-index:100 !important; }
         }
+        /* Screen styles (absolute to the document container) */
+        .print-wm-tl { position:absolute; top:0; left:0; width:320px; opacity:0.15; transform:translate(-20%, -20%); z-index:0; pointer-events:none; }
+        .print-wm-br { position:absolute; bottom:0; right:0; width:360px; opacity:0.15; transform:translate(20%, 20%); z-index:0; pointer-events:none; }
+        .print-page-footer { position:absolute; bottom:0; left:0; right:0; padding:10px 40px; display:flex; justify-content:flex-end; align-items:center; background:transparent; z-index:0; pointer-events:none; }
       `}</style>
 
       <div className="no-print">
@@ -108,195 +105,167 @@ export default function SuratJalanDetail() {
         />
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[12pt] relative overflow-hidden" id="sj-doc">
-        {/* Watermark background */}
-        <div aria-hidden="true" style={{
-          position:'absolute', inset:0, zIndex:0, pointerEvents:'none', overflow:'hidden',
-        }}>
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{position:'absolute',inset:0}}>
-            <defs>
-              <pattern id="wm-sj" width="60" height="60" patternUnits="userSpaceOnUse">
-                <circle cx="30" cy="30" r="1.2" fill="#1e3a8a" opacity="0.06" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#wm-sj)" />
-          </svg>
-          <div style={{position:'absolute',top:0,right:0,width:'180px',height:'180px',background:'radial-gradient(circle at top right, rgba(30,58,138,0.07), transparent 70%)'}} />
-          <div style={{position:'absolute',bottom:0,left:0,width:'180px',height:'180px',background:'radial-gradient(circle at bottom left, rgba(30,58,138,0.06), transparent 70%)'}} />
+      {/* Surat Jalan Document */}
+      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden" id="sj-doc">
+        
+        {/* Watermark & footer - absolute on screen, fixed on print */}
+        <img className="print-wm-tl" src="/watermark.png" alt="" />
+        <img className="print-wm-br" src="/watermark.png" alt="" />
+        <div className="print-page-footer">
+          <div className="text-right text-[7.5pt] text-gray-500 leading-relaxed">
+            {company?.address && <div>{company.address}</div>}
+            <div className="flex justify-end gap-4">
+              {company?.phone && <span>☎ {company.phone}</span>}
+              {company?.email && <span>✉ {company.email}</span>}
+            </div>
+          </div>
         </div>
 
-        <table className="w-full" style={{borderCollapse:'collapse', position:'relative', zIndex:1}}>
+        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+
+          {/* ===== THEAD: kop surat — repeats on every printed page ===== */}
           <thead>
             <tr>
-              <td style={{padding:0}}>
-                {/* Word-style header — tight to top edge */}
-                <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 pt-4 pb-3">
+              <td style={{ padding: 0 }}>
+                <div className="px-10 pt-8 pb-4">
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       {company?.logo_url ? (
-                        <div className="w-16 h-16 overflow-hidden flex items-center justify-center bg-white/10 rounded">
+                        <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
                           <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                         </div>
                       ) : (
-                        <div className="w-16 h-16 border border-white/30 rounded flex items-center justify-center text-white/50 text-xs">Logo</div>
+                        <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
                       )}
                       <div>
-                        <h1 className="text-white font-bold tracking-wide leading-tight text-[13pt]">{companyName}</h1>
-                        {company?.address && <p className="text-blue-100 mt-0.5 text-[9pt] leading-tight max-w-xs">{company.address}</p>}
+                        <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>
+                        {company?.address && <p className="text-gray-600 mt-0.5 text-[10pt]">{company.address}</p>}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-white/80 text-[8pt] font-medium tracking-widest uppercase mb-0.5">Document</div>
-                      <h2 className="text-white font-extrabold tracking-widest text-[18pt] leading-none">DELIVERY ORDER</h2>
+                      <span className="inline-block bg-blue-800 text-white font-bold text-[8pt] uppercase tracking-widest px-3 py-1.5 rounded">SURAT JALAN</span>
                     </div>
                   </div>
-                </div>
-                {/* thin accent line */}
-                <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
-                {/* SURAT JALAN subtitle */}
-                <div className="text-center py-3 border-b border-gray-100">
-                  <h3 className="font-bold underline text-lg tracking-widest text-blue-900">SURAT JALAN</h3>
                 </div>
               </td>
             </tr>
           </thead>
 
+          {/* ===== TBODY: all body content ===== */}
           <tbody>
             <tr>
-              <td style={{padding:0}}>
-                <div className="px-10 py-4">
-                  <div className="flex justify-between mb-8 text-[12pt] leading-snug">
-                    <div className="space-y-1.5 w-1/2 pr-4">
+              <td style={{ padding: 0 }}>
+                <div className="px-10 py-6">
+
+                  {/* Info Block */}
+                  <div className="grid grid-cols-2 gap-6 mb-5 text-[12pt] leading-snug">
+                    <div className="space-y-1">
                       <div className="flex items-start">
                         <span className="text-gray-700 w-24 shrink-0">Customer</span>
                         <span className="text-gray-700 mr-2">:</span>
-                        <span className="font-semibold text-gray-900">{po?.customer_name || '-'}</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">Address</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="text-gray-900 whitespace-pre-wrap">{po?.alamat_pengiriman || '-'}</span>
+                        <div>
+                          <div className="font-semibold text-gray-900">{po?.customer_name || '-'}</div>
+                          {po?.alamat_pengiriman && <div className="text-gray-600 text-[11pt]">{po.alamat_pengiriman}</div>}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="space-y-1.5 w-1/2 pl-4">
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">No</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="text-gray-900">{sj.sj_number}</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">Date</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="text-gray-900">{formatDate(sj.created_date)}</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">Ref</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="text-gray-900">{po?.po_in_number || '-'}</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">Ref Date</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="text-gray-900">{po?.tanggal ? formatDate(po.tanggal) : '-'}</span>
-                      </div>
+
+                    <div className="space-y-0.5">
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">No</span><span className="text-gray-700 mr-2">:</span><span className="font-bold text-gray-900">{sj.sj_number}</span></div>
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{formatDate(sj.created_date)}</span></div>
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{po?.po_in_number || '-'}</span></div>
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{po?.tanggal ? formatDate(po.tanggal) : '-'}</span></div>
                     </div>
                   </div>
 
+                  {/* Greeting / Ekspedisi */}
                   <div className="mb-4">
                     <span className="text-gray-900">Kami kirimkan barang-barang tersebut dibawah ini dengan menggunakan ekspedisi </span>
-                    <input 
-                      type="text" 
-                      value={ekspedisi} 
-                      onChange={e => setEkspedisi(e.target.value)} 
+                    <input
+                      type="text"
+                      value={ekspedisi}
+                      onChange={e => setEkspedisi(e.target.value)}
                       onBlur={handleEkspedisiBlur}
-                      placeholder="pilih ekspedisi (mis. JNT, JNE)..." 
-                      className="border-b border-gray-300 font-semibold focus:border-blue-500 focus:outline-none px-1 w-64 inline-block text-gray-900 placeholder:font-normal placeholder:text-gray-400 no-print" 
+                      placeholder="pilih ekspedisi (mis. JNT, JNE)..."
+                      className="border-b border-gray-300 font-semibold focus:border-blue-500 focus:outline-none px-1 w-64 inline-block text-gray-900 placeholder:font-normal placeholder:text-gray-400 no-print"
                     />
                     <span className="font-semibold hidden print:inline-block">{ekspedisi || '_________________'}</span>
                     <span className="text-gray-900"> :</span>
                   </div>
 
+                  {/* Items Table */}
                   <table className="w-full border-collapse mb-8 text-[11pt]">
                     <thead>
-                      <tr className="bg-[#8CB0CE] border border-black">
-                        <th className="border-r border-black py-2 px-3 text-center w-12 font-bold text-black">No</th>
-                        <th className="border-r border-black py-2 px-3 text-center font-bold text-black">Item</th>
-                        <th className="py-2 px-3 text-center w-24 font-bold text-black">Qty</th>
+                      <tr className="bg-blue-900 text-white">
+                        <th className="py-2.5 px-3 text-center font-semibold border border-black" style={{ width: '5%' }}>No</th>
+                        <th className="py-2.5 px-3 text-left font-semibold border border-black">Item</th>
+                        <th className="py-2.5 px-3 text-center font-semibold border border-black" style={{ width: '12%' }}>Qty</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={item.id} className="border border-black">
-                          <td className="border-r border-black py-3 px-3 text-center text-gray-600 align-top">{idx + 1}</td>
-                          <td className="border-r border-black py-3 px-3 align-top text-justify">
+                      {items.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-4 text-center italic text-gray-500 border border-black">Tidak ada item dalam Surat Jalan ini.</td>
+                        </tr>
+                      ) : items.map((item, idx) => (
+                        <tr key={item.id} className="break-inside-avoid bg-white">
+                          <td className="py-3 px-3 text-center text-gray-600 align-top border border-black">{idx + 1}</td>
+                          <td className="py-3 px-3 align-top text-justify border border-black">
                             <div className="text-gray-900">{item.item_customer}</div>
                             {item.item_vendor && item.item_vendor !== item.item_customer && (
                               <>
                                 <div className="h-3"></div>
-                                <div className="text-gray-900"><span className="font-bold">Offer to:</span><br/>{item.item_vendor}</div>
+                                <div className="text-gray-900"><span className="font-bold">Offer to:</span><br />{item.item_vendor}</div>
                               </>
                             )}
                           </td>
-                          <td className="py-3 px-3 text-center text-gray-800 align-top">{item.qty || 1}</td>
+                          <td className="py-3 px-3 text-center text-gray-800 align-top border border-black">{item.qty || 1}</td>
                         </tr>
                       ))}
-                      {items.length === 0 && (
-                        <tr className="border border-black">
-                          <td colSpan={3} className="py-4 text-center italic text-gray-500">Tidak ada item dalam Surat Jalan ini.</td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
 
-                  <p className="text-[10pt] text-gray-600 italic mb-8 break-inside-avoid leading-relaxed">
-                    Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
-                  </p>
-
-                  <div className="flex justify-between break-inside-avoid text-[12pt] mb-2">
-                    <div className="w-64 text-left">
-                      <div className="mb-1">Diterima,</div>
-                      <div>Tanggal : ______________________ .</div>
-                    </div>
-                    <div className="text-center" style={{ minWidth: '200px' }}>
-                      <p>Hormat kami,</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-stretch break-inside-avoid text-[12pt]">
-                    <div className="w-64 text-center flex flex-col justify-between">
-                      <div className="mt-0.5">{po?.customer_name || 'Customer'}</div>
-                      <div className="pb-8">(__________________________)</div>
-                    </div>
-                    <div className="text-gray-800 text-center flex flex-col items-center" style={{ minWidth: '200px' }}>
-                      <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
-                      <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden my-2">
-                        <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+                  {/* Disclaimer + Signatures */}
+                  <div className="break-inside-avoid">
+                    <p className="text-[10pt] text-gray-600 italic mb-8 leading-relaxed">
+                      Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
+                    </p>
+                    
+                    {/* Two-column signatures */}
+                    <div className="flex justify-between items-start text-[12pt]">
+                      {/* Left — received by */}
+                      <div className="text-left" style={{ minWidth: '200px' }}>
+                        <p>Diterima,</p>
+                        <p className="mt-1">Tanggal : ________________________.</p>
+                        <p className="mt-6 font-semibold text-gray-900 text-center">{po?.customer_name || 'Customer'}</p>
+                        <div style={{ height: '90px' }}></div>
+                        <p className="text-gray-900 text-center">(__________________________)</p>
                       </div>
-                      <p className="text-[10pt] text-gray-400 mb-2">Scan untuk verifikasi</p>
-                      <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
-                      <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
+
+                      {/* Right — company with QR */}
+                      <div className="text-gray-800 text-center flex flex-col items-center" style={{ minWidth: '200px' }}>
+                        <p className="invisible">Diterima,</p>
+                        <p className="mt-1">Hormat kami,</p>
+                        <p className="mt-6 font-semibold text-gray-900">{companyName}</p>
+                        <div className="w-20 h-20 border border-gray-200 p-1 bg-white overflow-hidden my-2">
+                          <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+                        </div>
+                        <p className="text-[10pt] text-gray-400 mb-2">Scan untuk verifikasi</p>
+                        <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
+                        <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Direktur'}</p>
+                      </div>
                     </div>
                   </div>
+
                 </div>
               </td>
             </tr>
           </tbody>
-          </tbody>
-
-          {/* ===== TFOOT: footer repeats on every printed page ===== */}
+          {/* Spacer to prevent fixed footer from overlapping content */}
           <tfoot>
             <tr>
-              <td style={{padding:0}}>
-                <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
-                <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 py-2.5 flex justify-between items-center">
-                  <div className="text-blue-200 text-[8pt]">{companyName}</div>
-                  <div className="flex items-center gap-4 text-[8pt] text-blue-100">
-                    {company?.email && <span>✉ {company.email}</span>}
-                    {company?.phone && <span>☎ {company.phone}</span>}
-                    {company?.address && <span className="max-w-[200px] text-right">📍 {company.address}</span>}
-                  </div>
-                </div>
+              <td>
+                <div style={{ height: '50px' }}></div>
               </td>
             </tr>
           </tfoot>

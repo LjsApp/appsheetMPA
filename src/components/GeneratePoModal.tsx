@@ -159,23 +159,72 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
         const total_nilai = totalBeli - totalDiscVal;
 
         const docs: any[] = [];
-        // Removed auto-pulling documents from item.documents per user request
+        
+        let dpVal = 0;
+        if (vd) {
+          if (vd.dp_pct && vd.dp_pct > 0) dpVal = total_nilai * (vd.dp_pct / 100);
+          else if (vd.dp_nominal && vd.dp_nominal > 0) dpVal = vd.dp_nominal;
+        }
 
-        const poId = `PO-${Date.now()}-${currentCounter}`;
-        await savePurchaseOrder.mutateAsync({
-          id: poId,
-          po_number: poNumber,
-          neraca_id: quotation.neraca_id,
-          quotation_id: quotation.id,
-          vendor_id: vendor.id,
-          vendor_name: vendor.name,
-          jumlah_item: jumlahItem,
-          total_nilai,
-          dokumen: JSON.stringify(docs),
-          status: 'Active',
-          created_date: new Date().toISOString(),
-          updated_date: new Date().toISOString(),
-        });
+        const basePoId = `PO-${Date.now()}-${currentCounter}`;
+        
+        if (dpVal > 0) {
+          // Buat 2 PO: DP dan Sisa
+          const poDpId = basePoId + '-DP';
+          const poSisaId = basePoId + '-SISA';
+          
+          // 1. PO DP
+          await savePurchaseOrder.mutateAsync({
+            id: poDpId,
+            po_number: poNumber + ' (DP)',
+            neraca_id: quotation.neraca_id,
+            quotation_id: quotation.id,
+            vendor_id: vendor.id,
+            vendor_name: vendor.name,
+            jumlah_item: jumlahItem,
+            total_nilai: dpVal,
+            dokumen: JSON.stringify(docs),
+            status: 'Active',
+            type: 'DP',
+            created_date: new Date().toISOString(),
+            updated_date: new Date().toISOString(),
+          });
+          
+          // 2. PO Sisa
+          await savePurchaseOrder.mutateAsync({
+            id: poSisaId,
+            po_number: poNumber,
+            neraca_id: quotation.neraca_id,
+            quotation_id: quotation.id,
+            vendor_id: vendor.id,
+            vendor_name: vendor.name,
+            jumlah_item: jumlahItem,
+            total_nilai: total_nilai - dpVal,
+            dokumen: JSON.stringify(docs),
+            status: 'Active',
+            type: 'Sisa',
+            dp_reference_id: poDpId,
+            created_date: new Date().toISOString(),
+            updated_date: new Date().toISOString(),
+          });
+        } else {
+          // Buat 1 PO Full
+          await savePurchaseOrder.mutateAsync({
+            id: basePoId,
+            po_number: poNumber,
+            neraca_id: quotation.neraca_id,
+            quotation_id: quotation.id,
+            vendor_id: vendor.id,
+            vendor_name: vendor.name,
+            jumlah_item: jumlahItem,
+            total_nilai,
+            dokumen: JSON.stringify(docs),
+            status: 'Active',
+            type: 'Full',
+            created_date: new Date().toISOString(),
+            updated_date: new Date().toISOString(),
+          });
+        }
       }
 
       onSuccess(quotation);

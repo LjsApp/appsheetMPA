@@ -149,8 +149,8 @@ export interface VendorDiscount {
   vendor_name: string;
   discount_pct: number;   // discount as percentage
   discount_cash: number;  // discount as cash (Rp)
-  subject?: string;
-  letter_date?: string;
+  dp_pct?: number;        // DP as percentage
+  dp_nominal?: number;    // DP as nominal cash
   updated_date: string;
 }
 
@@ -165,8 +165,9 @@ export interface PurchaseOrder {
   total_nilai: number;
   dokumen: string; // JSON array string
   status: 'Active' | 'Deleted';
-  po_date?: string;
-  letter_date?: string;
+  type?: 'Full' | 'DP' | 'Sisa';
+  dp_reference_id?: string;
+  due_date?: string;
   subject?: string;
   ref_date?: string;
   created_date: string;
@@ -223,6 +224,7 @@ export interface NeracaQuotation {
   request_title: string;     // judul permintaan dari inquiry
   nilai: number;             // grand_total dari neraca
   dokumen: string;           // URL dokumen (optional)
+  subject?: string;
   status: NeracaQuotationStatus;
   created_date: string;
   updated_date: string;

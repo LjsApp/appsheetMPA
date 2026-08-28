@@ -63,54 +63,33 @@ function numberToWords(n: number): string {
   return terbilang(Math.round(n)) + ' Rupiah';
 }
 
-// ─── Print-only header (Word-style, blue gradient) ───────────────────────────
-function DocHeader({ logoUrl, name, address, rightLabel, email, phone }: { logoUrl?: string; name: string; address?: string; rightLabel: string; email?: string; phone?: string }) {
+// ─── Print-only header (logo + company name + address) ───────────────────────
+function DocHeader({ logoUrl, name, address, rightLabel }: { logoUrl?: string; name: string; address?: string; rightLabel: string }) {
   return (
-    <>
-      <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="flex justify-between items-center px-10 pt-4 pb-3">
-        <div className="flex items-center gap-3">
-          {logoUrl ? (
-            <div className="w-16 h-16 overflow-hidden flex items-center justify-center bg-white/10 rounded flex-shrink-0">
-              <img src={getDriveImageUrl(logoUrl)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
-            </div>
-          ) : (
-            <div className="w-16 h-16 border border-white/30 rounded flex items-center justify-center text-white/50 text-xs flex-shrink-0">Logo</div>
-          )}
-          <div>
-            <h1 className="text-white font-bold tracking-wide leading-tight text-[13pt]">{name}</h1>
-            {address && <p className="text-blue-100 mt-0.5 text-[9pt] leading-tight max-w-xs">{address}</p>}
+    <div className="flex justify-between items-center px-10 pt-6 pb-4">
+      <div className="flex items-center gap-4">
+        {logoUrl ? (
+          <div className="w-20 h-20 overflow-hidden flex items-center justify-center flex-shrink-0">
+            <img src={getDriveImageUrl(logoUrl)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
           </div>
-        </div>
-        <div className="text-right">
-          <div className="text-white/70 text-[8pt] font-medium tracking-widest uppercase mb-0.5">Document</div>
-          <span className="inline-block bg-white text-blue-900 font-extrabold tracking-widest text-[10pt] uppercase px-3 py-1.5 rounded shadow">{rightLabel}</span>
-        </div>
-      </div>
-      <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
-    </>
-  );
-}
-
-// ─── Footer for each doc card ─────────────────────────────────────────────────
-function DocFooter({ name, email, phone, address }: { name: string; email?: string; phone?: string; address?: string }) {
-  return (
-    <>
-      <div className="h-1" style={{background:'linear-gradient(90deg,#f59e0b,#3b82f6,#6366f1)'}} />
-      <div style={{background:'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)'}} className="px-10 py-2 flex justify-between items-center">
-        <div className="text-blue-200 text-[8pt]">{name}</div>
-        <div className="flex items-center gap-4 text-[8pt] text-blue-100">
-          {email && <span>✉ {email}</span>}
-          {phone && <span>☎ {phone}</span>}
-          {address && <span className="max-w-[200px] text-right">📍 {address}</span>}
+        ) : (
+          <div className="w-20 h-20 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs flex-shrink-0">Logo</div>
+        )}
+        <div>
+          <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{name}</h1>
+          {address && <p className="text-gray-600 mt-0.5 text-[10pt]">{address}</p>}
         </div>
       </div>
-    </>
+      <div className="text-right">
+        <span className="inline-block bg-blue-800 text-white font-bold tracking-widest text-[8pt] uppercase px-3 py-1.5 rounded">{rightLabel}</span>
+      </div>
+    </div>
   );
 }
 
 function DocHeaderKwitansi({ logoUrl, name, address, email, phone }: { logoUrl?: string; name: string; address?: string; email?: string; phone?: string }) {
   return (
-    <div className="flex justify-between items-start pb-4 border-b border-gray-200">
+    <div className="flex justify-between items-start pb-4">
       <div className="flex items-center gap-4">
         {logoUrl ? (
           <div className="w-16 h-16 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -229,17 +208,25 @@ export default function InvoiceDetail() {
     <div className="space-y-5 pb-20">
       <style>{`
         @media print {
-          @page { size: A4; margin: 1cm; }
+          @page { size: A4; margin: 0; }
           body, html, #root { margin:0; padding:0; background:white !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; height:auto !important; overflow:visible !important; }
           .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
           .no-print { display: none !important; }
           .page-break { page-break-before: always; break-before: page; }
           .page-break-avoid { page-break-inside: avoid; break-inside: avoid; }
-          .print-doc-card { box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; }
+          .print-doc-card { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
           thead { display: table-header-group; }
-          tfoot { display: table-row-group; }
+          tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
+          /* Fixed watermark and footer on every printed page */
+          .print-wm-tl { display:block !important; position:fixed; top:0; left:0; width:320px; opacity:0.35; transform:translate(-20%, -20%); z-index:0; pointer-events:none; }
+          .print-wm-br { display:block !important; position:fixed; bottom:0; right:0; width:360px; opacity:0.35; transform:translate(20%, 20%); z-index:0; pointer-events:none; }
+          .print-page-footer { display:flex !important; position:fixed; bottom:0; left:0; right:0; background:white; z-index:100; padding:10px 40px; justify-content:flex-end; align-items:center; }
+          /* Add margin bottom to body content so footer doesn't overlap */
+          .space-y-8 > div:last-child { padding-bottom: 60px; }
         }
+        /* Hidden in screen, visible in print */
+        .print-wm-tl, .print-wm-br, .print-page-footer { display: none; }
       `}</style>
 
       <div className="no-print">
@@ -257,19 +244,22 @@ export default function InvoiceDetail() {
 
       <div className="space-y-8">
 
-        {/* ═══════════════════════════════════════════════════════════
-            PAGE 1 — SURAT PERMOHONAN PEMBAYARAN (SPP)
-        ════════════════════════════════════════════════════════════ */}
-        <div className="print-doc-card bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[11pt] overflow-hidden relative">
-          {/* Watermark */}
-          <div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,pointerEvents:'none'}}>
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{position:'absolute',inset:0}}>
-              <defs><pattern id="wm-spp" width="60" height="60" patternUnits="userSpaceOnUse"><circle cx="30" cy="30" r="1.1" fill="#1e3a8a" opacity="0.05" /></pattern></defs>
-              <rect width="100%" height="100%" fill="url(#wm-spp)" />
-            </svg>
-            <div style={{position:'absolute',top:0,right:0,width:'160px',height:'160px',background:'radial-gradient(circle at top right, rgba(30,58,138,0.07), transparent 70%)'}} />
+        {/* Fixed watermark & footer — appear on every printed page */}
+        <img className="print-wm-tl" src="/watermark.png" alt="" />
+        <img className="print-wm-br" src="/watermark.png" alt="" />
+        <div className="print-page-footer">
+          <div className="text-right text-[7.5pt] text-gray-500 leading-relaxed">
+            {company?.address && <div>{company.address}</div>}
+            <div className="flex justify-end gap-4">
+              {company?.phone && <span>☎ {company.phone}</span>}
+              {company?.email && <span>✉ {company.email}</span>}
+            </div>
           </div>
-        <table className="w-full" style={{ borderCollapse: 'collapse', position:'relative', zIndex:1 }}>
+        </div>
+
+        {/* PAGE 1 — SURAT PERMOHONAN PEMBAYARAN (SPP) */}
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[11pt] overflow-hidden relative">
+        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr><td style={{ padding: 0 }}>
               <DocHeader
@@ -277,8 +267,6 @@ export default function InvoiceDetail() {
                 name={companyName}
                 address={companyAddress}
                 rightLabel="Surat Permohonan Pembayaran"
-                email={company?.email}
-                phone={company?.phone}
               />
             </td></tr>
           </thead>
@@ -339,27 +327,12 @@ export default function InvoiceDetail() {
               </div>
             </td></tr>
           </tbody>
-          <tfoot>
-            <tr><td style={{padding:0}}>
-              <DocFooter name={companyName} email={company?.email} phone={company?.phone} address={companyAddress} />
-            </td></tr>
-          </tfoot>
         </table>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════
-            PAGE 2 — INVOICE DETAIL
-        ════════════════════════════════════════════════════════════ */}
-        <div className="print-doc-card bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug relative">
-          {/* Watermark */}
-          <div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,pointerEvents:'none'}}>
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{position:'absolute',inset:0}}>
-              <defs><pattern id="wm-inv" width="60" height="60" patternUnits="userSpaceOnUse"><circle cx="30" cy="30" r="1.1" fill="#1e3a8a" opacity="0.05" /></pattern></defs>
-              <rect width="100%" height="100%" fill="url(#wm-inv)" />
-            </svg>
-            <div style={{position:'absolute',top:0,right:0,width:'160px',height:'160px',background:'radial-gradient(circle at top right, rgba(30,58,138,0.07), transparent 70%)'}} />
-          </div>
-        <table className="w-full" style={{ borderCollapse: 'collapse', position:'relative', zIndex:1 }}>
+        {/* PAGE 2 — INVOICE DETAIL */}
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug">
+        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr><td style={{ padding: 0 }}>
               <DocHeader
@@ -367,8 +340,6 @@ export default function InvoiceDetail() {
                 name={companyName}
                 address={companyAddress}
                 rightLabel="Invoice"
-                email={company?.email}
-                phone={company?.phone}
               />
             </td></tr>
           </thead>
@@ -421,11 +392,17 @@ export default function InvoiceDetail() {
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="border-t border-black">
+                    <tbody className="border-t border-black break-inside-avoid">
                       <tr className="border-t border-black">
-                        <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Total</td>
+                        <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Sub Total</td>
                         <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(resume.subtotal).replace('Rp\u00a0', '').replace('Rp', '')}</td>
                       </tr>
+                      {resume.discount > 0 && (
+                        <tr className="border-t border-black">
+                          <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Discount</td>
+                          <td className="py-1 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(resume.discount).replace('Rp\u00a0', '').replace('Rp', '')}</td>
+                        </tr>
+                      )}
                       <tr className="border-t border-black">
                         <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Dpp Nilai Lain</td>
                         <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(resume.dpp).replace('Rp\u00a0', '').replace('Rp', '')}</td>
@@ -438,7 +415,7 @@ export default function InvoiceDetail() {
                         <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total</td>
                         <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(resume.grand_total)}</td>
                       </tr>
-                    </tfoot>
+                    </tbody>
                   </table>
                 </div>
 
@@ -453,34 +430,29 @@ export default function InvoiceDetail() {
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <Disclaimer />
-                </div>
+                <div className="break-inside-avoid">
+                  <div className="mb-6">
+                    <Disclaimer />
+                  </div>
 
-                <Signature />
+                  <Signature />
+                </div>
               </div>
             </td></tr>
           </tbody>
+          {/* TFOOT: empty spacer to prevent fixed footer from overlapping content */}
           <tfoot>
-            <tr><td style={{padding:0}}>
-              <DocFooter name={companyName} email={company?.email} phone={company?.phone} address={companyAddress} />
-            </td></tr>
+            <tr>
+              <td>
+                <div style={{ height: '50px' }}></div>
+              </td>
+            </tr>
           </tfoot>
         </table>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════
-            PAGE 3 — KWITANSI (DOUBLE / SPLIT PAGE)
-        ════════════════════════════════════════════════════════════ */}
-        <div className="print-doc-card bg-white rounded-2xl border border-gray-200 shadow-lg max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug relative">
-          {/* Watermark */}
-          <div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,pointerEvents:'none'}}>
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{position:'absolute',inset:0}}>
-              <defs><pattern id="wm-kw" width="60" height="60" patternUnits="userSpaceOnUse"><circle cx="30" cy="30" r="1.1" fill="#1e3a8a" opacity="0.05" /></pattern></defs>
-              <rect width="100%" height="100%" fill="url(#wm-kw)" />
-            </svg>
-            <div style={{position:'absolute',bottom:0,left:0,width:'160px',height:'160px',background:'radial-gradient(circle at bottom left, rgba(30,58,138,0.06), transparent 70%)'}} />
-          </div>
+        {/* PAGE 3 — KWITANSI */}
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug">
         {[0, 1].map(copy => (
           <div key={copy}>
             {copy === 1 && (

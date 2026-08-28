@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, FileText, Plus, X, Trash2, Printer } from 'lucide-react';
+import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2 } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -21,6 +21,10 @@ export default function SuratJalanList() {
   const [selectedPoId, setSelectedPoId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string }>({ isOpen: false, id: null, title: '' });
+
+  const [editSjId, setEditSjId] = useState<string | null>(null);
+  const [editSjNumber, setEditSjNumber] = useState('');
+  const [editCreatedDate, setEditCreatedDate] = useState('');
 
   const isLoading = loadingSJ || loadingPo;
 
@@ -150,6 +154,17 @@ export default function SuratJalanList() {
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
+                          onClick={() => {
+                            setEditSjId(item.id);
+                            setEditSjNumber(item.sj_number || '');
+                            setEditCreatedDate(item.created_date ? new Date(item.created_date).toISOString().split('T')[0] : '');
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                          title="Edit Surat Jalan"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => navigate(`/surat-jalan/${item.id}`)}
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           title="Cetak / Detail Surat Jalan"
@@ -233,6 +248,59 @@ export default function SuratJalanList() {
               >
                 {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                 Buat Surat Jalan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editSjId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Edit Surat Jalan</h2>
+              <button onClick={() => setEditSjId(null)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">No Surat Jalan</label>
+                <input
+                  type="text"
+                  value={editSjNumber}
+                  onChange={e => setEditSjNumber(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  placeholder="SJ-XXXX/YY/ZZ"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal</label>
+                <input
+                  type="date"
+                  value={editCreatedDate}
+                  onChange={e => setEditCreatedDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setEditSjId(null)}>Batal</Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const existingSj = suratJalanList.find(s => s.id === editSjId);
+                  if (existingSj) {
+                    saveSJ.mutate({
+                      ...existingSj,
+                      sj_number: editSjNumber,
+                      created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : existingSj.created_date
+                    });
+                    setEditSjId(null);
+                  }
+                }}
+              >
+                Simpan
               </Button>
             </div>
           </div>

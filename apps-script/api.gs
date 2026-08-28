@@ -430,11 +430,11 @@ function routeRequest(action, method, body, params) {
       var vdSheet = ss.getSheetByName('neraca_vendor_discounts');
       if (!vdSheet) {
         vdSheet = ss.insertSheet('neraca_vendor_discounts');
-        vdSheet.appendRow(['id','neraca_id','vendor_id','vendor_name','discount_pct','discount_cash','subject','delivery_time_disc','letter_date','updated_date']);
+        vdSheet.appendRow(['id','neraca_id','vendor_id','vendor_name','discount_pct','discount_cash','dp_pct','dp_nominal','updated_date']);
         results.push('Created sheet: neraca_vendor_discounts');
       } else {
         var vdHeaders = vdSheet.getRange(1, 1, 1, vdSheet.getLastColumn()).getValues()[0];
-        var newCols = ['subject', 'delivery_time_disc', 'letter_date'];
+        var newCols = ['dp_pct', 'dp_nominal'];
         newCols.forEach(function(col) {
           if (vdHeaders.indexOf(col) === -1) {
             var lastCol = vdSheet.getLastColumn();
@@ -496,9 +496,17 @@ function routeRequest(action, method, body, params) {
       var nqSheet = ss.getSheetByName('neraca_quotations');
       if (!nqSheet) {
         nqSheet = ss.insertSheet('neraca_quotations');
-        nqSheet.appendRow(['id','quotation_number','neraca_id','inquiry_id','customer_id','customer_name','request_title','nilai','dokumen','status','created_date','updated_date']);
+        nqSheet.appendRow(['id','quotation_number','neraca_id','inquiry_id','customer_id','customer_name','request_title','nilai','dokumen','status','created_date','updated_date','subject']);
         results.push('Created sheet: neraca_quotations');
+      } else {
+        var nqHeaders = nqSheet.getRange(1, 1, 1, nqSheet.getLastColumn()).getValues()[0];
+        if (nqHeaders.indexOf('subject') === -1) {
+          var nqLastCol = nqSheet.getLastColumn();
+          nqSheet.getRange(1, nqLastCol + 1).setValue('subject');
+          results.push('Added column subject to neraca_quotations');
+        }
       }
+
 
       // 5. Create company sheet if not exists
       var compSheet = ss.getSheetByName('company');
@@ -528,12 +536,12 @@ function routeRequest(action, method, body, params) {
         results.push('Renamed sheet: purchase_orders to po_out');
       } else if (!poSheet) {
         poSheet = ss.insertSheet('po_out');
-        poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','po_date','letter_date','subject','ref_date','created_date','updated_date']);
+        poSheet.appendRow(['id','po_number','neraca_id','quotation_id','vendor_id','vendor_name','jumlah_item','total_nilai','dokumen','status','due_date','subject','ref_date','created_date','updated_date']);
         results.push('Created sheet: po_out');
       } else {
         // Migrate: add new columns if missing
         var poHeaders = poSheet.getRange(1, 1, 1, poSheet.getLastColumn()).getValues()[0];
-        ['po_date', 'letter_date', 'subject', 'ref_date'].forEach(function(col) {
+        ['due_date', 'subject', 'ref_date', 'type', 'dp_reference_id'].forEach(function(col) {
           if (poHeaders.indexOf(col) === -1) {
             var lastCol = poSheet.getLastColumn();
             poSheet.getRange(1, lastCol + 1).setValue(col);
