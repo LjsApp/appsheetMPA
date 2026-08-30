@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Search, Edit2, Trash2, Loader2, FileText, Upload, X, Bell, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, FileText, Upload, X, Bell, AlertTriangle } from 'lucide-react';
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';

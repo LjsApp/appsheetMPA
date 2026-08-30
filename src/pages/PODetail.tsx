@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2 } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import { usePurchaseOrders, useVendors, useVendorDiscounts, useNeracaItems, useCompany } from '@/hooks/useData';
-import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
+import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from '@/lib/utils';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -46,6 +46,9 @@ export default function PODetail() {
   // Get vendor discount for this vendor
   const vd = vds.find(d => d.vendor_id === po.vendor_id);
   
+  // Find DP PO if this is a Sisa PO
+  const dpPo = po.type === 'Sisa' && po.dp_reference_id ? purchaseOrders.find(p => p.id === po.dp_reference_id) : null;
+
   // Get items for this vendor
   const vendorItems = items.filter(i => i.vendor_id === po.vendor_id);
 
@@ -69,6 +72,15 @@ export default function PODetail() {
   const totalAfterDisc = totalBeli - totalDiscVal;
   const discPct = vd?.discount_pct || 0;
 
+  // DP info from vendor discount
+  const dpPct = vd?.dp_pct || 0;
+  const dpNominal = vd?.dp_nominal || 0;
+  const dpLabel = dpPct > 0 ? `${dpPct}%` : dpNominal > 0 ? `Rp ${formatCurrency(dpNominal)}` : '';
+
+  // PPN
+  const ppnPct = vd?.ppn_pct || 0;
+  const ppnVal = totalAfterDisc * (ppnPct / 100);
+  const grandTotalWithPpn = totalAfterDisc + ppnVal;
 
   const companyName = company?.name || 'SourceQuo System';
   const waPhone = String(company?.phone || '6281328213968');
@@ -99,12 +111,14 @@ export default function PODetail() {
           tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
           /* Fixed watermark and footer on every printed page */
-          .print-wm-tl { display:block !important; position:fixed; top:0; left:0; width:320px; opacity:0.35; transform:translate(-20%, -20%); z-index:0; pointer-events:none; }
-          .print-wm-br { display:block !important; position:fixed; bottom:0; right:0; width:360px; opacity:0.35; transform:translate(20%, 20%); z-index:0; pointer-events:none; }
-          .print-page-footer { display:flex !important; position:fixed; bottom:0; left:0; right:0; background:white; z-index:100; padding:10px 40px; justify-content:flex-end; align-items:center; }
+          .print-wm-tl { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
+          .print-wm-br { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
+          .print-page-footer { display:flex !important; position:fixed !important; bottom:0; left:0; right:0; background:white !important; z-index:100 !important; padding:10px 40px; justify-content:space-between; align-items:center; }
         }
-        /* Hidden in screen, visible in print */
-        .print-wm-tl, .print-wm-br, .print-page-footer { display: none; }
+        /* Screen styles */
+        .print-wm-tl { position:absolute; top:0; left:0; width:320px; opacity:0.15; transform:translate(-20%, -20%); z-index:-1; pointer-events:none; }
+        .print-wm-br { position:absolute; bottom:0; right:0; width:360px; opacity:0.15; transform:translate(20%, 20%); z-index:-1; pointer-events:none; }
+        .print-page-footer { position:absolute; bottom:0; left:0; right:0; padding:10px 40px; display:flex; justify-content:space-between; align-items:center; background:transparent; z-index:0; pointer-events:none; }
       `}</style>
 
       <div className="no-print">
@@ -120,21 +134,39 @@ export default function PODetail() {
         />
       </div>
 
-      {/* Fixed watermark & footer — appear on every printed page */}
-      <img className="print-wm-tl" src="/watermark.png" alt="" />
-      <img className="print-wm-br" src="/watermark.png" alt="" />
-      <div className="print-page-footer">
-        <div className="text-right text-[7.5pt] text-gray-500 leading-relaxed">
-          {company?.address && <div>{company.address}</div>}
-          <div className="flex justify-end gap-4">
-            {company?.phone && <span>☎ {company.phone}</span>}
-            {company?.email && <span>✉ {company.email}</span>}
-          </div>
-        </div>
-      </div>
 
       {/* PO Document */}
-      <div className="bg-white max-w-[860px] mx-auto text-[12pt]" id="po-doc">
+      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="po-doc">
+
+        {/* Watermark & footer — absolute on screen, fixed on print */}
+        <img className="print-wm-tl" src="/watermark.png" alt="" />
+        <img className="print-wm-br" src="/watermark.png" alt="" />
+        <div className="print-page-footer">
+          <img src="/watermark2.png" alt="Logo" style={{height:'28px', opacity:0.85}} />
+          <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
+            <div className="flex items-center justify-end gap-1.5">
+              <span>HO: Citra Grand City – Tropical Valley - SB06/11 - Palembang – Sumatera Selatan</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>RO: Jl. Bratang Gede I No. 8 – Surabaya – Jawa Timur</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>+62-823-3587-8789, +62-857-3292-9919</span>
+              <Phone className="w-3 h-3 text-green-600" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morganpowerindo@gmail.com</span>
+              <Mail className="w-3 h-3 text-blue-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morgan_powerindo</span>
+              <AtSign className="w-3 h-3 text-pink-600" />
+            </div>
+          </div>
+        </div>
+
         <table className="w-full" style={{borderCollapse:'collapse'}}>
 
           {/* ===== THEAD: kop surat - repeats on every printed page ===== */}
@@ -230,7 +262,7 @@ export default function PODetail() {
                             <td className="py-3 px-3 align-top text-justify border-x border-black">
                               <div className="text-gray-900">{item.item_vendor}</div>
                             </td>
-                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{item.delivery_time_vk || '-'}</td>
+                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{formatDeliveryTime(item.dt_vk) || '-'}</td>
                             <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{item.qty}</td>
                             <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{formatCurrency(item.unitPrice)}</td>
                             <td className="py-3 px-3 text-right font-semibold text-gray-900 align-top border-x border-black">{formatCurrency(item.totalBeli)}</td>
@@ -254,10 +286,65 @@ export default function PODetail() {
                             <td className="py-1 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(totalDiscVal)}</td>
                           </tr>
                         )}
-                        <tr className="border-t border-black">
-                          <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total</td>
-                          <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(totalAfterDisc)}</td>
-                        </tr>
+                        
+                        {po.type === 'DP' ? (
+                          <>
+                            <tr className="border-t border-black">
+                              <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Total Sebelum DP</td>
+                              <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(grandTotalWithPpn)}</td>
+                            </tr>
+                            {ppnPct > 0 && (
+                              <tr className="border-t border-black">
+                                <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">PPN ({ppnPct}%)</td>
+                                <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(ppnVal)}</td>
+                              </tr>
+                            )}
+                            <tr className="border-t border-black">
+                              <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">
+                                Grand Total (Down Payment{dpLabel ? ` ${dpLabel}` : ''})
+                              </td>
+                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(po.total_nilai)}</td>
+                            </tr>
+                          </>
+                        ) : po.type === 'Sisa' ? (
+                          <>
+                            {ppnPct > 0 && (
+                              <tr className="border-t border-black">
+                                <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">PPN ({ppnPct}%)</td>
+                                <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(ppnVal)}</td>
+                              </tr>
+                            )}
+                            <tr className="border-t border-black">
+                              <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Total</td>
+                              <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(grandTotalWithPpn)}</td>
+                            </tr>
+                            {dpPo && (
+                              <tr className="border-t border-black">
+                                <td colSpan={5} className="py-1.5 px-3 text-right text-gray-600 border-x border-black italic">
+                                  Less DP (Dibayar tgl {formatDate(dpPo.created_date)}, No PO: {dpPo.po_number})
+                                </td>
+                                <td className="py-1.5 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(dpPo.total_nilai)}</td>
+                              </tr>
+                            )}
+                            <tr className="border-t border-black">
+                              <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total (Sisa)</td>
+                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(po.total_nilai)}</td>
+                            </tr>
+                          </>
+                        ) : (
+                          <>
+                            {ppnPct > 0 && (
+                              <tr className="border-t border-black">
+                                <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">PPN ({ppnPct}%)</td>
+                                <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(ppnVal)}</td>
+                              </tr>
+                            )}
+                            <tr className="border-t border-black">
+                              <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total</td>
+                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(grandTotalWithPpn)}</td>
+                            </tr>
+                          </>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -306,7 +393,7 @@ export default function PODetail() {
           <tfoot>
             <tr>
               <td>
-                <div style={{ height: '50px' }}></div>
+                <div style={{ height: '90px' }}></div>
               </td>
             </tr>
           </tfoot>

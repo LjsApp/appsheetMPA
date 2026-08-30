@@ -198,7 +198,7 @@ export default function Quotations() {
     } else {
       setEditQtDate('');
     }
-    setEditQtSubject((q as any).subject || '');
+    setEditQtSubject(q.request_title || '');
   };
 
   const handleSaveEdit = async () => {
@@ -209,9 +209,9 @@ export default function Quotations() {
         ...editModal.quotation,
         quotation_number: editQtNumber,
         created_date: editQtDate ? new Date(editQtDate).toISOString() : editModal.quotation.created_date,
-        subject: editQtSubject,
+        request_title: editQtSubject,
         updated_date: new Date().toISOString().split('T')[0],
-      } as any);
+      });
       setEditModal({ isOpen: false, quotation: null });
     } catch (e: any) {
       alert('Gagal menyimpan: ' + e.message);
@@ -363,7 +363,7 @@ export default function Quotations() {
                         )}
                         <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
                           <div>{q.quotation_number}</div>
-                          {(q as any).subject && <div className="text-[11px] text-gray-400 font-sans mt-0.5 max-w-[160px] truncate">{(q as any).subject}</div>}
+                          {q.request_title && <div className="text-[11px] text-gray-400 font-sans mt-0.5 max-w-[160px] truncate" title={q.request_title}>{q.request_title}</div>}
                         </td>
                         <td className="px-5 py-4 text-right font-semibold text-gray-900">
                           {Number(q.nilai) > 0 ? formatCurrency(Number(q.nilai)) : <span className="text-gray-400 font-normal text-xs">-</span>}
@@ -463,12 +463,12 @@ export default function Quotations() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Judul Permintaan</label>
                 <input
                   value={editQtSubject}
                   onChange={e => setEditQtSubject(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="Subject / perihal quotation"
+                  placeholder="Judul permintaan quotation"
                 />
               </div>
             </div>

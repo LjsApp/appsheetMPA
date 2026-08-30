@@ -72,3 +72,12 @@ export function calculateNeracaGrandTotal(items: NeracaItem[], detailData: Parti
   
   return grandTotal;
 }
+
+export function getDeliveryWeeks(dt: string) {
+  if (!dt) return 0;
+  const match = dt.match(/\d+/g);
+  if (match && match.length > 0) {
+    return Math.max(...match.map(Number));
+  }
+  return 0;
+}

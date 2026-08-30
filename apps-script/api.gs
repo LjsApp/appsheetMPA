@@ -430,11 +430,11 @@ function routeRequest(action, method, body, params) {
       var vdSheet = ss.getSheetByName('neraca_vendor_discounts');
       if (!vdSheet) {
         vdSheet = ss.insertSheet('neraca_vendor_discounts');
-        vdSheet.appendRow(['id','neraca_id','vendor_id','vendor_name','discount_pct','discount_cash','dp_pct','dp_nominal','updated_date']);
+        vdSheet.appendRow(['id','neraca_id','vendor_id','vendor_name','discount_pct','discount_cash','dp_pct','dp_nominal','ppn_pct','updated_date']);
         results.push('Created sheet: neraca_vendor_discounts');
       } else {
         var vdHeaders = vdSheet.getRange(1, 1, 1, vdSheet.getLastColumn()).getValues()[0];
-        var newCols = ['dp_pct', 'dp_nominal'];
+        var newCols = ['dp_pct', 'dp_nominal', 'ppn_pct'];
         newCols.forEach(function(col) {
           if (vdHeaders.indexOf(col) === -1) {
             var lastCol = vdSheet.getLastColumn();
@@ -468,11 +468,30 @@ function routeRequest(action, method, body, params) {
         });
       }
 
-      // 2. Add delivery_time and delivery_time_vk column to neraca_items if missing
+      // 2. Rename delivery_time to dt_kc, delivery_time_vk to dt_vk, delete documents, and ensure new cols exist
       var niSheet = ss.getSheetByName('neraca_items');
       if (niSheet) {
         var niHeaders = niSheet.getRange(1, 1, 1, niSheet.getLastColumn()).getValues()[0];
-        ['delivery_time', 'delivery_time_vk'].forEach(function(col) {
+        var dtIndex = niHeaders.indexOf('delivery_time');
+        if (dtIndex !== -1) {
+          niSheet.getRange(1, dtIndex + 1).setValue('dt_kc');
+          niHeaders[dtIndex] = 'dt_kc';
+          results.push('Renamed delivery_time to dt_kc in neraca_items');
+        }
+        var dtVkIndex = niHeaders.indexOf('delivery_time_vk');
+        if (dtVkIndex !== -1) {
+          niSheet.getRange(1, dtVkIndex + 1).setValue('dt_vk');
+          niHeaders[dtVkIndex] = 'dt_vk';
+          results.push('Renamed delivery_time_vk to dt_vk in neraca_items');
+        }
+        var docIndex = niHeaders.indexOf('documents');
+        if (docIndex !== -1) {
+          niSheet.deleteColumn(docIndex + 1);
+          niHeaders.splice(docIndex, 1);
+          results.push('Deleted documents column from neraca_items');
+        }
+
+        ['dt_kc', 'dt_vk'].forEach(function(col) {
           if (niHeaders.indexOf(col) === -1) {
             var niLastCol = niSheet.getLastColumn();
             niSheet.getRange(1, niLastCol + 1).setValue(col);
@@ -496,15 +515,8 @@ function routeRequest(action, method, body, params) {
       var nqSheet = ss.getSheetByName('neraca_quotations');
       if (!nqSheet) {
         nqSheet = ss.insertSheet('neraca_quotations');
-        nqSheet.appendRow(['id','quotation_number','neraca_id','inquiry_id','customer_id','customer_name','request_title','nilai','dokumen','status','created_date','updated_date','subject']);
+        nqSheet.appendRow(['id','quotation_number','neraca_id','inquiry_id','customer_id','customer_name','request_title','nilai','dokumen','status','created_date','updated_date']);
         results.push('Created sheet: neraca_quotations');
-      } else {
-        var nqHeaders = nqSheet.getRange(1, 1, 1, nqSheet.getLastColumn()).getValues()[0];
-        if (nqHeaders.indexOf('subject') === -1) {
-          var nqLastCol = nqSheet.getLastColumn();
-          nqSheet.getRange(1, nqLastCol + 1).setValue('subject');
-          results.push('Added column subject to neraca_quotations');
-        }
       }
 
 

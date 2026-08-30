@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2 } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import {
   useSuratJalan,
@@ -82,14 +82,14 @@ export default function SuratJalanDetail() {
           tr { page-break-inside: avoid; }
           input { border: none !important; padding: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
           input::placeholder { color: transparent !important; }
-          .print-wm-tl { position:fixed !important; opacity:0.35 !important; }
-          .print-wm-br { position:fixed !important; opacity:0.35 !important; }
-          .print-page-footer { position:fixed !important; background:white !important; z-index:100 !important; }
+          .print-wm-tl { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
+          .print-wm-br { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
+          .print-page-footer { display:flex !important; position:fixed !important; bottom:0; left:0; right:0; background:white !important; z-index:100 !important; padding:10px 40px; justify-content:space-between; align-items:center; }
         }
         /* Screen styles (absolute to the document container) */
-        .print-wm-tl { position:absolute; top:0; left:0; width:320px; opacity:0.15; transform:translate(-20%, -20%); z-index:0; pointer-events:none; }
-        .print-wm-br { position:absolute; bottom:0; right:0; width:360px; opacity:0.15; transform:translate(20%, 20%); z-index:0; pointer-events:none; }
-        .print-page-footer { position:absolute; bottom:0; left:0; right:0; padding:10px 40px; display:flex; justify-content:flex-end; align-items:center; background:transparent; z-index:0; pointer-events:none; }
+        .print-wm-tl { position:absolute; top:0; left:0; width:320px; opacity:0.15; transform:translate(-20%, -20%); z-index:-1; pointer-events:none; }
+        .print-wm-br { position:absolute; bottom:0; right:0; width:360px; opacity:0.15; transform:translate(20%, 20%); z-index:-1; pointer-events:none; }
+        .print-page-footer { position:absolute; bottom:0; left:0; right:0; padding:10px 40px; display:flex; justify-content:space-between; align-items:center; background:transparent; z-index:0; pointer-events:none; }
       `}</style>
 
       <div className="no-print">
@@ -106,17 +106,33 @@ export default function SuratJalanDetail() {
       </div>
 
       {/* Surat Jalan Document */}
-      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden" id="sj-doc">
+      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="sj-doc">
         
         {/* Watermark & footer - absolute on screen, fixed on print */}
         <img className="print-wm-tl" src="/watermark.png" alt="" />
         <img className="print-wm-br" src="/watermark.png" alt="" />
         <div className="print-page-footer">
-          <div className="text-right text-[7.5pt] text-gray-500 leading-relaxed">
-            {company?.address && <div>{company.address}</div>}
-            <div className="flex justify-end gap-4">
-              {company?.phone && <span>☎ {company.phone}</span>}
-              {company?.email && <span>✉ {company.email}</span>}
+          <img src="/watermark2.png" alt="Logo" style={{height:'28px', opacity:0.85}} />
+          <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
+            <div className="flex items-center justify-end gap-1.5">
+              <span>HO: Citra Grand City – Tropical Valley - SB06/11 - Palembang – Sumatera Selatan</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>RO: Jl. Bratang Gede I No. 8 – Surabaya – Jawa Timur</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>+62-823-3587-8789, +62-857-3292-9919</span>
+              <Phone className="w-3 h-3 text-green-600" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morganpowerindo@gmail.com</span>
+              <Mail className="w-3 h-3 text-blue-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morgan_powerindo</span>
+              <AtSign className="w-3 h-3 text-pink-600" />
             </div>
           </div>
         </div>
@@ -265,7 +281,7 @@ export default function SuratJalanDetail() {
           <tfoot>
             <tr>
               <td>
-                <div style={{ height: '50px' }}></div>
+                <div style={{ height: '90px' }}></div>
               </td>
             </tr>
           </tfoot>

@@ -21,6 +21,19 @@ export function formatDate(dateStr: string | undefined | null): string {
   return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 }
 
+export function formatDeliveryTime(val: string | undefined | null): string {
+  if (!val) return '';
+  if (val.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+      }
+    } catch(e) {}
+  }
+  return val;
+}
+
 export function generateId(prefix: string): string {
   const year = new Date().getFullYear();
   const rand = Math.floor(Math.random() * 100000).toString().padStart(6, '0');

@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2 } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail } from '@/hooks/useData';
 import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
@@ -47,8 +47,7 @@ function terbilang(n: number): string {
     'Sepuluh', 'Sebelas', 'Dua Belas', 'Tiga Belas', 'Empat Belas', 'Lima Belas', 'Enam Belas',
     'Tujuh Belas', 'Delapan Belas', 'Sembilan Belas'];
   if (n < 20) return satuan[n];
-  if (n < 100) return satuan[Math.floor(n / 10) === 1 ? 10 + (n % 10) : Math.floor(n / 10)].replace('Satu Puluh', 'Sepuluh') + (n % 10 !== 0 ? ' ' + satuan[n % 10] : '') + (Math.floor(n / 10) > 1 ? ' Puluh' : '');
-  if (n < 100) return Math.floor(n / 10) + ' Puluh' + (n % 10 !== 0 ? ' ' + satuan[n % 10] : '');
+  if (n < 100) return satuan[Math.floor(n / 10)] + ' Puluh' + (n % 10 !== 0 ? ' ' + satuan[n % 10] : '');
   if (n < 200) return 'Seratus' + (n - 100 !== 0 ? ' ' + terbilang(n - 100) : '');
   if (n < 1000) return satuan[Math.floor(n / 100)] + ' Ratus' + (n % 100 !== 0 ? ' ' + terbilang(n % 100) : '');
   if (n < 2000) return 'Seribu' + (n - 1000 !== 0 ? ' ' + terbilang(n - 1000) : '');
@@ -152,11 +151,12 @@ export default function InvoiceDetail() {
     const subtotal = calculatedItems.reduce((sum, i) => sum + i.total, 0);
     const discPct = Number(d.disc) || 0;
     const jualAfterDisc = subtotal * (1 - discPct / 100);
+    const discount = subtotal - jualAfterDisc;
     const ppn = Number(d.ppn) ?? 11;
     const tax_amount = jualAfterDisc * (ppn / 100);
     const grand_total = jualAfterDisc + tax_amount;
     const dpp = jualAfterDisc / 1.12; // DPP Nilai Lain approximation
-    return { subtotal, discPct, jualAfterDisc, ppn, tax_amount, grand_total, dpp };
+    return { subtotal, discPct, discount, jualAfterDisc, ppn, tax_amount, grand_total, dpp };
   }, [calculatedItems, detail]);
 
   useEffect(() => {
@@ -219,14 +219,16 @@ export default function InvoiceDetail() {
           tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
           /* Fixed watermark and footer on every printed page */
-          .print-wm-tl { display:block !important; position:fixed; top:0; left:0; width:320px; opacity:0.35; transform:translate(-20%, -20%); z-index:0; pointer-events:none; }
-          .print-wm-br { display:block !important; position:fixed; bottom:0; right:0; width:360px; opacity:0.35; transform:translate(20%, 20%); z-index:0; pointer-events:none; }
-          .print-page-footer { display:flex !important; position:fixed; bottom:0; left:0; right:0; background:white; z-index:100; padding:10px 40px; justify-content:flex-end; align-items:center; }
+          .print-wm-tl { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
+          .print-wm-br { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
+          .print-page-footer { display:flex !important; position:fixed !important; bottom:0; left:0; right:0; background:white !important; z-index:100 !important; padding:10px 40px; justify-content:space-between; align-items:center; }
           /* Add margin bottom to body content so footer doesn't overlap */
           .space-y-8 > div:last-child { padding-bottom: 60px; }
         }
-        /* Hidden in screen, visible in print */
-        .print-wm-tl, .print-wm-br, .print-page-footer { display: none; }
+        /* Screen styles */
+        .print-wm-tl { position:absolute; top:0; left:0; width:320px; opacity:0.15; transform:translate(-20%, -20%); z-index:-1; pointer-events:none; }
+        .print-wm-br { position:absolute; bottom:0; right:0; width:360px; opacity:0.15; transform:translate(20%, 20%); z-index:-1; pointer-events:none; }
+        .print-page-footer { position:absolute; bottom:0; left:0; right:0; padding:10px 40px; display:flex; justify-content:space-between; align-items:center; background:transparent; z-index:0; pointer-events:none; }
       `}</style>
 
       <div className="no-print">
@@ -244,21 +246,35 @@ export default function InvoiceDetail() {
 
       <div className="space-y-8">
 
-        {/* Fixed watermark & footer — appear on every printed page */}
+        {/* PAGE 1 — SURAT PERMOHONAN PEMBAYARAN (SPP) */}
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[11pt] overflow-hidden relative z-0">
         <img className="print-wm-tl" src="/watermark.png" alt="" />
         <img className="print-wm-br" src="/watermark.png" alt="" />
         <div className="print-page-footer">
-          <div className="text-right text-[7.5pt] text-gray-500 leading-relaxed">
-            {company?.address && <div>{company.address}</div>}
-            <div className="flex justify-end gap-4">
-              {company?.phone && <span>☎ {company.phone}</span>}
-              {company?.email && <span>✉ {company.email}</span>}
+          <img src="/watermark2.png" alt="Logo" style={{height:'28px', opacity:0.85}} />
+          <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
+            <div className="flex items-center justify-end gap-1.5">
+              <span>HO: Citra Grand City – Tropical Valley - SB06/11 - Palembang – Sumatera Selatan</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>RO: Jl. Bratang Gede I No. 8 – Surabaya – Jawa Timur</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>+62-823-3587-8789, +62-857-3292-9919</span>
+              <Phone className="w-3 h-3 text-green-600" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morganpowerindo@gmail.com</span>
+              <Mail className="w-3 h-3 text-blue-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morgan_powerindo</span>
+              <AtSign className="w-3 h-3 text-pink-600" />
             </div>
           </div>
         </div>
-
-        {/* PAGE 1 — SURAT PERMOHONAN PEMBAYARAN (SPP) */}
-        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[11pt] overflow-hidden relative">
         <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr><td style={{ padding: 0 }}>
@@ -327,11 +343,46 @@ export default function InvoiceDetail() {
               </div>
             </td></tr>
           </tbody>
+          {/* TFOOT: empty spacer to prevent fixed footer from overlapping content */}
+          <tfoot>
+            <tr>
+              <td>
+                <div style={{ height: '90px' }}></div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
         </div>
 
         {/* PAGE 2 — INVOICE DETAIL */}
-        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug">
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug relative z-0">
+        <img className="print-wm-tl no-print" src="/watermark.png" alt="" />
+        <img className="print-wm-br no-print" src="/watermark.png" alt="" />
+        <div className="print-page-footer no-print">
+          <img src="/watermark2.png" alt="Logo" style={{height:'28px', opacity:0.85}} />
+          <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
+            <div className="flex items-center justify-end gap-1.5">
+              <span>HO: Citra Grand City – Tropical Valley - SB06/11 - Palembang – Sumatera Selatan</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>RO: Jl. Bratang Gede I No. 8 – Surabaya – Jawa Timur</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>+62-823-3587-8789, +62-857-3292-9919</span>
+              <Phone className="w-3 h-3 text-green-600" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morganpowerindo@gmail.com</span>
+              <Mail className="w-3 h-3 text-blue-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morgan_powerindo</span>
+              <AtSign className="w-3 h-3 text-pink-600" />
+            </div>
+          </div>
+        </div>
         <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr><td style={{ padding: 0 }}>
@@ -444,7 +495,7 @@ export default function InvoiceDetail() {
           <tfoot>
             <tr>
               <td>
-                <div style={{ height: '50px' }}></div>
+                <div style={{ height: '90px' }}></div>
               </td>
             </tr>
           </tfoot>
@@ -452,7 +503,34 @@ export default function InvoiceDetail() {
         </div>
 
         {/* PAGE 3 — KWITANSI */}
-        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug">
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] overflow-hidden page-break leading-snug relative z-0">
+        <img className="print-wm-tl no-print" src="/watermark.png" alt="" />
+        <img className="print-wm-br no-print" src="/watermark.png" alt="" />
+        <div className="print-page-footer no-print">
+          <img src="/watermark2.png" alt="Logo" style={{height:'28px', opacity:0.85}} />
+          <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
+            <div className="flex items-center justify-end gap-1.5">
+              <span>HO: Citra Grand City – Tropical Valley - SB06/11 - Palembang – Sumatera Selatan</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>RO: Jl. Bratang Gede I No. 8 – Surabaya – Jawa Timur</span>
+              <MapPin className="w-3 h-3 text-red-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>+62-823-3587-8789, +62-857-3292-9919</span>
+              <Phone className="w-3 h-3 text-green-600" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morganpowerindo@gmail.com</span>
+              <Mail className="w-3 h-3 text-blue-500" />
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <span>morgan_powerindo</span>
+              <AtSign className="w-3 h-3 text-pink-600" />
+            </div>
+          </div>
+        </div>
         {[0, 1].map(copy => (
           <div key={copy}>
             {copy === 1 && (
@@ -524,6 +602,7 @@ export default function InvoiceDetail() {
             </div>
           </div>
         ))}
+        <div style={{ height: '90px' }}></div>
         </div>
       </div>
     </div>

@@ -127,7 +127,6 @@ export interface NeracaItem {
   neraca_id: string;
   vendor_id: string;
   vendor_name: string;
-  documents: string;     // JSON array [{name, url}]
   item_customer: string; // Item name as shown to customer
   item_vendor: string;   // Item name from vendor
   category_vk: string;   // 'A' | 'B' | 'C' | 'D' | 'E'
@@ -136,8 +135,8 @@ export interface NeracaItem {
   qty: number;
   harga_beli: number;
   berat: number;
-  delivery_time?: string;
-  delivery_time_vk?: string;
+  dt_kc?: string;         // Renamed from delivery_time
+  dt_vk?: string;         // Renamed from delivery_time_vk
   created_date: string;
   updated_date: string;
 }
@@ -151,6 +150,7 @@ export interface VendorDiscount {
   discount_cash: number;  // discount as cash (Rp)
   dp_pct?: number;        // DP as percentage
   dp_nominal?: number;    // DP as nominal cash
+  ppn_pct?: number;       // PPN percentage (e.g. 11)
   updated_date: string;
 }
 
@@ -224,7 +224,6 @@ export interface NeracaQuotation {
   request_title: string;     // judul permintaan dari inquiry
   nilai: number;             // grand_total dari neraca
   dokumen: string;           // URL dokumen (optional)
-  subject?: string;
   status: NeracaQuotationStatus;
   created_date: string;
   updated_date: string;

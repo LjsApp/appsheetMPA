@@ -20,7 +20,11 @@ const getRecords = (sheetName) => {
   return rows.map(row => {
     let obj = {};
     headers.forEach((header, i) => {
-      obj[header] = row[i];
+      let val = row[i];
+      if ((header === 'dt_kc' || header === 'dt_vk') && typeof val === 'string' && val.indexOf("'") === 0) {
+        val = val.substring(1);
+      }
+      obj[header] = val;
     });
     return obj;
   });
@@ -42,7 +46,7 @@ const addRecord = (sheetName, record) => {
   
   const newRow = headers.map(header => {
     let val = record[header] !== undefined ? record[header] : "";
-    if (header === 'delivery_time' && val) val = "'" + val;
+    if ((header === 'dt_kc' || header === 'dt_vk') && val) val = "'" + val;
     return val;
   });
   sheet.appendRow(newRow);
@@ -75,7 +79,7 @@ const updateRecord = (sheetName, idField, record) => {
   const existingRow = data[rowIndex - 1];
   const updatedRow = headers.map((header, i) => {
     let val = record.hasOwnProperty(header) ? record[header] : existingRow[i];
-    if (header === 'delivery_time' && val && String(val).indexOf("'") !== 0) val = "'" + val;
+    if ((header === 'dt_kc' || header === 'dt_vk') && val && String(val).indexOf("'") !== 0) val = "'" + val;
     return val;
   });
   

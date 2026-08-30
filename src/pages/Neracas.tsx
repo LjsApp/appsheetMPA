@@ -5,8 +5,7 @@ import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import Modal from '@/components/Modal';
 import { useForm } from 'react-hook-form';
 import { FileCheck2, Copy } from 'lucide-react';
-import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi, useDuplicateNeraca, usePurchaseOrders } from '@/hooks/useData';
-import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
+import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useDuplicateNeraca, usePurchaseOrders } from '@/hooks/useData';
 import type { Neraca } from '@/types';
 import { formatDate } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
@@ -27,11 +26,8 @@ export default function Neracas() {
   const initSheets = useInitNeracaSheets();
   const { data: allQuotations = [] } = useNeracaQuotations();
   const { data: allPos = [] } = usePurchaseOrders();
-  const saveQuotation = useSaveNeracaQuotation();
-  const getNextQtNumber = useGetNextQuotationNumber();
   const duplicateNeraca = useDuplicateNeraca();
 
-  const [creatingQtId, setCreatingQtId] = useState<string | null>(null);
   
   // For DeleteConfirmModal
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'inquiry' | 'neraca'; id: string | null; title: string }>({ isOpen: false, type: 'inquiry', id: null, title: '' });
@@ -39,42 +35,6 @@ export default function Neracas() {
   // For DuplicateModal
   const [duplicateModal, setDuplicateModal] = useState<{ isOpen: boolean; inquiryId: string | null }>({ isOpen: false, inquiryId: null });
   const [duplicateSourceId, setDuplicateSourceId] = useState<string>('');
-
-  const handleCreateQuotation = async (neraca: any, inq: any) => {
-    // Check if quotation already exists for this neraca
-    const existing = allQuotations.find(q => q.neraca_id === neraca.id);
-    if (existing) {
-      alert('Sudah jadi quotation!');
-      return;
-    }
-    setCreatingQtId(neraca.id);
-    try {
-      const qtNumber = await getNextQtNumber.mutateAsync();
-      const items = await fetchApi(`getNeracaItems&neraca_id=${neraca.id}`);
-      const detail = await fetchApi(`getNeracaDetail&neraca_id=${neraca.id}`);
-      const grandTotal = calculateNeracaGrandTotal(items || [], detail || undefined);
-
-      const payload = {
-        id: `QT-${Date.now()}`,
-        quotation_number: qtNumber || `QT-${new Date().getFullYear()}-${Date.now()}`,
-        neraca_id: neraca.id,
-        inquiry_id: inq.id,
-        customer_id: inq.customer_id || '',
-        customer_name: inq.customer_name || '',
-        request_title: inq.request_title || inq.project_name || '',
-        nilai: grandTotal,
-        dokumen: '',
-        status: 'Draft' as const,
-        created_date: new Date().toISOString().split('T')[0],
-        updated_date: new Date().toISOString().split('T')[0],
-      };
-      await saveQuotation.mutateAsync(payload);
-    } catch (e: any) {
-      alert('Gagal membuat quotation: ' + e.message);
-    } finally {
-      setCreatingQtId(null);
-    }
-  };
 
   const handleInit = async () => {
     try {

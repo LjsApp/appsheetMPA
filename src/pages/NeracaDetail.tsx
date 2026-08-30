@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Loader2, Save, FileText, Upload, X, Edit2, Eye, Settings, Lock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Save, Edit2, Eye, Settings, Lock, AlertTriangle } from 'lucide-react';
 import { Button, FormField } from '@/components/ui';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
@@ -10,10 +10,11 @@ import {
   DEFAULT_DETAIL, calcBaseHargaJual,
   getOngkirVK, getOngkirKC, getDifficultyValue
 } from '@/lib/neracaUtils';
+import { formatDeliveryTime } from '@/lib/utils';
 import {
   useNeracas, useNeracaDetail, useSaveNeracaDetail,
   useNeracaItems, useSaveNeracaItem, useDeleteNeracaItem,
-  useVendors, useUploadFile,
+  useVendors,
   useVendorDiscounts, useSaveVendorDiscount, useDeleteVendorDiscount,
   useNeracaQuotations, usePurchaseOrders
 } from '@/hooks/useData';
@@ -108,8 +109,6 @@ export default function NeracaDetail() {
   const saveItem = useSaveNeracaItem();
   const deleteItem = useDeleteNeracaItem();
   const { data: vendors = [] } = useVendors();
-  const uploadFile = useUploadFile();
-
   // --- Lock status: locked if this neraca already has Quotations or POs ---
   const { data: allQuotations = [] } = useNeracaQuotations();
   const { data: allPOs = [] } = usePurchaseOrders();
@@ -119,15 +118,12 @@ export default function NeracaDetail() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedDocs, setUploadedDocs] = useState<{ name: string; url: string }[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
   const [viewingItem, setViewingItem] = useState<NeracaItem | null>(null);
 
   // --- Vendor Discount Modal ---
   const { data: vendorDiscounts = [] } = useVendorDiscounts(neracaId!);
   const [vendorDiscountModalId, setVendorDiscountModalId] = useState<string | null>(null);
-  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', dpPct: number | '', dpCash: number | ''}>({ pct: '', cash: '', dpPct: '', dpCash: '' });
+  const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', dpPct: number | '', dpCash: number | '', ppnPct: number | ''}>({ pct: '', cash: '', dpPct: '', dpCash: '', ppnPct: '' });
   const [vdFormType, setVdFormType] = useState<'pct' | 'cash'>('pct');
   const [dpFormType, setDpFormType] = useState<'pct' | 'cash'>('pct');
   const saveVd = useSaveVendorDiscount();
@@ -142,12 +138,13 @@ export default function NeracaDetail() {
         pct: existing.discount_pct || '', 
         cash: existing.discount_cash || '',
         dpPct: existing.dp_pct || '',
-        dpCash: existing.dp_nominal || ''
+        dpCash: existing.dp_nominal || '',
+        ppnPct: existing.ppn_pct || ''
       });
       setVdFormType(existing.discount_cash > 0 && !existing.discount_pct ? 'cash' : 'pct');
       setDpFormType(existing.dp_nominal && !existing.dp_pct ? 'cash' : 'pct');
     } else {
-      setVdForm({ pct: '', cash: '', dpPct: '', dpCash: '' });
+      setVdForm({ pct: '', cash: '', dpPct: '', dpCash: '', ppnPct: '' });
       setVdFormType('pct');
       setDpFormType('pct');
     }
@@ -168,6 +165,7 @@ export default function NeracaDetail() {
       discount_cash: vdFormType === 'cash' ? (Number(vdForm.cash) || 0) : 0,
       dp_pct: dpFormType === 'pct' ? (Number(vdForm.dpPct) || 0) : 0,
       dp_nominal: dpFormType === 'cash' ? (Number(vdForm.dpCash) || 0) : 0,
+      ppn_pct: Number(vdForm.ppnPct) || 0,
       updated_date: new Date().toISOString().split('T')[0]
     };
     
@@ -200,59 +198,29 @@ export default function NeracaDetail() {
 
   const openCreate = () => {
     reset({});
-    setSelectedFiles([]);
-    setUploadedDocs([]);
     setEditingItemId(null);
     setIsModalOpen(true);
   };
 
   const openEdit = (item: NeracaItem) => {
     reset(item);
-    setSelectedFiles([]);
-    try { setUploadedDocs(item.documents ? JSON.parse(item.documents) : []); } catch { setUploadedDocs([]); }
     setEditingItemId(item.id);
     setIsModalOpen(true);
   };
 
-  const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setSelectedFiles(prev => [...prev, ...files]);
-  };
-
   const onSubmitItem = async (data: NeracaItem) => {
-    setIsUploading(true);
-    let currentDocs = [...uploadedDocs];
-    for (const file of selectedFiles) {
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
-          reader.onerror = reject;
-        });
-        const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-        currentDocs.push({ name: file.name, url });
-      } catch { alert(`Gagal upload ${file.name}`); }
-    }
-    // Renumber
-    currentDocs = currentDocs.map((d, i) => ({ ...d, name: `Lampiran ${i + 1}` }));
-    setIsUploading(false);
-
     const selectedVendor = vendors.find(v => v.id === data.vendor_id);
     let payload: NeracaItem = {
       ...data,
       neraca_id: neracaId!,
       vendor_name: selectedVendor?.vendor_name || data.vendor_id,
-      documents: JSON.stringify(currentDocs),
       qty: Number(data.qty) || 1,
       harga_beli: Number(data.harga_beli) || 0,
       berat: Number(data.berat) || 0,
+      id: editingItemId || `ITM-${Date.now()}`,
+      created_date: editingItemId ? data.created_date : new Date().toISOString().split('T')[0],
+      updated_date: new Date().toISOString().split('T')[0]
     };
-    if (!editingItemId) {
-      payload = { ...payload, id: `ITM-${Date.now()}`, created_date: new Date().toISOString().split('T')[0], updated_date: new Date().toISOString().split('T')[0] };
-    } else {
-      payload.updated_date = new Date().toISOString().split('T')[0];
-    }
     saveItem.mutate(payload, { onSuccess: () => setIsModalOpen(false) });
   };
 
@@ -423,24 +391,21 @@ export default function NeracaDetail() {
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Cat VK</th>
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Cat KC</th>
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Difficulty</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">Delivery</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">DT K-C</th>
                       <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 whitespace-nowrap">DT V-K</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Qty</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Harga Beli</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Total Beli</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Harga Jual</th>
                       <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Total Jual</th>
-                      <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 whitespace-nowrap">Dokumen</th>
                       <th className="px-3 py-2.5 whitespace-nowrap"></th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {calculatedItems.length === 0 ? (
-                      <tr><td colSpan={15} className="px-4 py-8 text-center text-gray-500 text-sm">Belum ada item di neraca ini</td></tr>
+                      <tr><td colSpan={14} className="px-4 py-8 text-center text-gray-500 text-sm">Belum ada item di neraca ini</td></tr>
                     ) : (
                       calculatedItems.map((item, idx) => {
-                        let docs: any[] = [];
-                        try { docs = item.documents ? JSON.parse(item.documents) : []; } catch { docs = []; }
                         const isFirstVendorItem = calculatedItems.findIndex(i => i.vendor_id === item.vendor_id) === idx;
                         return (
                           <tr key={item.id} className="hover:bg-gray-50">
@@ -467,23 +432,16 @@ export default function NeracaDetail() {
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">{item.difficulty}</span>
                             </td>
                             <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                              {item.delivery_time ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">{item.delivery_time}</span> : <span className="text-gray-300 text-xs">-</span>}
+                              {item.dt_kc ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">{formatDeliveryTime(item.dt_kc)}</span> : <span className="text-gray-300 text-xs">-</span>}
                             </td>
                             <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                              {item.delivery_time_vk ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{item.delivery_time_vk}</span> : <span className="text-gray-300 text-xs">-</span>}
+                              {item.dt_vk ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{formatDeliveryTime(item.dt_vk)}</span> : <span className="text-gray-300 text-xs">-</span>}
                             </td>
                             <td className="px-3 py-2.5 text-right text-gray-800">{item.qty}</td>
                             <td className="px-3 py-2.5 text-right text-gray-800">{fmt(Number(item.harga_beli))}</td>
                             <td className="px-3 py-2.5 text-right font-semibold text-gray-800">{fmt((Number(item.harga_beli) || 0) * (Number(item.qty) || 1))}</td>
                             <td className="px-3 py-2.5 text-right text-blue-700">{fmt(Number(item.qty) > 0 ? item.hj / Number(item.qty) : item.hj)}</td>
                             <td className="px-3 py-2.5 text-right font-semibold text-blue-700">{fmt(item.hj)}</td>
-                            <td className="px-3 py-2.5 text-right">
-                              {docs.map((d, i) => (
-                                <a key={i} href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mr-1">
-                                  <FileText className="w-3 h-3" />{d.name}
-                                </a>
-                              ))}
-                            </td>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center gap-1">
                                 <button onClick={() => setViewingItem(item)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Lihat Resume Item">
@@ -649,15 +607,15 @@ export default function NeracaDetail() {
                 {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </FormField>
-            <FormField label="Delivery Time">
-              <select {...register('delivery_time')}
+            <FormField label="DT K-C">
+              <select {...register('dt_kc')}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
                 <option value="">--</option>
                 {DELIVERY_TIMES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
               </select>
             </FormField>
-            <FormField label="Delivery Time V-K">
-              <select {...register('delivery_time_vk')}
+            <FormField label="DT V-K">
+              <select {...register('dt_vk')}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
                 <option value="">--</option>
                 {DELIVERY_TIMES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
@@ -682,39 +640,12 @@ export default function NeracaDetail() {
             </FormField>
           </div>
 
-          {/* Upload Dokumen Vendor */}
-          <FormField label="Upload Dokumen Vendor">
-            <label className="flex items-center justify-center w-full px-4 py-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors group">
-              <div className="flex flex-col items-center gap-1.5">
-                <Upload className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-                <span className="text-xs text-gray-500 group-hover:text-blue-600">Pilih satu atau lebih dokumen</span>
-              </div>
-              <input type="file" multiple className="hidden" onChange={handleFileAdd} accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" />
-            </label>
-            <div className="mt-2 space-y-1">
-              {uploadedDocs.map((d, i) => (
-                <div key={i} className="flex items-center justify-between p-2 bg-emerald-50 rounded text-xs">
-                  <a href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-emerald-700 hover:underline">
-                    <FileText className="w-3.5 h-3.5" />{d.name}
-                  </a>
-                  <button type="button" onClick={() => setUploadedDocs(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              {selectedFiles.map((f, i) => (
-                <div key={i} className="flex items-center justify-between p-2 bg-blue-50 rounded text-xs">
-                  <span className="flex items-center gap-1 text-blue-700"><FileText className="w-3.5 h-3.5" />Lampiran {uploadedDocs.length + i + 1} <span className="text-gray-400">({f.name})</span></span>
-                  <button type="button" onClick={() => setSelectedFiles(prev => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
-                </div>
-              ))}
-            </div>
-          </FormField>
+
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)} disabled={isUploading || saveItem.isPending}>Batal</Button>
-            <Button type="submit" loading={isUploading || saveItem.isPending}>
-              {isUploading ? 'Mengupload...' : editingItemId ? 'Simpan Perubahan' : 'Tambah Item'}
+            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)} disabled={saveItem.isPending}>Batal</Button>
+            <Button type="submit" loading={saveItem.isPending}>
+              {editingItemId ? 'Simpan Perubahan' : 'Tambah Item'}
             </Button>
           </div>
         </form>
@@ -926,14 +857,31 @@ export default function NeracaDetail() {
                 )}
               </div>
 
+              {/* PPN Section */}
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+                <FormField label="PPN (%)">
+                  <ThousandInput isFloat value={vdForm.ppnPct} onChange={val => setVdForm({ ...vdForm, ppnPct: val as number | '' })} placeholder="Cth: 11" className="w-full px-3 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </FormField>
+              </div>
+
               <div className="bg-emerald-50 p-4 rounded-lg flex flex-col gap-2 border border-emerald-100">
                 <div className="flex justify-between items-center text-emerald-800">
                   <span className="font-medium text-sm">Total Nilai Diskon:</span>
                   <span className="font-bold">Rp {fmt(totalDiscVal)}</span>
                 </div>
+                <div className="flex justify-between items-center text-emerald-800">
+                  <span className="font-medium text-sm">Setelah Diskon:</span>
+                  <span className="font-bold">Rp {fmt(totalBeli - totalDiscVal)}</span>
+                </div>
+                {Number(vdForm.ppnPct) > 0 && (
+                  <div className="flex justify-between items-center text-amber-700">
+                    <span className="font-medium text-sm">PPN ({vdForm.ppnPct}%):</span>
+                    <span className="font-bold">Rp {fmt((totalBeli - totalDiscVal) * Number(vdForm.ppnPct) / 100)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-emerald-900 border-t border-emerald-200 pt-2">
-                  <span className="font-medium">Total Setelah Diskon:</span>
-                  <span className="text-xl font-bold">Rp {fmt(totalBeli - totalDiscVal)}</span>
+                  <span className="font-medium">Total Setelah Diskon + PPN:</span>
+                  <span className="text-xl font-bold">Rp {fmt((totalBeli - totalDiscVal) * (1 + (Number(vdForm.ppnPct) || 0) / 100))}</span>
                 </div>
               </div>
 
