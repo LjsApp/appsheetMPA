@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Plus, Pencil, X, Upload, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile } from '@/hooks/useData';
+import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useCompany, useVendors } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
@@ -14,6 +14,8 @@ export default function PurchaseOrders() {
   const navigate = useNavigate();
   const { data: purchaseOrders = [], isLoading: loadingPOs, refetch: refetchPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
+  const { data: company } = useCompany();
+  const { data: vendors = [] } = useVendors();
   const savePO = useSavePurchaseOrder();
   const isLoading = loadingPOs || loadingPoIns;
 
@@ -30,6 +32,7 @@ export default function PurchaseOrders() {
   const [editDueDate, setEditDueDate] = useState('');
   const [editSubject, setEditSubject] = useState('');
   const [editRefDate, setEditRefDate] = useState('');
+  const [editFranco, setEditFranco] = useState('');
   const [existingDocs, setExistingDocs] = useState<any[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +61,7 @@ export default function PurchaseOrders() {
     setEditDueDate(toDateInput(po.due_date));
     setEditSubject(po.subject || '');
     setEditRefDate(toDateInput(po.ref_date));
+    setEditFranco(po.franco || '');
     
     let docs: any[] = [];
     if (po.dokumen) {
@@ -105,9 +109,10 @@ export default function PurchaseOrders() {
         ...editModal.po,
         po_number: editPoNumber,
         created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : editModal.po.created_date,
-        due_date: editDueDate,
+        due_date: editDueDate || undefined,
         subject: editSubject,
-        ref_date: editRefDate,
+        ref_date: editRefDate || undefined,
+        franco: editFranco,
         dokumen: JSON.stringify(finalDocs),
         updated_date: new Date().toISOString(),
       });
@@ -186,6 +191,7 @@ export default function PurchaseOrders() {
                   <th className="px-6 py-4 text-center">JML ITEM</th>
                   <th className="px-6 py-4 text-right">TOTAL NILAI</th>
                   <th className="px-6 py-4">DOKUMEN</th>
+                  <th className="px-6 py-4">DIKERJAKAN OLEH</th>
                   <th className="px-6 py-4 text-right">AKSI</th>
                 </tr>
               </thead>
@@ -252,6 +258,7 @@ export default function PurchaseOrders() {
                             <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>
                           )}
                         </td>
+                        <td className="px-6 py-4 text-xs italic text-gray-500">{po.created_by || '-'}</td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3">
                             <button
@@ -341,6 +348,10 @@ export default function PurchaseOrders() {
                       placeholder="Perihal pengadaan..."
                     />
                   </div>
+                </div>
+
+                {/* Kolom Kanan */}
+                <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref Date</label>
                     <input
@@ -350,11 +361,47 @@ export default function PurchaseOrders() {
                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                     />
                   </div>
-                </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Franco</label>
+                    <div className="space-y-2">
+                      <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${editFranco === company?.address ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-violet-300'}`}>
+                        <div className="mt-0.5">
+                          <input 
+                            type="radio" 
+                            name="franco"
+                            className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
+                            checked={editFranco === company?.address}
+                            onChange={() => setEditFranco(company?.address || "")}
+                          />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Alamat Perusahaan</div>
+                          <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{company?.address || "-"}</div>
+                        </div>
+                      </label>
 
-                {/* Kolom Kanan */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen PO Out</label>
+                      {editModal.po?.vendor_id && (
+                        <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${editFranco === vendors.find(v => v.id === editModal.po?.vendor_id)?.address ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-violet-300'}`}>
+                          <div className="mt-0.5">
+                            <input 
+                              type="radio" 
+                              name="franco"
+                              className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
+                              checked={editFranco === vendors.find(v => v.id === editModal.po?.vendor_id)?.address}
+                              onChange={() => setEditFranco(vendors.find(v => v.id === editModal.po?.vendor_id)?.address || "")}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">Alamat Vendor</div>
+                            <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{vendors.find(v => v.id === editModal.po?.vendor_id)?.address || "-"}</div>
+                          </div>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen PO Out</label>
                   
                   {/* Existing docs */}
                   {existingDocs.length > 0 && (
@@ -391,6 +438,7 @@ export default function PurchaseOrders() {
                       ))}
                     </ul>
                   )}
+                  </div>
                 </div>
               </div>
             </div>

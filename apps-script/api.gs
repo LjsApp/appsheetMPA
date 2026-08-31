@@ -1,5 +1,80 @@
 function routeRequest(action, method, body, params) {
   switch (action) {
+    // Setup & Init
+    case 'checkSetup': {
+      var roles = getRecords('roles');
+      var users = getRecords('users');
+      // Anggap sistem sudah di-setup jika ada minimal 1 user
+      var isSetupComplete = users.length > 0;
+      return { isSetupComplete: isSetupComplete };
+    }
+    case 'setupSystem': {
+      var roles = getRecords('roles');
+      var users = getRecords('users');
+      if (users.length > 0) throw new Error('Sistem sudah di-setup. Tidak bisa setup ulang.');
+      
+      // 1. Buat Role Super Admin
+      var superAdminRole = {
+        id: 'ROLE-SUPERADMIN',
+        role_name: 'Super Admin',
+        permissions: '[]',
+        is_super_admin: true,
+        created_date: new Date().toISOString()
+      };
+      addRecord('roles', superAdminRole);
+      
+      // 2. Buat User Super Admin
+      var superAdminUser = {
+        id: 'USR-SUPERADMIN',
+        name: body.name || 'Administrator',
+        email: body.email,
+        password: body.password,
+        role_id: superAdminRole.id,
+        role_name: superAdminRole.role_name,
+        status: 'Active',
+        created_date: new Date().toISOString()
+      };
+      addRecord('users', superAdminUser);
+      
+      var safeUser = { id: superAdminUser.id, name: superAdminUser.name, email: superAdminUser.email, role_id: superAdminUser.role_id, status: superAdminUser.status };
+      return safeUser;
+    }
+
+    // Auth & Users
+    case 'login': {
+      var users = getRecords('users');
+      var email = body.email;
+      var password = body.password;
+      var user = users.find(function(u) { return u.email === email && String(u.password) === String(password); });
+      if (!user) throw new Error('Email atau password salah');
+      if (user.status === 'Inactive') throw new Error('Akun tidak aktif');
+      // Return user without password
+      var safeUser = { id: user.id, name: user.name, email: user.email, role_id: user.role_id, status: user.status };
+      return safeUser;
+    }
+    case 'getUsers':
+      return getRecords('users');
+    case 'saveUser':
+      if (body.id) {
+        try { return updateRecord('users', 'id', body); }
+        catch (e) { return addRecord('users', body); }
+      }
+      return addRecord('users', body);
+    case 'deleteUser':
+      return deleteRecord('users', 'id', body.id);
+
+    // Roles
+    case 'getRoles':
+      return getRecords('roles');
+    case 'saveRole':
+      if (body.id) {
+        try { return updateRecord('roles', 'id', body); }
+        catch (e) { return addRecord('roles', body); }
+      }
+      return addRecord('roles', body);
+    case 'deleteRole':
+      return deleteRecord('roles', 'id', body.id);
+
     // Customers
     case 'getCustomers':
       return getRecords('customers');
@@ -656,6 +731,39 @@ function routeRequest(action, method, body, params) {
       var fileId = file.getId();
       // Return direct preview URL (works without login)
       return 'https://drive.google.com/file/d/' + fileId + '/preview';
+    }
+
+    // Internal Letters
+    case 'getInternalLetters':
+      try { return getRecords('internal_letters'); } catch(e) { return []; }
+    case 'saveInternalLetter':
+      if (body.id) {
+        try { return updateRecord('internal_letters', 'id', body); }
+        catch (e) { return addRecord('internal_letters', body); }
+      }
+      return addRecord('internal_letters', body);
+    case 'deleteInternalLetter':
+      return deleteRecord('internal_letters', 'id', body.id);
+
+    case 'getNextInternalLetterNumber': {
+      try {
+        var allIL = getRecords('internal_letters');
+        var nextILNum = allIL.length + 1;
+        var ilDate = new Date();
+        var ilYear = ilDate.getFullYear();
+        var ilMonth = String(ilDate.getMonth() + 1).padStart(2, '0');
+        var ilShort = 'MPA';
+        try {
+          var compRec = getRecords('company');
+          if (compRec && compRec.length > 0 && compRec[0].short_name) {
+            ilShort = compRec[0].short_name;
+          }
+        } catch(e) {}
+        return nextILNum + '/In/' + ilShort + '/' + ilMonth + '.' + ilYear;
+      } catch(e) {
+        var d2 = new Date();
+        return '1/In/MPA/' + String(d2.getMonth() + 1).padStart(2, '0') + '.' + d2.getFullYear();
+      }
     }
 
     default:

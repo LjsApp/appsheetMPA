@@ -6,6 +6,7 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
 import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, useCompany, fetchApi } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function Invoices() {
   const { data: company } = useCompany();
   const saveInvoice = useSaveInvoice();
   const deleteInvoice = useDeleteInvoice();
+  const user = useAuthStore(state => state.user);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -73,6 +75,7 @@ export default function Invoices() {
         invoice_date: invoiceDate,
         customer_id: po.customer_id,
         delivery_address: deliveryAddress,
+        created_by: user?.name || '',
         created_date: new Date().toISOString(),
         updated_date: new Date().toISOString(),
       };
@@ -307,6 +310,7 @@ export default function Invoices() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Invoice</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal Invoice</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Alamat Pengiriman</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
               </thead>
@@ -320,6 +324,7 @@ export default function Invoices() {
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">{item.invoice_number}</td>
                     <td className="px-5 py-4 text-gray-600 whitespace-nowrap text-xs">{formatDate(item.invoice_date)}</td>
                     <td className="px-5 py-4 text-gray-600 text-xs max-w-[200px] truncate">{item.delivery_address || '-'}</td>
+                    <td className="px-5 py-4 text-xs italic text-gray-500">{item.created_by || '-'}</td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button

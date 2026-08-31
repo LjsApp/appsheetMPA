@@ -168,8 +168,10 @@ export interface PurchaseOrder {
   type?: 'Full' | 'DP' | 'Sisa';
   dp_reference_id?: string;
   due_date?: string;
+  franco?: string;
   subject?: string;
   ref_date?: string;
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }
@@ -179,6 +181,7 @@ export interface SuratJalan {
   po_in_id: string;
   sj_number: string;
   ekspedisi: string;
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }
@@ -190,6 +193,7 @@ export interface Invoice {
   invoice_date: string;
   customer_id: string;
   delivery_address: string;
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }
@@ -365,4 +369,51 @@ export interface PricingCalculation {
   rounded_price: number;
   gross_profit: number;
   gross_margin_pct: number;
+}
+
+// ==================== INTERNAL LETTER ====================
+
+export interface InternalLetter {
+  id: string;
+  po_in_id: string;
+  po_out_id: string;       // linked PO Out for the same vendor
+  quotation_id: string;
+  neraca_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  customer_id: string;
+  customer_name: string;
+  internal_letter_number: string; // e.g. 98/In/MPA/08.2027
+  tanggal: string;
+  perihal: string;
+  franco: string;
+  jumlah_item: number;
+  total_nilai: number;
+  type: string;            // 'Full' | 'DP' | 'Sisa'
+  dp_reference_id?: string; // For Sisa: link to DP internal letter
+  dokumen: string;         // JSON array of uploaded documents
+  created_by?: string;     // Name of user who created this record
+  created_date: string;
+  updated_date: string;
+}
+
+// ==================== USER & AUTH TYPES ====================
+
+export interface Role {
+  id: string;
+  role_name: string;
+  permissions: string; // JSON array of allowed paths, e.g. ["/inquiries", "/neraca"]
+  is_super_admin?: boolean; // If true, all permissions granted
+  created_date?: string;
+}
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  password?: string; // Only sent when creating/updating
+  role_id: string;
+  role_name?: string; // Denormalized for display
+  status: 'Active' | 'Inactive';
+  created_date?: string;
 }

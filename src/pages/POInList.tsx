@@ -8,6 +8,7 @@ import TableToolbar from '@/components/TableToolbar';
 import { usePoIns, useDeletePoIn, useSuratJalan } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import type { POIn } from '@/types';
+import { useAuthStore } from '@/store/authStore';
 
 export default function POInList() {
   const { data: poIns = [], isLoading, refetch } = usePoIns();
@@ -142,6 +143,7 @@ export default function POInList() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Alamat Pengiriman</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Dokumen</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Dikerjakan Oleh</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -194,6 +196,7 @@ export default function POInList() {
                             <span className="text-gray-300 text-xs">—</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-xs italic text-gray-500">{p.created_by || '-'}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button

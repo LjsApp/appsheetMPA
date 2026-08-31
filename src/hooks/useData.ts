@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
 export { fetchApi };
-import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan, Invoice } from '../types';
+import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan, Invoice, InternalLetter, AppUser, Role } from '../types';
 
 
 // ==================== Customers ====================
@@ -511,3 +511,97 @@ export const useDeleteInvoice = () => {
     },
   });
 };
+
+// ==================== INTERNAL LETTERS ====================
+
+export function useInternalLetters() {
+  return useQuery<InternalLetter[]>({
+    queryKey: ['internal_letters'],
+    queryFn: () => fetchApi('getInternalLetters'),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSaveInternalLetter() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<InternalLetter>) => fetchApi('saveInternalLetter', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal_letters'] });
+    },
+  });
+}
+
+export function useDeleteInternalLetter() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteInternalLetter', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal_letters'] });
+    },
+  });
+}
+
+export function useGetNextInternalLetterNumber() {
+  return useMutation({
+    mutationFn: () => fetchApi('getNextInternalLetterNumber', 'POST', {}),
+  });
+}
+
+// ==================== Users ====================
+
+export function useUsers() {
+  return useQuery<AppUser[]>({
+    queryKey: ['users'],
+    queryFn: () => fetchApi('getUsers', 'GET', {}),
+  });
+}
+
+export function useSaveUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (user: Partial<AppUser>) => fetchApi('saveUser', 'POST', user),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteUser', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}
+
+// ==================== Roles ====================
+
+export function useRoles() {
+  return useQuery<Role[]>({
+    queryKey: ['roles'],
+    queryFn: () => fetchApi('getRoles', 'GET', {}),
+  });
+}
+
+export function useSaveRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (role: Partial<Role>) => fetchApi('saveRole', 'POST', role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+  });
+}
+
+export function useDeleteRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteRole', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+  });
+}

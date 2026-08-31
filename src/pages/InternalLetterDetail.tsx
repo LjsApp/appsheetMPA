@@ -1,78 +1,60 @@
-import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
-import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, useVendors, useVendorDiscounts, useNeracaItems, useCompany } from '@/hooks/useData';
-import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from '@/lib/utils';
+import { useEffect, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from "lucide-react";
+import { PageHeader, Button } from "@/components/ui";
+import { useInternalLetters, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems } from "@/hooks/useData";
+import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from "@/lib/utils";
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return 'pagi';
-  if (hour >= 12 && hour < 18) return 'siang';
-  return 'malam';
-}
-
-
-export default function PODetail() {
-  const { poId } = useParams<{ poId: string }>();
+export default function InternalLetterDetail() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: purchaseOrders = [], isLoading: isLoadingPo } = usePurchaseOrders();
+  const { data: letters = [], isLoading: isLoadingIL } = useInternalLetters();
   const { data: vendors = [] } = useVendors();
+  const { data: poIns = [] } = usePoIns();
+  const { data: purchaseOrders = [] } = usePurchaseOrders();
   const { data: company, isLoading: isLoadingCompany } = useCompany();
 
-  const po = purchaseOrders.find(p => p.id === poId);
-  const vendor = vendors.find(v => v.id === po?.vendor_id);
+  const letter = letters.find((l) => l.id === id);
+  const vendor = vendors.find((v) => v.id === letter?.vendor_id);
+  const poIn = poIns.find((p) => p.id === letter?.po_in_id);
+  const poOut = purchaseOrders.find((po) => po.id === letter?.po_out_id) ||
+    purchaseOrders.find((po) => po.quotation_id === letter?.quotation_id && po.vendor_id === letter?.vendor_id && po.type !== "DP");
 
-  const { data: items = [], isLoading: isLoadingItems } = useNeracaItems(po?.neraca_id || '');
-  const { data: vds = [], isLoading: isLoadingVds } = useVendorDiscounts(po?.neraca_id || '');
+  const { data: vds = [] } = useVendorDiscounts(letter?.neraca_id || "");
 
-  useEffect(() => {
-    if (po && company) {
-      const cName = company.name || 'SourceQuo System';
-      document.title = `${cName}_${po.po_number}`;
-      return () => { document.title = 'Vite + React + TS'; };
-    }
-  }, [company?.name, po?.po_number]);
+  const vd = vds.find((d) => d.vendor_id === letter?.vendor_id);
 
-  if (isLoadingPo || isLoadingCompany || isLoadingItems || isLoadingVds) {
-    return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
-  }
+  // Find DP IL if this is a Sisa IL
+  const dpIl = letter?.type === 'Sisa' && letter?.dp_reference_id
+    ? letters.find((l) => l.id === letter.dp_reference_id)
+    : null;
 
-  if (!po) {
-    return <div className="p-8 text-center text-red-600 font-medium">PO Out tidak ditemukan.</div>;
-  }
+  const companyName = company?.name || "PT. Morgan Powerindo Amerta";
 
-  // Get vendor discount for this vendor
-  const vd = vds.find(d => d.vendor_id === po.vendor_id);
-  
-  // Find DP PO if this is a Sisa PO
-  const dpPo = po.type === 'Sisa' && po.dp_reference_id ? purchaseOrders.find(p => p.id === po.dp_reference_id) : null;
+  const { data: allItems = [] } = useNeracaItems(letter?.neraca_id || "");
+  const items = useMemo(() => allItems.filter(i => i.vendor_id === letter?.vendor_id), [allItems, letter?.vendor_id]);
 
-  // Get items for this vendor
-  const vendorItems = items.filter(i => i.vendor_id === po.vendor_id);
+  const itemRows = useMemo(() => {
+    return items.map((item) => {
+      const hb = Number(item.harga_beli) || 0;
+      const qty = Number(item.qty) || 1;
+      return { ...item, unitPrice: hb, totalBeli: hb * qty };
+    });
+  }, [items]);
 
-  // Compute per-item total buy price
-  const itemRows = vendorItems.map(item => {
-    const hb = Number(item.harga_beli) || 0;
-    const qty = Number(item.qty) || 1;
-    const totalBeli = hb * qty;
-    return { ...item, totalBeli, unitPrice: hb };
-  });
-
-  // Total before discount
   const totalBeli = itemRows.reduce((s, i) => s + i.totalBeli, 0);
 
   // Discount
   let totalDiscVal = 0;
+  const discPct = vd?.discount_pct || 0;
   if (vd) {
     if ((vd.discount_pct || 0) > 0) totalDiscVal = totalBeli * ((vd.discount_pct || 0) / 100);
     else if ((vd.discount_cash || 0) > 0) totalDiscVal = vd.discount_cash || 0;
   }
   const totalAfterDisc = totalBeli - totalDiscVal;
-  const discPct = vd?.discount_pct || 0;
 
-  // DP info from vendor discount
+  // DP info
   const dpPct = vd?.dp_pct || 0;
   const dpNominal = vd?.dp_nominal || 0;
   const dpLabel = dpPct > 0 ? `${dpPct}%` : dpNominal > 0 ? `Rp ${formatCurrency(dpNominal)}` : '';
@@ -82,19 +64,27 @@ export default function PODetail() {
   const ppnVal = totalAfterDisc * (ppnPct / 100);
   const grandTotalWithPpn = totalAfterDisc + ppnVal;
 
-  const companyName = company?.name || 'SourceQuo System';
-  const waPhone = String(company?.phone || '6281328213968');
-  const waMessage = `Halo selamat ${getGreeting()}, izin bertanya terkait Purchase Order ${po.po_number} kepada ${vendor?.vendor_name || ''}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://wa.me/${waPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMessage)}`)}`;
+  const letterDate = letter?.tanggal ? formatDate(letter.tanggal) : formatDate(new Date().toISOString());
 
-  // Letter date — use created_date
-  const letterDate = formatDate(po.created_date);
-  const subject = po.subject || '-';
+  useEffect(() => {
+    if (letter && company) {
+      document.title = `${companyName}_${letter.internal_letter_number}`;
+      return () => { document.title = "Vite + React + TS"; };
+    }
+  }, [letter?.internal_letter_number, company?.name]);
+
+  if (isLoadingIL || isLoadingCompany) {
+    return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  }
+
+  if (!letter) {
+    return <div className="p-8 text-center text-red-600 font-medium">Internal Letter tidak ditemukan.</div>;
+  }
 
   return (
     <div className="space-y-5 pb-20">
       <style>{`
-      		@media print {
+        @media print {
           @page { size: A4; margin: 0; }
           body, html, #root {
             margin: 0; padding: 0;
@@ -106,16 +96,14 @@ export default function PODetail() {
           }
           .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
           .no-print { display: none !important; }
-          #po-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
+          #il-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
           thead { display: table-header-group; }
           tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
-          /* Fixed watermark and footer on every printed page */
           .print-wm-tl { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
           .print-wm-br { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
           .print-page-footer { display:flex !important; position:fixed !important; bottom:0; left:0; right:0; background:white !important; z-index:100 !important; padding:10px 40px; justify-content:space-between; align-items:center; }
         }
-        /* Screen styles */
         .print-wm-tl { position:absolute; top:0; left:0; width:320px; opacity:0.15; transform:translate(-20%, -20%); z-index:-1; pointer-events:none; }
         .print-wm-br { position:absolute; bottom:0; right:0; width:360px; opacity:0.15; transform:translate(20%, 20%); z-index:-1; pointer-events:none; }
         .print-page-footer { position:absolute; bottom:0; left:0; right:0; padding:10px 40px; display:flex; justify-content:space-between; align-items:center; background:transparent; z-index:0; pointer-events:none; }
@@ -123,8 +111,8 @@ export default function PODetail() {
 
       <div className="no-print">
         <PageHeader
-          title={`PO Out ${po.po_number}`}
-          subtitle={`${po.vendor_name}`}
+          title={`Internal Letter ${letter.internal_letter_number}`}
+          subtitle={`${letter.vendor_name} — ${letter.customer_name}`}
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigate(-1)}><RotateCcw className="w-4 h-4" /> Kembali</Button>
@@ -134,22 +122,21 @@ export default function PODetail() {
         />
       </div>
 
+      {/* Document */}
+      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="il-doc">
 
-      {/* PO Document */}
-      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="po-doc">
-
-        {/* Watermark & footer — absolute on screen, fixed on print */}
+        {/* Watermark & footer */}
         <img className="print-wm-tl" src="/watermark.png" alt="" />
         <img className="print-wm-br" src="/watermark.png" alt="" />
         <div className="print-page-footer">
-          <img src="/watermark2.png" alt="Logo" style={{height:'28px', opacity:0.85}} />
+          <img src="/watermark2.png" alt="Logo" style={{ height: "28px", opacity: 0.85 }} />
           <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
             <div className="flex items-center justify-end gap-1.5">
-              <span>HO: Citra Grand City – Tropical Valley - SB06/11 - Palembang – Sumatera Selatan</span>
+              <span>HO: Citra Grand City - Tropical Valley - SB06/11 - Palembang - Sumatera Selatan</span>
               <MapPin className="w-3 h-3 text-red-500" />
             </div>
             <div className="flex items-center justify-end gap-1.5">
-              <span>RO: Jl. Bratang Gede I No. 8 – Surabaya – Jawa Timur</span>
+              <span>RO: Jl. Bratang Gede I No. 8 - Surabaya - Jawa Timur</span>
               <MapPin className="w-3 h-3 text-red-500" />
             </div>
             <div className="flex items-center justify-end gap-1.5">
@@ -167,12 +154,11 @@ export default function PODetail() {
           </div>
         </div>
 
-        <table className="w-full" style={{borderCollapse:'collapse'}}>
-
-          {/* ===== THEAD: kop surat - repeats on every printed page ===== */}
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          {/* THEAD: Kop surat */}
           <thead>
             <tr>
-              <td style={{padding:0}}>
+              <td style={{ padding: 0 }}>
                 <div className="px-10 pt-8 pb-4">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
@@ -190,7 +176,7 @@ export default function PODetail() {
                     </div>
                     <div className="text-right">
                       <span className="inline-block bg-blue-800 text-white font-bold text-[8pt] uppercase tracking-widest px-3 py-1.5 rounded">
-                        PURCHASE ORDER {po.type && po.type !== 'Full' ? `(${po.type})` : ''}
+                        INTERNAL LETTER{letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : ''}
                       </span>
                     </div>
                   </div>
@@ -199,70 +185,60 @@ export default function PODetail() {
             </tr>
           </thead>
 
-          {/* ===== TBODY: all body content ===== */}
+          {/* TBODY */}
           <tbody>
             <tr>
-              <td style={{padding:0}}>
+              <td style={{ padding: 0 }}>
                 <div className="px-10 py-6">
 
-                  {/* Info Block — vendor on left, PO info on right */}
-                  <div className="grid grid-cols-2 gap-6 mb-5 text-[12pt] leading-snug">
-                    <div className="space-y-1">
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">To</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="font-semibold text-gray-900">{vendor?.vendor_name || po.vendor_name}</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-gray-700 w-24 shrink-0">Address</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="text-gray-800">{vendor?.address || '-'}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-gray-700 w-24 shrink-0">Attention</span>
-                        <span className="text-gray-700 mr-2">:</span>
-                        <span className="font-semibold text-gray-900">Bapak/Ibu</span>
-                      </div>
-                    </div>
+                  {/* Title block */}
+                  <div className="text-center mb-6">
+                    <p className="font-bold text-[13pt] underline text-gray-900">PENGAJUAN RENCANA ANGGARAN BIAYA (RAB)</p>
+                    <p className="font-bold text-[12pt] underline text-gray-900">BELANJA PROJECT</p>
+                    <p className="italic text-gray-600 text-[11pt] mt-1">{letter.internal_letter_number?.replace(/\s*\(DP\)\s*$/i, '').replace(/\s*\(SISA\)\s*$/i, '')}</p>
+                  </div>
 
-                    <div className="space-y-0.5">
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Po No</span><span className="text-gray-700 mr-2">:</span><span className="font-bold text-gray-900">{po.po_number}</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{letterDate}</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Subject</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{subject}</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">Wa / Email</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{po.ref_date ? formatDate(po.ref_date) : '-'}</span></div>
+                  {/* Perihal / Customer / Rincian */}
+                  <div className="mb-5 text-[12pt]">
+                    <div className="grid grid-cols-[16px_120px_10px_1fr] gap-y-1 text-gray-800">
+                      <div>A.</div>
+                      <div className="font-medium">Perihal</div>
+                      <div>:</div>
+                      <div>{letter.perihal || "-"}</div>
+                      <div>B.</div>
+                      <div className="font-medium">Customer</div>
+                      <div>:</div>
+                      <div>{letter.customer_name}</div>
+                      <div>C.</div>
+                      <div className="font-medium">Rincian Project</div>
+                      <div />
+                      <div />
                     </div>
                   </div>
 
-                  {/* Greeting */}
-                  <div className="mb-4 text-gray-800 text-[12pt]">
-                    <p>Dear Sir/Madam,</p>
-                    <p className="mt-1">Here we submit the PO Out for <span className="font-medium">{subject}</span> as per our agreement:</p>
-                  </div>
-
-                  {/* Items Table — from vendor discount data */}
+                  {/* Items Table */}
                   <div className="mb-6 text-[12pt]">
                     <table className="w-full border-collapse border border-black">
                       <thead className="bg-blue-900 text-white">
                         <tr>
-                          <th className="py-2.5 px-3 text-center font-semibold border-x border-black" style={{width:'5%'}}>No.</th>
-                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{width:'42%'}}>Spesifikasi</th>
-                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{width:'14%'}}>Delivery</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'6%'}}>Qty</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'16%'}}>Unit Price</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'17%'}}>Total Price</th>
+                          <th className="py-2.5 px-3 text-center font-semibold border-x border-black" style={{ width: "5%" }}>No.</th>
+                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{ width: "42%" }}>Spesifikasi</th>
+                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{ width: "14%" }}>Delivery</th>
+                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{ width: "6%" }}>Qty</th>
+                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{ width: "16%" }}>Unit Price</th>
+                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{ width: "17%" }}>Total Price</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black">
                         {itemRows.length === 0 ? (
-                          <tr><td colSpan={6} className="py-6 text-center text-gray-400">Tidak ada item untuk vendor ini.</td></tr>
+                          <tr><td colSpan={6} className="py-6 text-center text-gray-400">Tidak ada item.</td></tr>
                         ) : itemRows.map((item, idx) => (
-                          <tr key={item.id} className="break-inside-avoid bg-white">
+                          <tr key={item.id || idx} className="break-inside-avoid bg-white">
                             <td className="py-3 px-3 text-center text-gray-600 align-top border-x border-black">{idx + 1}</td>
                             <td className="py-3 px-3 align-top text-justify border-x border-black">
                               <div className="text-gray-900">{item.item_vendor}</div>
                             </td>
-                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{formatDeliveryTime(item.dt_vk) || '-'}</td>
+                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{formatDeliveryTime(item.dt_vk) || "-"}</td>
                             <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{item.qty}</td>
                             <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{formatCurrency(item.unitPrice)}</td>
                             <td className="py-3 px-3 text-right font-semibold text-gray-900 align-top border-x border-black">{formatCurrency(item.totalBeli)}</td>
@@ -286,8 +262,8 @@ export default function PODetail() {
                             <td className="py-1 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(totalDiscVal)}</td>
                           </tr>
                         )}
-                        
-                        {po.type === 'DP' ? (
+
+                        {letter.type === 'DP' ? (
                           <>
                             {ppnPct > 0 && (
                               <tr className="border-t border-black">
@@ -303,16 +279,14 @@ export default function PODetail() {
                               <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">
                                 Down Payment{dpLabel ? ` (${dpLabel})` : ''}
                               </td>
-                              <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(po.total_nilai)}</td>
+                              <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(letter.total_nilai)}</td>
                             </tr>
                             <tr className="border-t border-black">
-                              <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">
-                                Grand Total
-                              </td>
-                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(po.total_nilai)}</td>
+                              <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total</td>
+                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(letter.total_nilai)}</td>
                             </tr>
                           </>
-                        ) : po.type === 'Sisa' ? (
+                        ) : letter.type === 'Sisa' ? (
                           <>
                             {ppnPct > 0 && (
                               <tr className="border-t border-black">
@@ -324,17 +298,17 @@ export default function PODetail() {
                               <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Total</td>
                               <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(grandTotalWithPpn)}</td>
                             </tr>
-                            {dpPo && (
+                            {dpIl && (
                               <tr className="border-t border-black">
                                 <td colSpan={5} className="py-1.5 px-3 text-right text-gray-600 border-x border-black italic">
-                                  Less DP (No PO: {dpPo.po_number}, Tanggal: {formatDate(dpPo.created_date)})
+                                  Less DP (No IL: {dpIl.internal_letter_number}, Tanggal: {formatDate(dpIl.tanggal)})
                                 </td>
-                                <td className="py-1.5 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(dpPo.total_nilai)}</td>
+                                <td className="py-1.5 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(dpIl.total_nilai)}</td>
                               </tr>
                             )}
                             <tr className="border-t border-black">
                               <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total (Sisa)</td>
-                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(po.total_nilai)}</td>
+                              <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(letter.total_nilai)}</td>
                             </tr>
                           </>
                         ) : (
@@ -355,37 +329,35 @@ export default function PODetail() {
                     </table>
                   </div>
 
-                  <div className="break-inside-avoid mb-5 text-[12pt]">
-                    <h3 className="font-bold text-gray-900 mb-2">Term and Condition</h3>
-                    <div className="grid grid-cols-[120px_10px_1fr] gap-y-1 text-gray-800">
-                      <div className="font-medium">Due Date</div><div>:</div><div>{po.due_date ? formatDate(po.due_date) : '-'}</div>
-                      <div className="font-medium">Franco</div><div>:</div><div>{po.franco || '-'}</div>
-                      <div className="font-medium">Shipping Address</div><div>:</div><div>{company?.address || '-'}</div>
-                      <div className="font-medium">Packaging</div><div>:</div><div>Package must be sure to be good, secure and safe, to prevent any damage.</div>
+                  {/* Info below table */}
+                  <div className="mb-8 text-[12pt]">
+                    <div className="grid grid-cols-[130px_10px_1fr] gap-y-1 text-gray-800">
+                      <div className="font-medium">No. PO In</div><div>:</div><div>{poIn?.po_in_number || "-"}</div>
+                      <div className="font-medium">PO Out</div><div>:</div><div>{poOut?.po_number || "-"}</div>
+                      <div className="font-medium">Vendor</div><div>:</div><div>{vendor?.vendor_name || letter.vendor_name}</div>
+                      <div className="font-medium">Bank</div><div>:</div><div>{vendor?.bank_name || "-"}</div>
+                      <div className="font-medium">No. Rekening</div><div>:</div><div>{vendor?.bank_account_number || "-"}</div>
+                      <div className="font-medium">Atas Nama</div><div>:</div><div>{vendor?.bank_account_name || "-"}</div>
+                      <div className="font-medium">Franco</div><div>:</div><div>{letter.franco || "-"}</div>
                     </div>
                   </div>
 
+                  {/* Signature section */}
                   <div className="break-inside-avoid">
-                    {/* Disclaimer */}
-                    <div className="text-[10pt] text-gray-600 italic mb-8 leading-relaxed">
-                      Dokumen ini dikeluarkan oleh sistem integrasi data <span className="font-semibold">{companyName}</span> dan dinyatakan sah dan otentik bila disertai QR Code dan tidak memerlukan tanda tangan basah. Silahkan melakukan verifikasi dengan scan QR Code.
+                    <div className="flex justify-end mb-6">
+                      <p className="text-gray-900 font-medium">Surabaya, {letterDate}</p>
                     </div>
-
-                    {/* Signature & QR */}
                     <div className="flex justify-between items-end text-[12pt]">
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
-                          <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
-                        </div>
-                        <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                      <div className="text-gray-800">
+                        <p>Menyetujui</p>
+                        <div style={{ height: "80px" }} />
+                        <p className="font-bold underline">{company?.leader_name || "Erick PM"}</p>
+                        <p className="italic">{company?.admin_position || "Direktur"}</p>
                       </div>
-
-                      <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
-                        <p>Regards,</p>
-                        <p className="font-semibold text-gray-900 mt-0.5">{companyName}</p>
-                        <div style={{ height: '110px' }}></div>
-                        <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
-                        <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Staff'}</p>
+                      <div className="text-gray-800">
+                        <p>Mengetahui</p>
+                        <div style={{ height: "80px" }} />
+                        <p className="font-semibold">Sakti</p>
                       </div>
                     </div>
                   </div>
@@ -394,11 +366,11 @@ export default function PODetail() {
               </td>
             </tr>
           </tbody>
-          {/* TFOOT: empty spacer to prevent fixed footer from overlapping content */}
+          {/* TFOOT spacer */}
           <tfoot>
             <tr>
               <td>
-                <div style={{ height: '90px' }}></div>
+                <div style={{ height: "90px" }}></div>
               </td>
             </tr>
           </tfoot>

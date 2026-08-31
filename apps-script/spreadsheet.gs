@@ -4,8 +4,10 @@
 
 const getSheet = (sheetName) => {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) throw new Error(`Sheet ${sheetName} not found`);
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
   return sheet;
 }
 
@@ -42,7 +44,16 @@ const addRecord = (sheetName, record) => {
     lastCol = newHeaders.length;
   }
   
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  
+  // Check for new columns
+  const recordKeys = Object.keys(record);
+  const newCols = recordKeys.filter(k => headers.indexOf(k) === -1);
+  if (newCols.length > 0) {
+    sheet.getRange(1, lastCol + 1, 1, newCols.length).setValues([newCols]);
+    headers = headers.concat(newCols);
+    lastCol = headers.length;
+  }
   
   const newRow = headers.map(header => {
     let val = record[header] !== undefined ? record[header] : "";
@@ -55,10 +66,11 @@ const addRecord = (sheetName, record) => {
 
 const updateRecord = (sheetName, idField, record) => {
   const sheet = getSheet(sheetName);
+  let lastCol = sheet.getLastColumn();
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) throw new Error("No data found to update");
   
-  const headers = data[0];
+  let headers = data[0];
   const idIndex = headers.indexOf(idField);
   if (idIndex === -1) throw new Error(`ID field ${idField} not found in headers`);
   
@@ -74,9 +86,19 @@ const updateRecord = (sheetName, idField, record) => {
   
   if (rowIndex === -1) throw new Error(`Record with ${idField}=${recordId} not found`);
   
-  // We need to update only the fields provided in the record object
-  // Merge existing row data with new record data
-  const existingRow = data[rowIndex - 1];
+  // Check for new columns
+  const recordKeys = Object.keys(record);
+  const newCols = recordKeys.filter(k => headers.indexOf(k) === -1);
+  if (newCols.length > 0) {
+    sheet.getRange(1, lastCol + 1, 1, newCols.length).setValues([newCols]);
+    headers = headers.concat(newCols);
+    lastCol = headers.length;
+  }
+  
+  // Refresh existing row in case new columns were added (though it will just be undefined/empty)
+  // We need to fetch the row again from the sheet because data array doesn't have the new cols
+  const existingRow = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+  
   const updatedRow = headers.map((header, i) => {
     let val = record.hasOwnProperty(header) ? record[header] : existingRow[i];
     if ((header === 'dt_kc' || header === 'dt_vk') && val && String(val).indexOf("'") !== 0) val = "'" + val;

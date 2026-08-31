@@ -9,6 +9,7 @@ import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInqu
 import type { Neraca } from '@/types';
 import { formatDate } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Neracas() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function Neracas() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeInquiryId, setActiveInquiryId] = useState<string | null>(null);
+  const user = useAuthStore(state => state.user);
 
   const { data: allInquiries = [], isLoading: isLoadingInq } = useInquiries();
   const { data: neracas = [], isLoading: isLoadingNeracas } = useNeracas();
@@ -79,6 +81,7 @@ export default function Neracas() {
       payload = {
         ...payload,
         id: `NER-${Date.now()}`,
+        created_by: user?.name || '',
         created_date: new Date().toISOString().split('T')[0],
         updated_date: new Date().toISOString().split('T')[0],
       };
@@ -218,6 +221,7 @@ export default function Neracas() {
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Nama Neraca</th>
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Tgl Dibuat</th>
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Tgl Update</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Dikerjakan Oleh</th>
                                         <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">Aksi</th>
                                       </tr>
                                     </thead>
@@ -236,6 +240,7 @@ export default function Neracas() {
                                           </td>
                                           <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(n.created_date)}</td>
                                           <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(n.updated_date)}</td>
+                                          <td className="px-4 py-2.5 text-xs italic text-gray-500">{n.created_by || '-'}</td>
                                           <td className="px-4 py-2.5 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                               {(() => {

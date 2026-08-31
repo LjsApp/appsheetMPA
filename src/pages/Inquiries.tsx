@@ -8,6 +8,7 @@ import TableToolbar from '@/components/TableToolbar';
 import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
+import { useAuthStore } from '@/store/authStore';
 
 const INQUIRY_STATUSES: Inquiry['status'][] = ['Jalan', 'Batal', 'Telat'];
 
@@ -60,6 +61,7 @@ export default function Inquiries() {
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Inquiry>();
   const watchCustomerId = watch('customer_id');
+  const user = useAuthStore(state => state.user);
 
   // Filter PICs by selected customer
   const filteredPics = pics.filter(p => p.customer_id === watchCustomerId);
@@ -184,7 +186,7 @@ export default function Inquiries() {
       payload = {
         ...payload,
         id: `INQ-${Date.now()}`,
-        // request_number diambil dari input user, tidak di-generate otomatis
+        created_by: user?.name || '',
         created_date: new Date().toISOString().split('T')[0],
         updated_date: new Date().toISOString().split('T')[0],
       };
@@ -261,8 +263,11 @@ export default function Inquiries() {
         );
       } catch { return '-'; }
     }},
+    { key: 'created_by', label: 'Dikerjakan Oleh', render: (v: unknown) => <span className="text-gray-500 text-xs italic">{String(v || '-')}</span> },
     { key: 'status', label: 'Status', render: (v: unknown) => (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(String(v))}`}>{String(v)}</span>
+      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(String(v))}`}>
+        {String(v)}
+      </span>
     )},
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center justify-end gap-2">

@@ -6,6 +6,7 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
 import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi } from '@/hooks/useData';
 import type { POIn } from '@/types';
+import { useAuthStore } from '@/store/authStore';
 
 export default function SuratJalanList() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function SuratJalanList() {
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const saveSJ = useSaveSuratJalan();
   const deleteSJ = useDeleteSuratJalan();
+  const user = useAuthStore(state => state.user);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -81,6 +83,7 @@ export default function SuratJalanList() {
         po_in_id: poIn.id,
         sj_number: sjNumber,
         ekspedisi: '',
+        created_by: user?.name || '',
         created_date: new Date().toISOString(),
         updated_date: new Date().toISOString(),
       };
@@ -134,6 +137,7 @@ export default function SuratJalanList() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Surat Jalan</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
               </thead>
@@ -151,6 +155,7 @@ export default function SuratJalanList() {
                         day: 'numeric', month: 'short', year: 'numeric'
                       })}
                     </td>
+                    <td className="px-5 py-4 text-xs italic text-gray-500">{item.created_by || '-'}</td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button

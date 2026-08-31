@@ -250,10 +250,10 @@ export default function SuratJalanDetail() {
                     {/* Two-column signatures */}
                     <div className="flex justify-between items-start text-[12pt]">
                       {/* Left — received by */}
-                      <div className="text-left" style={{ minWidth: '200px' }}>
+                      <div className="text-left flex flex-col" style={{ minWidth: '200px' }}>
                         <p>Diterima,</p>
                         <p className="mt-1">Tanggal : ________________________.</p>
-                        <p className="mt-6 font-semibold text-gray-900 text-center">{po?.customer_name || 'Customer'}</p>
+                        <p className="mt-1 font-semibold text-gray-900 text-center">{po?.customer_name || 'Customer'}</p>
                         <div style={{ height: '90px' }}></div>
                         <p className="text-gray-900 text-center">(__________________________)</p>
                       </div>
@@ -262,11 +262,11 @@ export default function SuratJalanDetail() {
                       <div className="text-gray-800 text-center flex flex-col items-center" style={{ minWidth: '200px' }}>
                         <p className="invisible">Diterima,</p>
                         <p className="mt-1">Hormat kami,</p>
-                        <p className="mt-6 font-semibold text-gray-900">{companyName}</p>
-                        <div className="w-20 h-20 border border-gray-200 p-1 bg-white overflow-hidden my-2">
+                        <p className="mt-1 font-semibold text-gray-900">{companyName}</p>
+                        <div className="w-16 h-16 border border-gray-200 p-1 bg-white overflow-hidden my-2">
                           <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
                         </div>
-                        <p className="text-[10pt] text-gray-400 mb-2">Scan untuk verifikasi</p>
+                        <p className="text-[9pt] text-gray-400 mb-2">Scan untuk verifikasi</p>
                         <p className="font-bold text-gray-900 underline">{company?.leader_name || 'Admin'}</p>
                         <p className="text-gray-700 mt-0.5">{company?.admin_position || 'Direktur'}</p>
                       </div>
