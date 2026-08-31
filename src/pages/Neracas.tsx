@@ -221,7 +221,7 @@ export default function Neracas() {
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Nama Neraca</th>
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Tgl Dibuat</th>
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Tgl Update</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Dikerjakan Oleh</th>
+                                        {user?.is_super_admin && <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Dikerjakan Oleh</th>}
                                         <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">Aksi</th>
                                       </tr>
                                     </thead>
@@ -240,7 +240,7 @@ export default function Neracas() {
                                           </td>
                                           <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(n.created_date)}</td>
                                           <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(n.updated_date)}</td>
-                                          <td className="px-4 py-2.5 text-xs italic text-gray-500">{n.created_by || '-'}</td>
+                                          {user?.is_super_admin && <td className="px-4 py-2.5 text-xs italic text-gray-500">{n.created_by || '-'}</td>}
                                           <td className="px-4 py-2.5 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                               {(() => {

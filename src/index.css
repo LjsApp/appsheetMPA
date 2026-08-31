@@ -64,4 +64,9 @@
   }
 }
 
-
+/* ─── Global Table Consistency ───────────────────────────────────────────────
+   Cegah header tabel wrap ke baris baru
+─────────────────────────────────────────────────────────────────────────────── */
+table th {
+  white-space: nowrap;
+}

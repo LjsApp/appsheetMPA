@@ -48,8 +48,12 @@ function routeRequest(action, method, body, params) {
       var user = users.find(function(u) { return u.email === email && String(u.password) === String(password); });
       if (!user) throw new Error('Email atau password salah');
       if (user.status === 'Inactive') throw new Error('Akun tidak aktif');
+      // Get role to determine is_super_admin
+      var roles = getRecords('roles');
+      var userRole = roles.find(function(r) { return r.id === user.role_id; });
+      var isSuperAdmin = userRole ? (userRole.is_super_admin === true || userRole.is_super_admin === 'TRUE' || userRole.is_super_admin === 'true') : false;
       // Return user without password
-      var safeUser = { id: user.id, name: user.name, email: user.email, role_id: user.role_id, status: user.status };
+      var safeUser = { id: user.id, name: user.name, email: user.email, role_id: user.role_id, status: user.status, is_super_admin: isSuperAdmin };
       return safeUser;
     }
     case 'getUsers':

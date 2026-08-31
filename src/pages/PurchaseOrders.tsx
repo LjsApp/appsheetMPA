@@ -9,8 +9,10 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
 import GeneratePoModal from '@/components/GeneratePoModal';
 import TableToolbar from '@/components/TableToolbar';
+import { useAuthStore } from '@/store/authStore';
 
 export default function PurchaseOrders() {
+  const user = useAuthStore(state => state.user);
   const navigate = useNavigate();
   const { data: purchaseOrders = [], isLoading: loadingPOs, refetch: refetchPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
@@ -191,7 +193,7 @@ export default function PurchaseOrders() {
                   <th className="px-6 py-4 text-center">JML ITEM</th>
                   <th className="px-6 py-4 text-right">TOTAL NILAI</th>
                   <th className="px-6 py-4">DOKUMEN</th>
-                  <th className="px-6 py-4">DIKERJAKAN OLEH</th>
+                  {user?.is_super_admin && <th className="px-6 py-4">DIKERJAKAN OLEH</th>}
                   <th className="px-6 py-4 text-right">AKSI</th>
                 </tr>
               </thead>
@@ -258,7 +260,7 @@ export default function PurchaseOrders() {
                             <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-xs italic text-gray-500">{po.created_by || '-'}</td>
+                        {user?.is_super_admin && <td className="px-6 py-4 text-xs italic text-gray-500">{po.created_by || '-'}</td>}
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3">
                             <button

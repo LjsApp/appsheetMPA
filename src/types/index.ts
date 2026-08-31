@@ -83,6 +83,7 @@ export interface Inquiry {
   documents: string;              // JSON array of Drive URLs
   status: InquiryStatus;
   notes?: string;
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }
@@ -93,6 +94,7 @@ export interface Neraca {
   id: string;
   inquiry_id: string;
   name: string;        // e.g. "Neraca 1", "Neraca 2"
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }
@@ -212,6 +214,7 @@ export interface POIn {
   pic_name: string;
   tanggal_batas: string;
   dokumen: string; // JSON array string
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }
@@ -229,6 +232,7 @@ export interface NeracaQuotation {
   nilai: number;             // grand_total dari neraca
   dokumen: string;           // URL dokumen (optional)
   status: NeracaQuotationStatus;
+  created_by?: string;
   created_date: string;
   updated_date: string;
 }

@@ -137,7 +137,7 @@ export default function SuratJalanList() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Surat Jalan</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>
+                  {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
               </thead>
@@ -155,7 +155,7 @@ export default function SuratJalanList() {
                         day: 'numeric', month: 'short', year: 'numeric'
                       })}
                     </td>
-                    <td className="px-5 py-4 text-xs italic text-gray-500">{item.created_by || '-'}</td>
+                    {user?.is_super_admin && <td className="px-5 py-4 text-xs italic text-gray-500">{item.created_by || '-'}</td>}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button

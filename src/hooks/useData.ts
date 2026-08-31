@@ -2,7 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
 export { fetchApi };
 import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan, Invoice, InternalLetter, AppUser, Role } from '../types';
+import { useAuthStore } from '../store/authStore';
 
+// ─── Row-level filter helper ───────────────────────────────────────────────────
+// Returns a selector that keeps all rows for super-admin, or only the rows
+// whose `created_by` matches the current user's name for regular users.
+function useOwnerSelector<T extends { created_by?: string }>() {
+  const user = useAuthStore(state => state.user);
+  return (data: T[]) => {
+    if (!user) return [];
+    if (user.is_super_admin) return data; // super admin sees everything
+    return data.filter(row => !row.created_by || row.created_by === user.name);
+  };
+}
 
 // ==================== Customers ====================
 
@@ -129,9 +141,11 @@ export function useDeleteProduct() {
 // ==================== Inquiries ====================
 
 export function useInquiries() {
+  const select = useOwnerSelector<Inquiry>();
   return useQuery<Inquiry[]>({
     queryKey: ['inquiries'],
     queryFn: () => fetchApi('getInquiries'),
+    select,
     staleTime: 2 * 60 * 1000,
   });
 }
@@ -159,9 +173,11 @@ export function useDeleteInquiry() {
 // ==================== Neraca ====================
 
 export function useNeracas() {
+  const select = useOwnerSelector<Neraca>();
   return useQuery<Neraca[]>({
     queryKey: ['neracas'],
     queryFn: () => fetchApi('getNeracas'),
+    select,
     staleTime: 2 * 60 * 1000,
   });
 }
@@ -284,11 +300,13 @@ export function useInitNeracaSheets() {
 // ==================== Neraca Quotations ====================
 
 export function useNeracaQuotations(neracaId?: string) {
+  const select = useOwnerSelector<NeracaQuotation>();
   return useQuery<NeracaQuotation[]>({
     queryKey: ['neraca_quotations', neracaId ?? 'all'],
     queryFn: () => neracaId
       ? fetchApi(`getNeracaQuotations&neraca_id=${neracaId}`)
       : fetchApi('getNeracaQuotations'),
+    select,
     staleTime: 60 * 1000,
   });
 }
@@ -324,6 +342,7 @@ export function useGetNextQuotationNumber() {
 // ==================== PO Out ====================
 
 export function usePurchaseOrders() {
+  const select = useOwnerSelector<PurchaseOrder>();
   return useQuery<PurchaseOrder[]>({
     queryKey: ['purchase_orders'],
     queryFn: async () => {
@@ -333,6 +352,7 @@ export function usePurchaseOrders() {
         id: po.id || `fallback-po-${po.po_number?.replace(/\//g, '-')}-${idx}`
       }));
     },
+    select,
     staleTime: 60 * 1000,
   });
 }
@@ -425,9 +445,11 @@ export function useSaveCompany() {
 // ==================== PO In ====================
 
 export function usePoIns() {
+  const select = useOwnerSelector<POIn>();
   return useQuery<POIn[]>({
     queryKey: ['po_ins'],
     queryFn: () => fetchApi('getPoIns'),
+    select,
     staleTime: 60 * 1000,
   });
 }
@@ -455,9 +477,11 @@ export function useDeletePoIn() {
 // ==================== SURAT JALAN ====================
 
 export const useSuratJalan = () => {
+  const select = useOwnerSelector<SuratJalan>();
   return useQuery<SuratJalan[]>({
     queryKey: ['suratJalan'],
     queryFn: () => fetchApi('getSuratJalan'),
+    select,
     staleTime: 5 * 60 * 1000,
   });
 };
@@ -485,9 +509,11 @@ export const useDeleteSuratJalan = () => {
 // ==================== INVOICES ====================
 
 export const useInvoices = () => {
+  const select = useOwnerSelector<Invoice>();
   return useQuery<Invoice[]>({
     queryKey: ['invoices'],
     queryFn: () => fetchApi('getInvoices'),
+    select,
     staleTime: 5 * 60 * 1000,
   });
 };
@@ -515,9 +541,11 @@ export const useDeleteInvoice = () => {
 // ==================== INTERNAL LETTERS ====================
 
 export function useInternalLetters() {
+  const select = useOwnerSelector<InternalLetter>();
   return useQuery<InternalLetter[]>({
     queryKey: ['internal_letters'],
     queryFn: () => fetchApi('getInternalLetters'),
+    select,
     staleTime: 60 * 1000,
   });
 }

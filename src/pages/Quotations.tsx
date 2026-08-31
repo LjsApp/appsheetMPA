@@ -326,7 +326,7 @@ export default function Quotations() {
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dokumen</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status PO</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>
+                {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
               </tr>
             </thead>
@@ -392,7 +392,7 @@ export default function Quotations() {
                           )}
                         </td>
                         <td className="px-5 py-4 text-xs text-gray-500">{formatDate(q.created_date)}</td>
-                        <td className="px-5 py-4 text-xs italic text-gray-500">{q.created_by || '-'}</td>
+                        {user?.is_super_admin && <td className="px-5 py-4 text-xs italic text-gray-500">{q.created_by || '-'}</td>}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button onClick={() => openEditModal(q)} className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors" title="Edit Quotation">

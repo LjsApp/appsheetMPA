@@ -263,7 +263,7 @@ export default function Inquiries() {
         );
       } catch { return '-'; }
     }},
-    { key: 'created_by', label: 'Dikerjakan Oleh', render: (v: unknown) => <span className="text-gray-500 text-xs italic">{String(v || '-')}</span> },
+    ...(user?.is_super_admin ? [{ key: 'created_by', label: 'Dikerjakan Oleh', render: (v: unknown) => <span className="text-gray-500 text-xs italic">{String(v || '-')}</span> }] : []),
     { key: 'status', label: 'Status', render: (v: unknown) => (
       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(String(v))}`}>
         {String(v)}

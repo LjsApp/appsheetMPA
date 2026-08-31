@@ -207,9 +207,9 @@ export default function Roles() {
                       return (
                         <label key={page.path} className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-gray-50 cursor-pointer">
                           {checked ? (
-                            <CheckSquare className="w-4 h-4 text-blue-600 flex-shrink-0" onClick={() => togglePath(page.path)} />
+                            <CheckSquare className="w-4 h-4 text-blue-600 flex-shrink-0" />
                           ) : (
-                            <Square className="w-4 h-4 text-gray-300 flex-shrink-0" onClick={() => togglePath(page.path)} />
+                            <Square className="w-4 h-4 text-gray-300 flex-shrink-0" />
                           )}
                           <input type="checkbox" className="hidden" checked={checked} onChange={() => togglePath(page.path)} />
                           <span className="text-sm text-gray-700">{page.label}</span>

@@ -22,7 +22,7 @@ export default function DataTable<T extends Record<string, unknown>>({
 }: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <table className="min-w-full divide-y divide-gray-100 text-sm">
+      <table className="min-w-full divide-y divide-gray-100 text-xs">
         <thead>
           <tr className="bg-gray-50">
             {columns.map((col) => (

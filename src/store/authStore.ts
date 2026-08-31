@@ -7,6 +7,7 @@ export interface User {
   email: string;
   role_id: string;
   status: string;
+  is_super_admin?: boolean;
 }
 
 interface AuthState {
