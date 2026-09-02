@@ -123,15 +123,15 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-4 mb-6 z-10">
               <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                 <p className="text-xs text-gray-500 mb-1">Total Pemasukan</p>
-                <p className="text-base font-bold text-emerald-600">Rp {formatCurrency(totalBelanjaIn)}</p>
+                <p className="text-base font-bold text-emerald-600">{formatCurrency(totalBelanjaIn)}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                 <p className="text-xs text-gray-500 mb-1">Total Pengeluaran</p>
-                <p className="text-base font-bold text-red-600">Rp {formatCurrency(totalBelanjaOut)}</p>
+                <p className="text-base font-bold text-red-600">{formatCurrency(totalBelanjaOut)}</p>
               </div>
               <div className="col-span-2 bg-blue-50 rounded-lg p-3 border border-blue-100 flex justify-between items-center">
                 <span className="text-sm font-semibold text-blue-800">Sisa Belanja</span>
-                <span className="text-lg font-bold text-blue-700">Rp {formatCurrency(sisaBelanja)}</span>
+                <span className="text-lg font-bold text-blue-700">{formatCurrency(sisaBelanja)}</span>
               </div>
             </div>
             <button 
@@ -148,7 +148,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold text-gray-900 mb-4 z-10">Pembelian (PO Out)</h3>
             <div className="mb-6 z-10 flex-1 flex flex-col justify-center">
               <p className="text-sm text-gray-500 mb-1">Total Pembelian Keseluruhan</p>
-              <p className="text-3xl font-bold text-gray-900">Rp {formatCurrency(totalPembelian)}</p>
+              <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalPembelian)}</p>
             </div>
             <button 
               onClick={() => setModalContent({ isOpen: true, title: 'Detail Pembelian per Vendor', type: 'pembelian' })}
@@ -164,16 +164,16 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold text-gray-900 mb-4 z-10">Penjualan (Invoice)</h3>
             <div className="mb-4 z-10">
               <p className="text-sm text-gray-500 mb-1">Total Nominal Penjualan</p>
-              <p className="text-2xl font-bold text-gray-900">Rp {formatCurrency(totalPenjualan)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalPenjualan)}</p>
             </div>
             <div className="grid grid-cols-2 gap-4 mb-6 z-10">
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
                 <p className="text-xs text-emerald-700 mb-1">Total Lunas</p>
-                <p className="text-sm font-bold text-emerald-700">Rp {formatCurrency(totalLunas)}</p>
+                <p className="text-sm font-bold text-emerald-700">{formatCurrency(totalLunas)}</p>
               </div>
               <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
                 <p className="text-xs text-amber-700 mb-1">Total Piutang</p>
-                <p className="text-sm font-bold text-amber-700">Rp {formatCurrency(totalPiutang)}</p>
+                <p className="text-sm font-bold text-amber-700">{formatCurrency(totalPiutang)}</p>
               </div>
             </div>
             <button 
@@ -191,7 +191,7 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500 mb-4 z-10">Penjualan (Total) - Pembelian (Total)</p>
             <div className="z-10">
               <span className={`inline-block px-4 py-2 rounded-xl text-3xl font-black ${keuntungan >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                {keuntungan >= 0 ? '+' : '-'} Rp {formatCurrency(Math.abs(keuntungan))}
+                {keuntungan >= 0 ? '+' : '-'} {formatCurrency(Math.abs(keuntungan))}
               </span>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function Dashboard() {
                       <span className="text-sm font-medium text-gray-700 truncate">{c.name}</span>
                       <span className="text-xs text-gray-400">{c.count} PO In</span>
                     </div>
-                    <span className="text-sm font-bold text-emerald-600 shrink-0">Rp {formatCurrency(c.total)}</span>
+                    <span className="text-sm font-bold text-emerald-600 shrink-0">{formatCurrency(c.total)}</span>
                   </div>
                 ))}
               </div>
@@ -308,25 +308,25 @@ export default function Dashboard() {
                   <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                     <h4 className="font-bold text-gray-900 mb-3 border-b border-gray-200 pb-2">Belanja Dapur</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      <div><p className="text-xs text-gray-500">Pemasukan</p><p className="font-bold text-emerald-600">Rp {formatCurrency(totalDapurIn)}</p></div>
-                      <div><p className="text-xs text-gray-500">Pengeluaran</p><p className="font-bold text-red-600">Rp {formatCurrency(totalDapurOut)}</p></div>
-                      <div><p className="text-xs text-gray-500">Sisa</p><p className="font-bold text-blue-600">Rp {formatCurrency(totalDapurIn - totalDapurOut)}</p></div>
+                      <div><p className="text-xs text-gray-500">Pemasukan</p><p className="font-bold text-emerald-600">{formatCurrency(totalDapurIn)}</p></div>
+                      <div><p className="text-xs text-gray-500">Pengeluaran</p><p className="font-bold text-red-600">{formatCurrency(totalDapurOut)}</p></div>
+                      <div><p className="text-xs text-gray-500">Sisa</p><p className="font-bold text-blue-600">{formatCurrency(totalDapurIn - totalDapurOut)}</p></div>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                     <h4 className="font-bold text-gray-900 mb-3 border-b border-gray-200 pb-2">Belanja Proyek</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      <div><p className="text-xs text-gray-500">Pemasukan</p><p className="font-bold text-emerald-600">Rp {formatCurrency(totalProyekIn)}</p></div>
-                      <div><p className="text-xs text-gray-500">Pengeluaran</p><p className="font-bold text-red-600">Rp {formatCurrency(totalProyekOut)}</p></div>
-                      <div><p className="text-xs text-gray-500">Sisa</p><p className="font-bold text-blue-600">Rp {formatCurrency(totalProyekIn - totalProyekOut)}</p></div>
+                      <div><p className="text-xs text-gray-500">Pemasukan</p><p className="font-bold text-emerald-600">{formatCurrency(totalProyekIn)}</p></div>
+                      <div><p className="text-xs text-gray-500">Pengeluaran</p><p className="font-bold text-red-600">{formatCurrency(totalProyekOut)}</p></div>
+                      <div><p className="text-xs text-gray-500">Sisa</p><p className="font-bold text-blue-600">{formatCurrency(totalProyekIn - totalProyekOut)}</p></div>
                     </div>
                   </div>
                   <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
                     <h4 className="font-bold text-blue-900 mb-3 border-b border-blue-200 pb-2">Total Keseluruhan</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      <div><p className="text-xs text-blue-600">Total Pemasukan</p><p className="font-bold text-blue-800">Rp {formatCurrency(totalBelanjaIn)}</p></div>
-                      <div><p className="text-xs text-blue-600">Total Pengeluaran</p><p className="font-bold text-blue-800">Rp {formatCurrency(totalBelanjaOut)}</p></div>
-                      <div><p className="text-xs text-blue-600">Total Sisa</p><p className="text-xl font-black text-blue-900">Rp {formatCurrency(sisaBelanja)}</p></div>
+                      <div><p className="text-xs text-blue-600">Total Pemasukan</p><p className="font-bold text-blue-800">{formatCurrency(totalBelanjaIn)}</p></div>
+                      <div><p className="text-xs text-blue-600">Total Pengeluaran</p><p className="font-bold text-blue-800">{formatCurrency(totalBelanjaOut)}</p></div>
+                      <div><p className="text-xs text-blue-600">Total Sisa</p><p className="text-xl font-black text-blue-900">{formatCurrency(sisaBelanja)}</p></div>
                     </div>
                   </div>
                 </div>
@@ -346,7 +346,7 @@ export default function Dashboard() {
                       {vendorPembelian.map((v, idx) => (
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-medium text-gray-900">{v.name}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-gray-900">Rp {formatCurrency(v.total)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(v.total)}</td>
                         </tr>
                       ))}
                       {vendorPembelian.length === 0 && <tr><td colSpan={2} className="px-4 py-8 text-center text-gray-500">Belum ada data</td></tr>}
@@ -355,7 +355,7 @@ export default function Dashboard() {
                       <tfoot className="bg-gray-50 border-t border-gray-200 font-bold">
                         <tr>
                           <td className="px-4 py-3 text-right text-gray-700">Total Keseluruhan</td>
-                          <td className="px-4 py-3 text-right text-gray-900">Rp {formatCurrency(totalPembelian)}</td>
+                          <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(totalPembelian)}</td>
                         </tr>
                       </tfoot>
                     )}
@@ -369,7 +369,7 @@ export default function Dashboard() {
                   <div className="border border-amber-200 rounded-lg overflow-hidden">
                     <div className="bg-amber-50 px-4 py-2 border-b border-amber-200 font-bold text-amber-800 flex justify-between items-center">
                       <span>Invoice Belum Lunas (Piutang)</span>
-                      <span>Total: Rp {formatCurrency(totalPiutang)}</span>
+                      <span>Total: {formatCurrency(totalPiutang)}</span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm">
@@ -381,7 +381,7 @@ export default function Dashboard() {
                             <tr key={inv.id}>
                               <td className="px-4 py-2 font-mono text-xs">{inv.invoice_number}</td>
                               <td className="px-4 py-2">{inv.customer_name}</td>
-                              <td className="px-4 py-2 text-right font-semibold">Rp {formatCurrency(inv.nilai)}</td>
+                              <td className="px-4 py-2 text-right font-semibold">{formatCurrency(inv.nilai)}</td>
                             </tr>
                           ))}
                           {belumLunasInvoices.length === 0 && <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-500">Semua lunas</td></tr>}
@@ -393,7 +393,7 @@ export default function Dashboard() {
                   <div className="border border-emerald-200 rounded-lg overflow-hidden">
                     <div className="bg-emerald-50 px-4 py-2 border-b border-emerald-200 font-bold text-emerald-800 flex justify-between items-center">
                       <span>Invoice Lunas</span>
-                      <span>Total: Rp {formatCurrency(totalLunas)}</span>
+                      <span>Total: {formatCurrency(totalLunas)}</span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm">
@@ -405,7 +405,7 @@ export default function Dashboard() {
                             <tr key={inv.id}>
                               <td className="px-4 py-2 font-mono text-xs">{inv.invoice_number}</td>
                               <td className="px-4 py-2">{inv.customer_name}</td>
-                              <td className="px-4 py-2 text-right font-semibold">Rp {formatCurrency(inv.nilai)}</td>
+                              <td className="px-4 py-2 text-right font-semibold">{formatCurrency(inv.nilai)}</td>
                             </tr>
                           ))}
                           {lunasInvoices.length === 0 && <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-500">Belum ada invoice lunas</td></tr>}
@@ -416,7 +416,7 @@ export default function Dashboard() {
                   
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center text-blue-900 font-bold text-lg">
                     <span>Total Keseluruhan Penjualan</span>
-                    <span>Rp {formatCurrency(totalPenjualan)}</span>
+                    <span>{formatCurrency(totalPenjualan)}</span>
                   </div>
                 </div>
               )}
@@ -456,7 +456,7 @@ export default function Dashboard() {
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
                           <td className="px-4 py-3 text-center text-gray-600">{c.count}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-emerald-600">Rp {formatCurrency(c.total)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatCurrency(c.total)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -481,7 +481,7 @@ export default function Dashboard() {
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-medium text-gray-900">{inv.customer_name}</td>
                           <td className="px-4 py-3 font-mono text-xs text-blue-600">{inv.invoice_number}</td>
-                          <td className="px-4 py-3 text-right text-gray-700">Rp {formatCurrency(inv.nilai)}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">{formatCurrency(inv.nilai)}</td>
                           <td className="px-4 py-3 text-center font-bold text-amber-600"><span className="bg-amber-50 px-3 py-1 rounded-full">{inv.diffDays} Hari</span></td>
                         </tr>
                       ))}
