@@ -4,6 +4,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
 import Dashboard from './pages/Dashboard';
+import DashboardCustomer from './pages/DashboardCustomer';
+import DashboardVendor from './pages/DashboardVendor';
+import DashboardProyek from './pages/DashboardProyek';
 import Customers from './pages/Customers';
 import Vendors from './pages/Vendors';
 import Products from './pages/Products';
@@ -45,6 +48,9 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="dashboard/customer" element={<DashboardCustomer />} />
+          <Route path="dashboard/vendor" element={<DashboardVendor />} />
+          <Route path="dashboard/proyek" element={<DashboardProyek />} />
           <Route path="customers" element={<Customers />} />
           <Route path="vendors" element={<Vendors />} />
           <Route path="products" element={<Products />} />

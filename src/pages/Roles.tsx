@@ -5,7 +5,10 @@ import { Loader2, Plus, Pencil, Trash2, Shield, X, CheckSquare, Square } from 'l
 import type { Role } from '@/types';
 
 const ALL_PAGES = [
-  { label: 'Dashboard', path: '/' },
+  { label: 'Dashboard Umum', path: '/' },
+  { label: 'Dashboard Customer', path: '/dashboard/customer' },
+  { label: 'Dashboard Vendor', path: '/dashboard/vendor' },
+  { label: 'Dashboard Proyek', path: '/dashboard/proyek' },
   { label: 'Customers', path: '/customers' },
   { label: 'Vendors', path: '/vendors' },
   { label: 'Products', path: '/products' },

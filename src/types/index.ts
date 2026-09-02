@@ -187,6 +187,9 @@ export interface SuratJalan {
   po_in_id: string;
   sj_number: string;
   ekspedisi: string;
+  no_resi?: string;
+  upload_resi?: string;
+  resi_data?: string;
   created_by?: string;
   created_date: string;
   updated_date: string;
@@ -205,6 +208,10 @@ export interface Invoice {
   verified_by?: string;
   verified_date?: string;
   created_date: string;
+  payment_status?: 'Belum Dibayar' | 'Lunas';
+  payment_date?: string;
+  payment_proof_url?: string;
+  payment_note?: string;
   updated_date: string;
 }
 

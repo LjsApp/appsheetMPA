@@ -4,7 +4,7 @@ import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2 } from 'lucide-react
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
-import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi } from '@/hooks/useData';
+import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi, useUploadFile } from '@/hooks/useData';
 import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 
@@ -13,6 +13,7 @@ export default function SuratJalanList() {
   const { data: suratJalanList = [], isLoading: loadingSJ } = useSuratJalan();
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const saveSJ = useSaveSuratJalan();
+  const uploadFile = useUploadFile();
   const deleteSJ = useDeleteSuratJalan();
   const user = useAuthStore(state => state.user);
 
@@ -27,6 +28,20 @@ export default function SuratJalanList() {
   const [editSjId, setEditSjId] = useState<string | null>(null);
   const [editSjNumber, setEditSjNumber] = useState('');
   const [editCreatedDate, setEditCreatedDate] = useState('');
+  const [editResiList, setEditResiList] = useState<{id: string, no_resi: string, ekspedisi: string, url: string, file: File | null}[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const parseResiData = (sj: any) => {
+    if (sj.resi_data) {
+      try {
+        return JSON.parse(sj.resi_data).map((r: any) => ({ ...r, id: r.id || Date.now().toString() + Math.random(), file: null }));
+      } catch { return []; }
+    }
+    if (sj.no_resi || sj.ekspedisi || sj.upload_resi) {
+      return [{ id: Date.now().toString(), no_resi: sj.no_resi || '', ekspedisi: sj.ekspedisi || '', url: sj.upload_resi || '', file: null }];
+    }
+    return [];
+  };
 
   const isLoading = loadingSJ || loadingPo;
 
@@ -90,7 +105,7 @@ export default function SuratJalanList() {
       const saved = await saveSJ.mutateAsync(data);
       setShowModal(false);
       setSelectedPoId('');
-      navigate(`/surat-jalan/${saved?.id || data.id}`);
+      // navigate(`/surat-jalan/${saved?.id || data.id}`);
     } catch {
       alert('Gagal membuat Surat Jalan');
     } finally {
@@ -137,6 +152,7 @@ export default function SuratJalanList() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Surat Jalan</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Pengiriman / Resi</th>
                   {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
@@ -155,6 +171,29 @@ export default function SuratJalanList() {
                         day: 'numeric', month: 'short', year: 'numeric'
                       })}
                     </td>
+                    <td className="px-5 py-4 text-xs">
+                      {(() => {
+                        const resis = parseResiData(item);
+                        if (resis.length === 0) return <span className="text-gray-400 italic">Belum ada info pengiriman</span>;
+                        return (
+                          <div className="space-y-2">
+                            {resis.map((r: any, idx: number) => (
+                              <div key={idx} className="bg-gray-50 p-2 rounded border border-gray-100 flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-gray-700">{r.ekspedisi || 'Ekspedisi -'}</div>
+                                  <div className="text-gray-500 font-mono mt-0.5">{r.no_resi || 'No Resi -'}</div>
+                                </div>
+                                {r.url && (
+                                  <a href={r.url} target="_blank" rel="noreferrer" className="flex items-center justify-center shrink-0 w-8 h-8 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Lihat Foto Resi">
+                                    <FileText className="w-4 h-4" />
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     {user?.is_super_admin && <td className="px-5 py-4 text-xs italic text-gray-500">{item.created_by || '-'}</td>}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -163,6 +202,7 @@ export default function SuratJalanList() {
                             setEditSjId(item.id);
                             setEditSjNumber(item.sj_number || '');
                             setEditCreatedDate(item.created_date ? new Date(item.created_date).toISOString().split('T')[0] : '');
+                            setEditResiList(parseResiData(item));
                           }}
                           className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
                           title="Edit Surat Jalan"
@@ -261,50 +301,164 @@ export default function SuratJalanList() {
 
       {editSjId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Edit Surat Jalan</h2>
               <button onClick={() => setEditSjId(null)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">No Surat Jalan</label>
-                <input
-                  type="text"
-                  value={editSjNumber}
-                  onChange={e => setEditSjNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                  placeholder="SJ-XXXX/YY/ZZ"
-                />
+            <div className="p-6 grid grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">No Surat Jalan</label>
+                  <input
+                    type="text"
+                    value={editSjNumber}
+                    onChange={e => setEditSjNumber(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                    placeholder="SJ-XXXX/YY/ZZ"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal</label>
+                  <input
+                    type="date"
+                    value={editCreatedDate}
+                    onChange={e => setEditCreatedDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal</label>
-                <input
-                  type="date"
-                  value={editCreatedDate}
-                  onChange={e => setEditCreatedDate(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                />
+
+              {/* Right Column */}
+              <div className="border-l border-gray-100 pl-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-xs font-semibold text-gray-900">Informasi Pengiriman / Resi</label>
+                  <Button variant="secondary" size="sm" onClick={() => setEditResiList([...editResiList, { id: Date.now().toString(), no_resi: '', ekspedisi: '', url: '', file: null }])}>
+                    <Plus className="w-3 h-3 mr-1" /> Tambah
+                  </Button>
+                </div>
+                {editResiList.length === 0 && (
+                  <div className="text-xs text-gray-500 italic text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                    Belum ada data resi. Klik "Tambah" untuk memasukkan info ekspedisi.
+                  </div>
+                )}
+                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                  {editResiList.map((resi, idx) => (
+                    <div key={resi.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 relative group">
+                      <button 
+                        onClick={() => setEditResiList(editResiList.filter(r => r.id !== resi.id))}
+                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        title="Hapus Resi ini"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="space-y-3 pt-1">
+                        <div>
+                          <label className="block text-[11px] font-medium text-gray-600 mb-1">Ekspedisi</label>
+                          <select
+                            value={resi.ekspedisi}
+                            onChange={e => {
+                              const newArr = [...editResiList];
+                              newArr[idx].ekspedisi = e.target.value;
+                              setEditResiList(newArr);
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                          >
+                            <option value="">-- Pilih Ekspedisi --</option>
+                            <option value="JNE">JNE</option>
+                            <option value="J&T">J&T</option>
+                            <option value="Papandayan">Papandayan</option>
+                            <option value="Lainnya">Lainnya...</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-gray-600 mb-1">No Resi</label>
+                          <input
+                            type="text"
+                            value={resi.no_resi}
+                            onChange={e => {
+                              const newArr = [...editResiList];
+                              newArr[idx].no_resi = e.target.value;
+                              setEditResiList(newArr);
+                            }}
+                            className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            placeholder="Nomor resi pengiriman"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-gray-600 mb-1">Foto Resi</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="file"
+                              onChange={e => {
+                                const newArr = [...editResiList];
+                                newArr[idx].file = e.target.files?.[0] || null;
+                                setEditResiList(newArr);
+                              }}
+                              className="w-full text-[11px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                              accept="image/*,.pdf"
+                            />
+                            {resi.url && !resi.file && (
+                              <a href={resi.url} target="_blank" rel="noreferrer" className="shrink-0 text-[11px] text-blue-600 hover:underline">Lihat Foto</a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <Button variant="secondary" onClick={() => setEditSjId(null)}>Batal</Button>
               <Button
                 variant="primary"
-                onClick={() => {
+                disabled={isSavingEdit}
+                onClick={async () => {
                   const existingSj = suratJalanList.find(s => s.id === editSjId);
                   if (existingSj) {
-                    saveSJ.mutate({
-                      ...existingSj,
-                      sj_number: editSjNumber,
-                      created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : existingSj.created_date
-                    });
-                    setEditSjId(null);
+                    setIsSavingEdit(true);
+                    try {
+                      const finalResiList = [];
+                      for (const resi of editResiList) {
+                        let finalUrl = resi.url;
+                        if (resi.file) {
+                          const base64 = await new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                            reader.readAsDataURL(resi.file!);
+                          });
+                          const res = await uploadFile.mutateAsync({ filename: resi.file.name, mimeType: resi.file.type, base64 });
+                          finalUrl = typeof res === 'string' ? res : res?.url || '';
+                        }
+                        finalResiList.push({
+                          id: resi.id,
+                          no_resi: resi.no_resi,
+                          ekspedisi: resi.ekspedisi,
+                          url: finalUrl
+                        });
+                      }
+                      
+                      await saveSJ.mutateAsync({
+                        ...existingSj,
+                        sj_number: editSjNumber,
+                        created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : existingSj.created_date,
+                        resi_data: JSON.stringify(finalResiList),
+                        updated_date: new Date().toISOString()
+                      });
+                      setEditSjId(null);
+                    } catch (e) {
+                      alert('Gagal menyimpan Surat Jalan');
+                    } finally {
+                      setIsSavingEdit(false);
+                    }
                   }
                 }}
               >
+                {isSavingEdit ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
                 Simpan
               </Button>
             </div>

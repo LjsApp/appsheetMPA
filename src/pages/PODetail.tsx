@@ -204,7 +204,7 @@ export default function PODetail() {
             {/* Actions: Pimpinan */}
             {user?.is_super_admin && po.verification_status === 'Menunggu Verifikasi' && (
               <button
-                onClick={() => navigate('/verifikasi')}
+                onClick={() => navigate('/verifikasi?tab=po')}
                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
               >
                 Buka Halaman Verifikasi →

@@ -292,50 +292,78 @@ export default function InvoiceDetail() {
 
         {/* Verification Status Banner */}
         <div className="max-w-[860px] mx-auto mb-4">
-          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm">
-            <div className="flex items-center gap-3">
-              {invoice.verification_status === 'Terverifikasi' ? (
-                <><CheckCircle className="w-5 h-5 text-emerald-500" />
-                <div>
-                  <span className="text-sm font-semibold text-emerald-700">Terverifikasi</span>
-                  {invoice.verified_by && <p className="text-xs text-gray-500">oleh {invoice.verified_by} · {invoice.verified_date ? formatDate(invoice.verified_date) : ''}</p>}
-                </div></>
-              ) : invoice.verification_status === 'Ditolak' ? (
-                <><XCircle className="w-5 h-5 text-red-500" />
-                <div>
-                  <span className="text-sm font-semibold text-red-700">Ditolak</span>
-                  {invoice.verification_note && <p className="text-xs text-gray-500">Alasan: {invoice.verification_note}</p>}
-                </div></>
-              ) : invoice.verification_status === 'Menunggu Verifikasi' ? (
-                <><Clock className="w-5 h-5 text-amber-500" />
-                <span className="text-sm font-semibold text-amber-700">Menunggu Verifikasi Pimpinan</span></>
-              ) : (
-                <><AlertCircle className="w-5 h-5 text-gray-400" />
-                <span className="text-sm font-semibold text-gray-600">Perlu Verifikasi</span></>
-              )}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm gap-4">
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-3">
+                {invoice.verification_status === 'Terverifikasi' ? (
+                  <><CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <div>
+                    <span className="text-sm font-semibold text-emerald-700">Terverifikasi</span>
+                    {invoice.verified_by && <p className="text-xs text-gray-500">oleh {invoice.verified_by} · {invoice.verified_date ? formatDate(invoice.verified_date) : ''}</p>}
+                  </div></>
+                ) : invoice.verification_status === 'Ditolak' ? (
+                  <><XCircle className="w-5 h-5 text-red-500" />
+                  <div>
+                    <span className="text-sm font-semibold text-red-700">Ditolak</span>
+                    {invoice.verification_note && <p className="text-xs text-gray-500">Alasan: {invoice.verification_note}</p>}
+                  </div></>
+                ) : invoice.verification_status === 'Menunggu Verifikasi' ? (
+                  <><Clock className="w-5 h-5 text-amber-500" />
+                  <span className="text-sm font-semibold text-amber-700">Menunggu Verifikasi Pimpinan</span></>
+                ) : (
+                  <><AlertCircle className="w-5 h-5 text-gray-400" />
+                  <span className="text-sm font-semibold text-gray-600">Perlu Verifikasi</span></>
+                )}
+              </div>
+
+              <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
+              
+              <div className="flex items-center gap-3">
+                {invoice.payment_status === 'Lunas' ? (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-green-700">Lunas</span>
+                        {invoice.payment_proof_url && (
+                          <a href={invoice.payment_proof_url} target="_blank" rel="noreferrer" className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full hover:bg-green-200 transition-colors">Lihat Bukti</a>
+                        )}
+                      </div>
+                      {invoice.payment_date && <p className="text-xs text-gray-500">Tgl: {formatDate(invoice.payment_date)}</p>}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-5 h-5 text-amber-500" />
+                    <span className="text-sm font-semibold text-amber-700">Belum Dibayar</span>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Actions: Staff */}
-            {!user?.is_super_admin && (invoice.verification_status === 'Perlu Verifikasi' || invoice.verification_status === 'Ditolak' || !invoice.verification_status) && (
-              <button
-                onClick={handleRequestVerification}
-                disabled={isRequestingVerif}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg transition-colors"
-              >
-                {isRequestingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Minta Verifikasi
-              </button>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Actions: Staff */}
+              {!user?.is_super_admin && (invoice.verification_status === 'Perlu Verifikasi' || invoice.verification_status === 'Ditolak' || !invoice.verification_status) && (
+                <button
+                  onClick={handleRequestVerification}
+                  disabled={isRequestingVerif}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg transition-colors"
+                >
+                  {isRequestingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Minta Verifikasi
+                </button>
+              )}
 
-            {/* Actions: Pimpinan */}
-            {user?.is_super_admin && invoice.verification_status === 'Menunggu Verifikasi' && (
-              <button
-                onClick={() => navigate('/verifikasi')}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
-              >
-                Buka Halaman Verifikasi →
-              </button>
-            )}
+              {/* Actions: Pimpinan */}
+              {user?.is_super_admin && invoice.verification_status === 'Menunggu Verifikasi' && (
+                <button
+                  onClick={() => navigate('/verifikasi?tab=invoice')}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                >
+                  Buka Verifikasi →
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

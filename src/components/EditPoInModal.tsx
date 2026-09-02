@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
-import { useNeracaQuotations, useCustomers, usePics, useSavePoIn, useUploadFile } from '@/hooks/useData';
+import { useNeracaQuotations, useCustomers, usePics, useSavePoIn, useUploadFile, usePurchaseOrders } from '@/hooks/useData';
 import type { POIn } from '@/types';
 
 interface EditPoInModalProps {
@@ -37,6 +37,8 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
   const { data: pics = [] } = usePics();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
+  const { data: pos = [] } = usePurchaseOrders();
+  const hasPoOut = poIn ? pos.some(p => p.po_in_id === poIn.id) : false;
 
   const [selectedQtId, setSelectedQtId] = useState('');
   
@@ -207,9 +209,15 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
           <select
             value={selectedQtId}
             onChange={e => setSelectedQtId(e.target.value)}
+            disabled={hasPoOut}
             className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-400"
           >
             <option value="">-- Pilih Quotation --</option>
+            {hasPoOut && (
+              <option disabled className="text-amber-600 bg-amber-50">
+                ⚠️ Tidak dapat diubah karena sudah ada PO Out
+              </option>
+            )}
             {quotations.map(q => {
               // Jika ini quotation_id asli milik poIn, biarkan tetap bisa dipilih.
               // Jika bukan, disable jika sudah ada PO In.

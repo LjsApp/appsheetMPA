@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal } from 'lucide-react';
+import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal, BadgeCheck, HandCoins } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
-import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, useCompany, fetchApi, useSaveNotification } from '@/hooks/useData';
+import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, useCompany, fetchApi, useSaveNotification, useUsers, useUploadFile } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
@@ -14,9 +14,11 @@ export default function Invoices() {
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const { data: customers = [] } = useCustomers();
   const { data: company } = useCompany();
+  const { data: users = [] } = useUsers();
   const saveInvoice = useSaveInvoice();
   const deleteInvoice = useDeleteInvoice();
   const saveNotification = useSaveNotification();
+  const uploadFile = useUploadFile();
   const user = useAuthStore(state => state.user);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +26,13 @@ export default function Invoices() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState<{ isOpen: boolean; invoice: typeof invoices[0] | null }>({ isOpen: false, invoice: null });
+  
+  // Payment Modal States
+  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; invoice: typeof invoices[0] | null }>({ isOpen: false, invoice: null });
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [paymentNote, setPaymentNote] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('Semua');
   const [selectedPoId, setSelectedPoId] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -85,12 +94,46 @@ export default function Invoices() {
         created_date: new Date().toISOString(),
         updated_date: new Date().toISOString(),
       };
-      const saved = await saveInvoice.mutateAsync(data);
+      await saveInvoice.mutateAsync(data);
 
       setShowModal(false);
       resetModal();
     } catch {
       alert('Gagal membuat Invoice');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentModal.invoice) return;
+    setIsCreating(true);
+    try {
+      let fileUrl = '';
+      if (paymentFile) {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(paymentFile);
+        });
+        const res = await uploadFile.mutateAsync({ filename: paymentFile.name, mimeType: paymentFile.type, base64 });
+        fileUrl = typeof res === 'string' ? res : (res as any)?.url || '';
+      }
+
+      await saveInvoice.mutateAsync({
+        ...paymentModal.invoice,
+        payment_status: 'Lunas',
+        payment_date: paymentDate,
+        payment_proof_url: fileUrl || paymentModal.invoice.payment_proof_url,
+        payment_note: paymentNote,
+        updated_date: new Date().toISOString(),
+      });
+      setPaymentModal({ isOpen: false, invoice: null });
+      setPaymentFile(null);
+      setPaymentNote('');
+    } catch {
+      alert('Gagal menandai lunas');
     } finally {
       setIsCreating(false);
     }
@@ -154,10 +197,11 @@ export default function Invoices() {
 
   const openEdit = (inv: typeof invoices[0]) => {
     setInvoiceNumber(inv.invoice_number);
-    setInvoiceDate(inv.invoice_date || new Date().toISOString().split('T')[0]);
+    setInvoiceDate(inv.invoice_date ? new Date(inv.invoice_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     setDeliveryAddress(inv.delivery_address || '');
     // Rebuild address options from customer
-    const cust = customers.find(c => c.id === inv.customer_id);
+    const po = poIns.find(p => p.id === inv.po_in_id);
+    const cust = customers.find(c => c.id === po?.customer_id || c.company_name === po?.customer_name);
     const opts: { label: string; value: string }[] = [];
     if (cust?.office_address) opts.push({ label: 'Alamat Kantor', value: cust.office_address });
     if (cust?.warehouse_address) opts.push({ label: 'Alamat Gudang', value: cust.warehouse_address });
@@ -187,6 +231,11 @@ export default function Invoices() {
         judul_po: po?.judul || '-',
       };
     }).filter(item => {
+      if (paymentStatusFilter !== 'Semua') {
+        const isLunas = item.payment_status === 'Lunas';
+        if (paymentStatusFilter === 'Lunas' && !isLunas) return false;
+        if (paymentStatusFilter === 'Belum Dibayar' && isLunas) return false;
+      }
       if (!searchTerm) return true;
       const term = searchTerm.toLowerCase();
       return (
@@ -315,6 +364,65 @@ export default function Invoices() {
     </div>
   );
 
+
+  const PaymentModalContent = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-semibold text-gray-900">Tandai Invoice Lunas</h2>
+          <button onClick={() => { setPaymentModal({ isOpen: false, invoice: null }); setPaymentFile(null); setPaymentNote(''); }} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-green-800 mb-4">
+            <div><span className="font-medium">No Invoice:</span> {paymentModal.invoice?.invoice_number}</div>
+            <div><span className="font-medium">Customer:</span> {paymentModal.invoice?.customer_name}</div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Pembayaran</label>
+            <input
+              type="date"
+              value={paymentDate}
+              onChange={e => setPaymentDate(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Bukti Transfer (opsional)</label>
+            <input
+              type="file"
+              onChange={e => setPaymentFile(e.target.files?.[0] || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              accept="image/*,.pdf"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Catatan Pembayaran (opsional)</label>
+            <textarea
+              value={paymentNote}
+              onChange={e => setPaymentNote(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+              placeholder="Catatan..."
+            />
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => { setPaymentModal({ isOpen: false, invoice: null }); setPaymentFile(null); setPaymentNote(''); }}>Batal</Button>
+          <Button
+            variant="primary"
+            onClick={handlePaymentSubmit}
+            disabled={isCreating}
+          >
+            {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+            Simpan Pembayaran
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -329,14 +437,25 @@ export default function Invoices() {
       />
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <TableToolbar
-          search={searchTerm}
-          onSearchChange={v => { setSearchTerm(v); setCurrentPage(1); }}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
-          totalRows={dataWithDetails.length}
-          searchPlaceholder="Cari No Invoice, Customer..."
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50 gap-4">
+          <TableToolbar
+            search={searchTerm}
+            onSearchChange={v => { setSearchTerm(v); setCurrentPage(1); }}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+            totalRows={dataWithDetails.length}
+            searchPlaceholder="Cari No Invoice, Customer..."
+          />
+          <select
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white shadow-sm font-medium text-gray-700"
+          >
+            <option value="Semua">Semua Status Bayar</option>
+            <option value="Belum Dibayar">Belum Dibayar</option>
+            <option value="Lunas">Lunas</option>
+          </select>
+        </div>
 
         {isLoading ? (
           <div className="py-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
@@ -356,6 +475,7 @@ export default function Invoices() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal Invoice</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Alamat Pengiriman</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Verifikasi</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Bayar</th>
                   {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
@@ -392,9 +512,31 @@ export default function Invoices() {
                         </span>
                       )}
                     </td>
-                    {user?.is_super_admin && <td className="px-5 py-4 align-top italic text-gray-500">{item.created_by || '-'}</td>}
+                    <td className="px-5 py-4 align-top">
+                      {item.payment_status === 'Lunas' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20">
+                          <BadgeCheck className="w-3 h-3" />
+                          Lunas
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20 whitespace-nowrap">
+                          Belum Dibayar
+                        </span>
+                      )}
+                    </td>
+                    {user?.is_super_admin && <td className="px-5 py-4 align-top italic text-gray-500">{users.find(u => u.id === item.created_by)?.name || item.created_by || '-'}</td>}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {item.verification_status === 'Terverifikasi' && item.payment_status !== 'Lunas' && (
+                          <button
+                            onClick={() => setPaymentModal({ isOpen: true, invoice: item })}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors whitespace-nowrap"
+                            title="Tandai Lunas"
+                          >
+                            <HandCoins className="w-3 h-3" />
+                            Tandai Lunas
+                          </button>
+                        )}
                         {(item.verification_status === 'Perlu Verifikasi' || item.verification_status === 'Ditolak') && (
                           <button
                             onClick={() => handleRequestVerification(item)}
@@ -446,6 +588,7 @@ export default function Invoices() {
 
       {showModal && <ModalContent isEdit={false} />}
       {editModal.isOpen && <ModalContent isEdit={true} />}
+      {paymentModal.isOpen && <PaymentModalContent />}
 
       <DeleteConfirmModal
         isOpen={deleteModal.isOpen}

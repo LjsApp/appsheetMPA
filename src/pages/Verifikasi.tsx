@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePurchaseOrders, useInvoices, useInternalLetters, useSavePurchaseOrder, useSaveInvoice, useSaveInternalLetter, useSaveNotification, usePoIns, useUsers, useVendors, useUploadFile, useNotifications } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/ui';
@@ -8,6 +9,8 @@ import type { PurchaseOrder, Invoice, InternalLetter } from '@/types';
 
 export default function Verifikasi() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: purchaseOrders = [], isLoading: poLoading } = usePurchaseOrders();
   const { data: invoices = [], isLoading: invLoading } = useInvoices();
   const { data: letters = [], isLoading: ilLoading } = useInternalLetters();
@@ -21,7 +24,8 @@ export default function Verifikasi() {
   const { data: vendors = [] } = useVendors();
   const { data: notifications = [] } = useNotifications();
 
-  const [activeTab, setActiveTab] = useState<'po' | 'invoice' | 'il'>('po');
+  const initialTab = (searchParams.get('tab') as 'po' | 'invoice' | 'il') || 'po';
+  const [activeTab, setActiveTab] = useState<'po' | 'invoice' | 'il'>(initialTab);
   const [rejectModal, setRejectModal] = useState<{ isOpen: boolean, type: 'po' | 'invoice', id: string, docNumber: string }>({ isOpen: false, type: 'po', id: '', docNumber: '' });
   const [rejectReason, setRejectReason] = useState('');
 
@@ -265,7 +269,7 @@ export default function Verifikasi() {
     finally { setIsProcessingIL(false); }
   };
 
-  const openDoc = (type: string, id: string) => { window.open(`/${type}/${id}`, '_blank'); };
+  const openDoc = (type: string, id: string) => { navigate(`/${type}/${id}`); };
 
   if (poLoading || invLoading || ilLoading) return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>;
 

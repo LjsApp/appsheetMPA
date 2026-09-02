@@ -39,7 +39,16 @@ type MenuItem =
   | { label: string; icon: React.ElementType; path?: never; group?: never; submenus: (SubItem | GroupItem)[] };
 
 const MENU_ITEMS: MenuItem[] = [
-  { label: 'Dashboard',  icon: LayoutDashboard, path: '/' },
+  {
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    submenus: [
+      { label: 'Umum', icon: LayoutDashboard, path: '/' },
+      { label: 'Customer', icon: Users, path: '/dashboard/customer' },
+      { label: 'Vendor', icon: Building2, path: '/dashboard/vendor' },
+      { label: 'Proyek', icon: FileText, path: '/dashboard/proyek' },
+    ],
+  },
   { label: 'Customers',  icon: Users,           path: '/customers' },
   { label: 'Vendors',    icon: Building2,        path: '/vendors' },
   { label: 'Products',   icon: Package,          path: '/products' },
@@ -96,7 +105,10 @@ export default function MainLayout() {
 
   const canAccess = (path: string) => {
     if (allowedPaths === null) return true; // super admin
-    return allowedPaths.includes(path);
+    if (allowedPaths.includes(path)) return true;
+    // If user has dashboard access ('/'), also allow all /dashboard/* sub-routes
+    if (path.startsWith('/dashboard/') && allowedPaths.includes('/')) return true;
+    return false;
   };
 
   const isSuperAdmin = useMemo(() => {
@@ -124,6 +136,9 @@ export default function MainLayout() {
     // Determine base path (e.g., /neraca/123 -> /neraca)
     const segments = location.pathname.split('/');
     const basePath = segments[1] ? '/' + segments[1] : '/';
+    
+    // Allow /dashboard/* sub-routes if user has '/' access
+    if (location.pathname.startsWith('/dashboard/') && allowedPaths.includes('/')) return;
     
     // Allow if base path is in allowed paths, or if the exact path is allowed
     if (!allowedPaths.includes(basePath) && !allowedPaths.includes(location.pathname)) {
