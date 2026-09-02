@@ -7,7 +7,6 @@ import {
   Package, 
   FileText,
   FileCheck2,
-  Settings,
   Scale,
   Menu,
   ChevronDown,
@@ -18,12 +17,15 @@ import {
   Receipt,
   LogOut,
   Shield,
-  UserCircle
+  UserCircle,
+  ShoppingBag,
+  CookingPot
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuthStore } from '@/store/authStore';
 import { useRoles } from '@/hooks/useData';
+import NotificationBell from '@/components/NotificationBell';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -43,6 +45,7 @@ const MENU_ITEMS: MenuItem[] = [
   { label: 'Products',   icon: Package,          path: '/products' },
   { label: 'Inquiries',  icon: FileText,         path: '/inquiries' },
   { label: 'Neraca',     icon: Scale,            path: '/neraca' },
+  { label: 'Verifikasi', icon: FileCheck2,       path: '/verifikasi' },
   {
     label: 'Dokumen',
     icon: FolderOpen,
@@ -59,6 +62,14 @@ const MENU_ITEMS: MenuItem[] = [
       { label: 'Internal Letter', icon: FileText, path: '/internal-letters' },
       { label: 'Surat Jalan', icon: FileText, path: '/surat-jalan' },
       { label: 'Invoice', icon: Receipt, path: '/invoices' },
+    ],
+  },
+  {
+    label: 'Belanja',
+    icon: ShoppingBag,
+    submenus: [
+      { label: 'Belanja Dapur',  icon: CookingPot, path: '/belanja-dapur'  },
+      { label: 'Belanja Proyek', icon: ShoppingBag, path: '/belanja-proyek' },
     ],
   },
 ];
@@ -368,7 +379,8 @@ export default function MainLayout() {
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm">
+            <NotificationBell />
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm ml-2">
               {user?.name?.[0]?.toUpperCase() || 'U'}
             </div>
             {isSidebarOpen !== false && (
@@ -376,7 +388,7 @@ export default function MainLayout() {
             )}
             <button
               onClick={handleLogout}
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors ml-2"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />

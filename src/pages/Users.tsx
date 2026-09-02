@@ -160,9 +160,15 @@ export default function Users() {
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Role</label>
                 <select value={roleId} onChange={e => setRoleId(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="">-- Pilih Role --</option>
-                  {roles.map(r => (
-                    <option key={r.id} value={r.id}>{r.role_name}</option>
-                  ))}
+                  {roles.map(r => {
+                    const isPimpinan = r.role_name?.toLowerCase() === 'pimpinan';
+                    const isTaken = isPimpinan && users.some(u => u.role_id === r.id && u.id !== editingUser?.id);
+                    return (
+                      <option key={r.id} value={r.id} disabled={isTaken}>
+                        {r.role_name} {isTaken ? '(Sudah dipakai)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div>

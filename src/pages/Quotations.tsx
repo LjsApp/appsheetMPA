@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart, Edit2, Search, Calendar } from 'lucide-react';
+import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart, Edit2, Search, Calendar, MessageCircle } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import type { NeracaQuotation } from '@/types';
 import {
   useNeracaQuotations, useDeleteNeracaQuotation,
   useInquiries, usePurchaseOrders,
   useNeracas, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi,
-  useNeracaItems, useNeracaDetail
+  useNeracaItems, useNeracaDetail, usePics
 } from '@/hooks/useData';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 import { formatDate, formatCurrency } from '@/lib/utils';
@@ -89,6 +89,7 @@ export default function Quotations() {
   const { data: inquiries = [] } = useInquiries();
   const { data: quotations = [], isLoading } = useNeracaQuotations();
   const { data: purchaseOrders = [] } = usePurchaseOrders();
+  const { data: pics = [] } = usePics();
 
 
   const deleteQuotation = useDeleteNeracaQuotation();
@@ -163,6 +164,7 @@ export default function Quotations() {
           quotation_number: qtNum,
           neraca_id: neraca.id,
           inquiry_id: inquiry.id,
+          customer_id: inquiry.customer_id || '',
           customer_name: inquiry.customer_name || '',
           request_title: inquiry.request_title || '',
           nilai: grandTotal,
@@ -355,6 +357,66 @@ export default function Quotations() {
                     const activePOs = purchaseOrders.filter(p => p.quotation_id === q.id);
                     const hasPO = activePOs.length > 0;
                     const docUrl = getInquiryDocument(q.inquiry_id);
+                    
+                    const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
+                    const now = Date.now();
+
+                    // Disable: belum 6 hari dari tgl quotation dibuat (belum pernah fu)
+                    const daysSinceCreated = now - new Date(q.created_date).getTime();
+                    const notYetActive = daysSinceCreated < SIX_DAYS_MS;
+
+                    // Disable: sudah kirim pesan (dan belum 6 hari dari last fu)
+                    const sentRecently = q.last_follow_up_date
+                      ? (now - new Date(q.last_follow_up_date).getTime() < SIX_DAYS_MS)
+                      : false;
+
+                    const isFollowUpDisabled = notYetActive || sentRecently;
+
+                    // Tooltip text
+                    const fuTooltip = (() => {
+                      if (notYetActive) {
+                        const readyDate = new Date(new Date(q.created_date).getTime() + SIX_DAYS_MS);
+                        return `Follow up aktif mulai ${formatDate(readyDate.toISOString())}`;
+                      }
+                      if (sentRecently && q.last_follow_up_date) {
+                        const nextDate = new Date(new Date(q.last_follow_up_date).getTime() + SIX_DAYS_MS);
+                        return `Terakhir follow up: ${formatDate(q.last_follow_up_date)}\nAktif lagi: ${formatDate(nextDate.toISOString())}`;
+                      }
+                      if (q.last_follow_up_date) {
+                        return `Terakhir follow up: ${formatDate(q.last_follow_up_date)}\nKlik untuk follow up via WhatsApp`;
+                      }
+                      return 'Follow Up via WhatsApp';
+                    })();
+
+                    const handleWhatsAppFollowUp = async () => {
+                      if (isFollowUpDisabled) return;
+                      const pic = pics.find(p => p.id === inquiry?.pic_id);
+                      if (!pic || !pic.phone) {
+                        alert('Nomor HP PIC tidak ditemukan!');
+                        return;
+                      }
+                      
+                      const newCount = (q.follow_up_count || 0) + 1;
+                      const newDate = new Date().toISOString();
+                      
+                      // Save to DB
+                      try {
+                        await saveQuotation.mutateAsync({
+                          ...q,
+                          follow_up_count: newCount,
+                          last_follow_up_date: newDate
+                        });
+                      } catch (e) {
+                        console.error('Failed to update quotation follow up status', e);
+                      }
+
+                      // Open WhatsApp
+                      const phone = pic.phone.replace(/^0/, '62').replace(/[^0-9]/g, '');
+                      const message = `Halo Bapak/Ibu,\n\nApakah ada update terbaru mengenai penawaran kami?\n\nNo Quotation: ${q.quotation_number}\nTgl Quotation: ${formatDate(q.created_date)}\nNo Permintaan: ${inquiry?.request_number || '-'}\nJudul Permintaan: ${inquiry?.request_title || '-'}\nTgl Permintaan: ${formatDate(inquiry?.request_date || '')}`;
+                      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                      window.open(waUrl, '_blank');
+                    };
+
                     return (
                       <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
                         {idx === 0 && (
@@ -398,6 +460,21 @@ export default function Quotations() {
                             <button onClick={() => openEditModal(q)} className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors" title="Edit Quotation">
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
+                            <div className="relative inline-block">
+                              <button
+                                onClick={handleWhatsAppFollowUp}
+                                disabled={isFollowUpDisabled || saveQuotation.isPending}
+                                className={`p-1.5 rounded transition-colors ${isFollowUpDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                                title={fuTooltip}
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </button>
+                              {(q.follow_up_count || 0) > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-1 ring-white">
+                                  {q.follow_up_count}
+                                </span>
+                              )}
+                            </div>
                             <button onClick={() => handleDelete(q)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

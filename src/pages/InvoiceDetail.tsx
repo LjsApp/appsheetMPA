@@ -1,8 +1,9 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail } from '@/hooks/useData';
+import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification } from '@/hooks/useData';
+import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
 import type { NeracaDetail, NeracaItem } from '@/types';
 
@@ -115,11 +116,16 @@ const DEFAULT_DETAIL: Partial<NeracaDetail> = { disc: 0, ppn: 11, un_cost: 0 };
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
 
-  const { data: invoices = [], isLoading: loadingInv } = useInvoices();
+  const { data: invoices = [], isLoading: loadingInv, refetch } = useInvoices();
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const { data: company, isLoading: loadingCo } = useCompany();
   const { data: customers = [] } = useCustomers();
+  const saveInvoice = useSaveInvoice();
+  const saveNotification = useSaveNotification();
+
+  const [isRequestingVerif, setIsRequestingVerif] = useState(false);
 
   const invoice = invoices.find(inv => inv.id === id);
   const po = poIns.find(p => p.id === invoice?.po_in_id);
@@ -164,6 +170,39 @@ export default function InvoiceDetail() {
     return () => { document.title = 'Vite + React + TS'; };
   }, [invoice?.invoice_number]);
 
+  const handleRequestVerification = async () => {
+    if (!invoice) return;
+    if (!window.confirm(`Minta verifikasi pimpinan untuk Invoice: ${invoice.invoice_number}?`)) return;
+    setIsRequestingVerif(true);
+    try {
+      await saveInvoice.mutateAsync({
+        ...invoice,
+        verification_status: 'Menunggu Verifikasi',
+        updated_date: new Date().toISOString()
+      });
+      try {
+        await saveNotification.mutateAsync({
+          id: Date.now().toString(),
+          from_user_id: user?.id || 'system',
+          from_user_name: user?.name || 'System',
+          to_user_id: 'pimpinan',
+          type: 'verification_request',
+          ref_type: 'invoice',
+          ref_id: invoice.id,
+          ref_number: invoice.invoice_number,
+          message: `${user?.name || 'Staff'} meminta verifikasi Invoice: ${invoice.invoice_number}`,
+          is_read: false,
+          created_date: new Date().toISOString()
+        });
+      } catch { /* ignore */ }
+      refetch();
+    } catch {
+      alert('Gagal mengubah status verifikasi');
+    } finally {
+      setIsRequestingVerif(false);
+    }
+  };
+
   const isLoading = loadingInv || loadingPo || loadingCo || loadingItems;
   if (isLoading) return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   if (!invoice) return <div className="p-8 text-center text-red-600 font-medium">Invoice tidak ditemukan.</div>;
@@ -183,10 +222,18 @@ export default function InvoiceDetail() {
   const Signature = () => (
     <div className="flex justify-between items-end mt-8 text-[12pt]">
       <div className="flex flex-col items-center gap-1">
-        <div className="w-24 h-24 border border-gray-200 p-1 bg-white overflow-hidden">
-          <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
-        </div>
-        <p className="text-[9pt] text-gray-400">Scan untuk verifikasi</p>
+        {invoice.verification_status === 'Terverifikasi' ? (
+          <>
+            <div className="w-24 h-24 border border-gray-200 p-1 bg-white overflow-hidden">
+              <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+            </div>
+            <p className="text-[9pt] text-gray-400">Scan untuk verifikasi</p>
+          </>
+        ) : (
+          <div className="w-24 h-24 border-2 border-dashed border-gray-300 flex items-center justify-center p-2 text-center text-[9px] text-gray-400">
+            Menunggu Verifikasi
+          </div>
+        )}
       </div>
       <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
         <p>Hormat kami,</p>
@@ -242,6 +289,55 @@ export default function InvoiceDetail() {
             </div>
           }
         />
+
+        {/* Verification Status Banner */}
+        <div className="max-w-[860px] mx-auto mb-4">
+          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              {invoice.verification_status === 'Terverifikasi' ? (
+                <><CheckCircle className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <span className="text-sm font-semibold text-emerald-700">Terverifikasi</span>
+                  {invoice.verified_by && <p className="text-xs text-gray-500">oleh {invoice.verified_by} · {invoice.verified_date ? formatDate(invoice.verified_date) : ''}</p>}
+                </div></>
+              ) : invoice.verification_status === 'Ditolak' ? (
+                <><XCircle className="w-5 h-5 text-red-500" />
+                <div>
+                  <span className="text-sm font-semibold text-red-700">Ditolak</span>
+                  {invoice.verification_note && <p className="text-xs text-gray-500">Alasan: {invoice.verification_note}</p>}
+                </div></>
+              ) : invoice.verification_status === 'Menunggu Verifikasi' ? (
+                <><Clock className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-semibold text-amber-700">Menunggu Verifikasi Pimpinan</span></>
+              ) : (
+                <><AlertCircle className="w-5 h-5 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-600">Perlu Verifikasi</span></>
+              )}
+            </div>
+
+            {/* Actions: Staff */}
+            {!user?.is_super_admin && (invoice.verification_status === 'Perlu Verifikasi' || invoice.verification_status === 'Ditolak' || !invoice.verification_status) && (
+              <button
+                onClick={handleRequestVerification}
+                disabled={isRequestingVerif}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg transition-colors"
+              >
+                {isRequestingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Minta Verifikasi
+              </button>
+            )}
+
+            {/* Actions: Pimpinan */}
+            {user?.is_super_admin && invoice.verification_status === 'Menunggu Verifikasi' && (
+              <button
+                onClick={() => navigate('/verifikasi')}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+              >
+                Buka Halaman Verifikasi →
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-8">

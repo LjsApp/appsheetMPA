@@ -1,18 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../services/api';
 export { fetchApi };
-import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan, Invoice, InternalLetter, AppUser, Role } from '../types';
+import type { Customer, Vendor, Product, Inquiry, PIC, PicVendor, Neraca, NeracaDetail, NeracaItem, VendorDiscount, NeracaQuotation, Company, PurchaseOrder, POIn, SuratJalan, Invoice, InternalLetter, AppUser, Role, BelanjaPemasukan, BelanjaPengeluaran } from '../types';
 import { useAuthStore } from '../store/authStore';
 
 // ─── Row-level filter helper ───────────────────────────────────────────────────
 // Returns a selector that keeps all rows for super-admin, or only the rows
-// whose `created_by` matches the current user's name for regular users.
+// whose `created_by` matches the current user's name OR id for regular users.
 function useOwnerSelector<T extends { created_by?: string }>() {
   const user = useAuthStore(state => state.user);
   return (data: T[]) => {
     if (!user) return [];
     if (user.is_super_admin) return data; // super admin sees everything
-    return data.filter(row => !row.created_by || row.created_by === user.name);
+    return data.filter(row =>
+      !row.created_by ||
+      row.created_by === user.name ||
+      row.created_by === user.id
+    );
   };
 }
 
@@ -239,6 +243,24 @@ export function useNeracaItems(neracaId: string) {
     queryFn: () => fetchApi(`getNeracaItems&neraca_id=${neracaId}`),
     enabled: !!neracaId,
     staleTime: 30 * 1000,
+  });
+}
+
+/** Fetches ALL neraca_items across all neracas (for cross-neraca views like Products history) */
+export function useAllNeracaItems() {
+  return useQuery<NeracaItem[]>({
+    queryKey: ['neraca_items_all'],
+    queryFn: () => fetchApi('getNeracaItems'),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** Fetches ALL neraca_details across all neracas */
+export function useAllNeracaDetails() {
+  return useQuery<import('../types').NeracaDetail[]>({
+    queryKey: ['neraca_details_all'],
+    queryFn: () => fetchApi('getNeracaDetail'),
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -630,6 +652,140 @@ export function useDeleteRole() {
     mutationFn: (id: string) => fetchApi('deleteRole', 'POST', { id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+  });
+}
+
+// ==================== Notifications ====================
+
+import type { AppNotification } from '@/types';
+
+export function useNotifications() {
+  return useQuery<AppNotification[]>({
+    queryKey: ['notifications'],
+    queryFn: () => fetchApi('getNotifications', 'GET', {}),
+    refetchInterval: 30000, // Polling every 30s
+  });
+}
+
+export function useSaveNotification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<AppNotification>) => fetchApi('saveNotification', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+// ==================== BELANJA DAPUR ====================
+
+export function useBelanjaDapurIn() {
+  return useQuery<BelanjaPemasukan[]>({
+    queryKey: ['belanja_dapur_in'],
+    queryFn: () => fetchApi('getBelanjaDapurIn', 'GET', {}),
+  });
+}
+
+export function useSaveBelanjaDapurIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<BelanjaPemasukan>) => fetchApi('saveBelanjaDapurIn', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_dapur_in'] });
+    },
+  });
+}
+
+export function useDeleteBelanjaDapurIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteBelanjaDapurIn', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_dapur_in'] });
+    },
+  });
+}
+
+export function useBelanjaDapurOut() {
+  return useQuery<BelanjaPengeluaran[]>({
+    queryKey: ['belanja_dapur_out'],
+    queryFn: () => fetchApi('getBelanjaDapurOut', 'GET', {}),
+  });
+}
+
+export function useSaveBelanjaDapurOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<BelanjaPengeluaran>) => fetchApi('saveBelanjaDapurOut', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_dapur_out'] });
+    },
+  });
+}
+
+export function useDeleteBelanjaDapurOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteBelanjaDapurOut', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_dapur_out'] });
+    },
+  });
+}
+
+// ==================== BELANJA PROYEK ====================
+
+export function useBelanjaProyekIn() {
+  return useQuery<BelanjaPemasukan[]>({
+    queryKey: ['belanja_proyek_in'],
+    queryFn: () => fetchApi('getBelanjaProyekIn', 'GET', {}),
+  });
+}
+
+export function useSaveBelanjaProyekIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<BelanjaPemasukan>) => fetchApi('saveBelanjaProyekIn', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_proyek_in'] });
+    },
+  });
+}
+
+export function useDeleteBelanjaProyekIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteBelanjaProyekIn', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_proyek_in'] });
+    },
+  });
+}
+
+export function useBelanjaProyekOut() {
+  return useQuery<BelanjaPengeluaran[]>({
+    queryKey: ['belanja_proyek_out'],
+    queryFn: () => fetchApi('getBelanjaProyekOut', 'GET', {}),
+  });
+}
+
+export function useSaveBelanjaProyekOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<BelanjaPengeluaran>) => fetchApi('saveBelanjaProyekOut', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_proyek_out'] });
+    },
+  });
+}
+
+export function useDeleteBelanjaProyekOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchApi('deleteBelanjaProyekOut', 'POST', { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['belanja_proyek_out'] });
     },
   });
 }

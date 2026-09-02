@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { PageHeader, Button } from '@/components/ui';
 import { useRoles, useSaveRole, useDeleteRole } from '@/hooks/useData';
 import { Loader2, Plus, Pencil, Trash2, Shield, X, CheckSquare, Square } from 'lucide-react';
@@ -17,6 +17,8 @@ const ALL_PAGES = [
   { label: 'Internal Letter', path: '/internal-letters' },
   { label: 'Surat Jalan', path: '/surat-jalan' },
   { label: 'Invoice', path: '/invoices' },
+  { label: 'Belanja Dapur', path: '/belanja-dapur' },
+  { label: 'Belanja Proyek', path: '/belanja-proyek' },
   { label: 'Manajemen Perusahaan', path: '/settings/company' },
   { label: 'Manajemen Pegawai', path: '/settings/users' },
   { label: 'Hak Akses / Role', path: '/settings/roles' },

@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Printer, Plus, Pencil, Trash2, FileText, Upload, X } from "lucide-react";
+import { Loader2, Printer, Plus, Pencil, SendHorizonal, X } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
-import { useInternalLetters, useSaveInternalLetter, useDeleteInternalLetter, useUploadFile, usePoIns, useVendors, useCompany } from "@/hooks/useData";
+import { useInternalLetters, useSaveInternalLetter, useDeleteInternalLetter, usePoIns, useVendors, useCompany, useSaveNotification } from "@/hooks/useData";
+import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AddInternalLetterModal from "@/components/AddInternalLetterModal";
 import TableToolbar from "@/components/TableToolbar";
@@ -26,13 +27,14 @@ function TypeBadge({ type }: { type?: string }) {
 
 export default function InternalLetters() {
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
   const { data: letters = [], isLoading, refetch } = useInternalLetters();
   const { data: poIns = [] } = usePoIns();
   const { data: vendors = [] } = useVendors();
   const { data: company } = useCompany();
   const saveIL = useSaveInternalLetter();
   const deleteIL = useDeleteInternalLetter();
-  const uploadFile = useUploadFile();
+  const saveNotification = useSaveNotification();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState("");
@@ -45,10 +47,40 @@ export default function InternalLetters() {
   const [editPerihal, setEditPerihal] = useState("");
   const [editFranco, setEditFranco] = useState("");
   const [editType, setEditType] = useState("Full");
-  const [existingDocs, setExistingDocs] = useState<any[]>([]);
-  const [newFiles, setNewFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mintaVerifId, setMintaVerifId] = useState<string | null>(null);
+
+  const handleMintaVerifikasi = async (letter: InternalLetter) => {
+    if (!window.confirm(`Minta verifikasi pimpinan untuk IL: ${letter.internal_letter_number}?`)) return;
+    setMintaVerifId(letter.id);
+    try {
+      await saveIL.mutateAsync({
+        ...letter,
+        verification_status: 'Menunggu Verifikasi',
+        updated_date: new Date().toISOString()
+      });
+      try {
+        await saveNotification.mutateAsync({
+          id: Date.now().toString(),
+          from_user_id: user?.id || 'system',
+          from_user_name: user?.name || 'System',
+          to_user_id: 'pimpinan',
+          type: 'verification_request',
+          ref_type: 'internal_letter',
+          ref_id: letter.id,
+          ref_number: letter.internal_letter_number,
+          message: `${user?.name || 'Staff'} meminta verifikasi Internal Letter: ${letter.internal_letter_number}`,
+          is_read: false,
+          created_date: new Date().toISOString()
+        });
+      } catch { /* notifikasi gagal, status sudah berubah */ }
+      refetch();
+    } catch {
+      alert('Gagal mengubah status verifikasi');
+    } finally {
+      setMintaVerifId(null);
+    }
+  };
 
   const openEdit = (letter: InternalLetter) => {
     setEditNumber(letter.internal_letter_number || "");
@@ -56,32 +88,13 @@ export default function InternalLetters() {
     setEditPerihal(letter.perihal || "");
     setEditFranco(letter.franco || "");
     setEditType(letter.type || "Full");
-    let docs: any[] = [];
-    try { docs = JSON.parse(letter.dokumen || "[]"); } catch {}
-    setExistingDocs(docs);
-    setNewFiles([]);
     setEditModal({ isOpen: true, letter });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) setNewFiles(prev => [...prev, ...Array.from(e.target.files as FileList)]);
   };
 
   const handleSaveEdit = async () => {
     if (!editModal.letter) return;
     setIsSaving(true);
     try {
-      let finalDocs = [...existingDocs];
-      for (const file of newFiles) {
-        const base64 = await new Promise<string>(resolve => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(",")[1]);
-          reader.readAsDataURL(file);
-        });
-        const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-        const fileUrl = typeof res === "string" ? res : (res as any)?.url;
-        if (fileUrl) finalDocs.push({ name: file.name, url: fileUrl });
-      }
       await saveIL.mutateAsync({
         ...editModal.letter,
         internal_letter_number: editNumber,
@@ -89,7 +102,6 @@ export default function InternalLetters() {
         perihal: editPerihal,
         franco: editFranco,
         type: editType,
-        dokumen: JSON.stringify(finalDocs),
         updated_date: new Date().toISOString(),
       });
       setEditModal({ isOpen: false, letter: null });
@@ -98,11 +110,13 @@ export default function InternalLetters() {
     finally { setIsSaving(false); }
   };
 
+  // handleDelete kept for future use
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus Internal Letter ini?")) return;
     await deleteIL.mutateAsync(id);
     refetch();
   };
+  void handleDelete; // suppress unused warning
 
   // Group by po_in_id — same pattern as PO Out groups by quotation_id
   const groupedLetters = useMemo(() => {
@@ -171,15 +185,14 @@ export default function InternalLetters() {
                   <th className="px-6 py-4 text-xs uppercase tracking-wide">VENDOR</th>
                   <th className="px-6 py-4 text-center text-xs uppercase tracking-wide">JML ITEM</th>
                   <th className="px-6 py-4 text-right text-xs uppercase tracking-wide">TOTAL NILAI</th>
-                  <th className="px-6 py-4 text-xs uppercase tracking-wide">DOKUMEN</th>
+                  <th className="px-6 py-4 text-xs uppercase tracking-wide">STATUS</th>
+                  <th className="px-6 py-4 text-xs uppercase tracking-wide">BUKTI TF</th>
                   <th className="px-6 py-4 text-right text-xs uppercase tracking-wide">AKSI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginatedGroups.map((group) => {
                   return group.map((letter, index) => {
-                    let docs: any[] = [];
-                    try { docs = JSON.parse(letter.dokumen || "[]"); } catch {}
                     let itemsCount = letter.jumlah_item || 0;
                     const poIn = poIns.find(p => p.id === letter.po_in_id);
 
@@ -216,27 +229,64 @@ export default function InternalLetters() {
                         </td>
 
                         <td className="px-6 py-4">
-                          {docs.length > 0 ? (
-                            <div className="flex gap-2 flex-wrap">
-                              {docs.map((d: any, idx: number) => (
-                                <a
-                                  key={`${letter.id}-doc-${idx}`}
-                                  href={d.url || d}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                                >
-                                  Dok.{idx + 1}
-                                </a>
-                              ))}
+                          {letter.verification_status === 'Terverifikasi' ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                              Terverifikasi
+                            </span>
+                          ) : letter.verification_status === 'Ditolak' ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="inline-flex w-max items-center px-2 py-1 rounded-md text-[11px] font-medium bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20" title={letter.verification_note}>
+                                Ditolak
+                              </span>
+                              <span className="text-[10px] text-gray-500 italic max-w-[120px] truncate" title={letter.verification_note}>Note: {letter.verification_note}</span>
                             </div>
+                          ) : letter.verification_status === 'Menunggu Verifikasi' ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                              Menunggu Verifikasi
+                            </span>
                           ) : (
-                            <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20">
+                              Perlu Verifikasi
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          {letter.bukti_tf_url ? (
+                            <a
+                              href={letter.bukti_tf_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                            >
+                              Lihat Bukti
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">Belum ada</span>
                           )}
                         </td>
 
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Minta Verifikasi — only for non-admin when status allows it */}
+                            {!user?.is_super_admin && (
+                              letter.verification_status === 'Perlu Verifikasi' ||
+                              letter.verification_status === 'Ditolak' ||
+                              !letter.verification_status
+                            ) && (
+                              <button
+                                onClick={() => handleMintaVerifikasi(letter)}
+                                disabled={mintaVerifId === letter.id}
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap"
+                                title="Minta Verifikasi Pimpinan"
+                              >
+                                {mintaVerifId === letter.id
+                                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                                  : <SendHorizonal className="w-3 h-3" />
+                                }
+                                Minta Verifikasi
+                              </button>
+                            )}
                             <button
                               onClick={() => openEdit(letter)}
                               className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
@@ -251,7 +301,6 @@ export default function InternalLetters() {
                             >
                               <Printer className="w-4 h-4" />
                             </button>
-
                           </div>
                         </td>
                       </tr>
@@ -353,44 +402,6 @@ export default function InternalLetters() {
                         </label>
                       )}
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen Internal Letter</label>
-                    {existingDocs.length > 0 && (
-                      <ul className="mb-2 space-y-1">
-                        {existingDocs.map((doc, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded px-2 py-1.5">
-                            <FileText className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex-1 truncate hover:underline">{doc.name}</a>
-                            <button onClick={() => setExistingDocs(prev => prev.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-500">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <div onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
-                      <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1" />
-                      <p className="text-xs text-gray-500">Klik untuk unggah</p>
-                      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
-                    </div>
-
-                    {newFiles.length > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {newFiles.map((f, i) => (
-                          <li key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded px-2 py-1.5">
-                            <FileText className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                            <span className="flex-1 truncate">{f.name}</span>
-                            <button onClick={() => setNewFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
                 </div>
               </div>

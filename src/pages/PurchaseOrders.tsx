@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Plus, Pencil, X, Upload, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useCompany, useVendors } from '@/hooks/useData';
+import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useCompany, useVendors, useSaveNotification } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
@@ -19,7 +19,10 @@ export default function PurchaseOrders() {
   const { data: company } = useCompany();
   const { data: vendors = [] } = useVendors();
   const savePO = useSavePurchaseOrder();
+  const saveNotification = useSaveNotification();
   const isLoading = loadingPOs || loadingPoIns;
+
+  const [requestingVerificationId, setRequestingVerificationId] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [generatingPoQt, setGeneratingPoQt] = useState<NeracaQuotation | null>(null);
@@ -117,13 +120,51 @@ export default function PurchaseOrders() {
         franco: editFranco,
         dokumen: JSON.stringify(finalDocs),
         updated_date: new Date().toISOString(),
+        verification_status: 'Perlu Verifikasi',
       });
+
       setEditModal({ isOpen: false, po: null });
       setNewFiles([]);
     } catch {
       alert('Gagal menyimpan perubahan PO Out');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRequestVerification = async (po: PurchaseOrder) => {
+    if (!window.confirm(`Minta verifikasi pimpinan untuk PO: ${po.po_number}?`)) return;
+    setRequestingVerificationId(po.id);
+    try {
+      await savePO.mutateAsync({
+        ...po,
+        verification_status: 'Menunggu Verifikasi',
+        updated_date: new Date().toISOString()
+      });
+    } catch (e) {
+      alert('Gagal mengubah status PO');
+      return;
+    }
+
+    try {
+      await saveNotification.mutateAsync({
+        id: Date.now().toString(),
+        from_user_id: user?.id || 'system',
+        from_user_name: user?.name || 'System',
+        to_user_id: 'pimpinan',
+        type: 'verification_request',
+        ref_type: 'po',
+        ref_id: po.id,
+        ref_number: po.po_number,
+        message: `User ${user?.name} meminta verifikasi PO: ${po.po_number}`,
+        is_read: false,
+        created_date: new Date().toISOString()
+      });
+    } catch (e) {
+      // Notification failed but status already updated — not critical
+      console.warn('Notifikasi gagal dikirim, tapi status PO sudah diubah:', e);
+    } finally {
+      setRequestingVerificationId(null);
     }
   };
 
@@ -192,6 +233,7 @@ export default function PurchaseOrders() {
                   <th className="px-6 py-4">VENDOR</th>
                   <th className="px-6 py-4 text-center">JML ITEM</th>
                   <th className="px-6 py-4 text-right">TOTAL NILAI</th>
+                  <th className="px-6 py-4">STATUS</th>
                   <th className="px-6 py-4">DOKUMEN</th>
                   {user?.is_super_admin && <th className="px-6 py-4">DIKERJAKAN OLEH</th>}
                   <th className="px-6 py-4 text-right">AKSI</th>
@@ -242,6 +284,28 @@ export default function PurchaseOrders() {
                           Rp {formatCurrency(Number(po.total_nilai))}
                         </td>
                         <td className="px-6 py-4">
+                          {po.verification_status === 'Terverifikasi' ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                              Terverifikasi
+                            </span>
+                          ) : po.verification_status === 'Ditolak' ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="inline-flex w-max items-center px-2 py-1 rounded-md text-[11px] font-medium bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20" title={po.verification_note}>
+                                Ditolak
+                              </span>
+                              <span className="text-[10px] text-gray-500 italic max-w-[120px] truncate" title={po.verification_note}>Note: {po.verification_note}</span>
+                            </div>
+                          ) : po.verification_status === 'Menunggu Verifikasi' ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                              Menunggu Verifikasi
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20">
+                              Perlu Verifikasi
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
                           {docs.length > 0 ? (
                             <div className="flex gap-2 flex-wrap">
                               {docs.map((d: any, idx: number) => (
@@ -263,6 +327,17 @@ export default function PurchaseOrders() {
                         {user?.is_super_admin && <td className="px-6 py-4 text-xs italic text-gray-500">{po.created_by || '-'}</td>}
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3">
+                            {(po.verification_status === 'Perlu Verifikasi' || po.verification_status === 'Ditolak') && (
+                              <button
+                                onClick={() => handleRequestVerification(po)}
+                                disabled={requestingVerificationId === po.id}
+                                className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+                                title="Minta Verifikasi"
+                              >
+                                {requestingVerificationId === po.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                Minta Verifikasi
+                              </button>
+                            )}
                             <button
                               onClick={() => openEdit(po)}
                               className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"

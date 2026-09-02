@@ -1,19 +1,36 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from "lucide-react";
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, Upload, X, Banknote } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
-import { useInternalLetters, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems } from "@/hooks/useData";
+import { useInternalLetters, useSaveInternalLetter, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems, useUploadFile, useSaveNotification } from "@/hooks/useData";
+import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from "@/lib/utils";
 
 export default function InternalLetterDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
 
   const { data: letters = [], isLoading: isLoadingIL } = useInternalLetters();
   const { data: vendors = [] } = useVendors();
   const { data: poIns = [] } = usePoIns();
   const { data: purchaseOrders = [] } = usePurchaseOrders();
   const { data: company, isLoading: isLoadingCompany } = useCompany();
+  const saveIL = useSaveInternalLetter();
+  const uploadFile = useUploadFile();
+  const saveNotification = useSaveNotification();
+
+  // Verification state
+  const [isRequestingVerif, setIsRequestingVerif] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
+  const [isProcessingVerif, setIsProcessingVerif] = useState(false);
+  const [buktiFile, setBuktiFile] = useState<File | null>(null);
+  const [uploadedBuktiUrl, setUploadedBuktiUrl] = useState<string | null>(null);
+  const [isUploadingBukti, setIsUploadingBukti] = useState(false);
+  const [verifNote, setVerifNote] = useState('');
+  const buktiInputRef = useRef<HTMLInputElement>(null);
 
   const letter = letters.find((l) => l.id === id);
   const vendor = vendors.find((v) => v.id === letter?.vendor_id);
@@ -66,12 +83,141 @@ export default function InternalLetterDetail() {
 
   const letterDate = letter?.tanggal ? formatDate(letter.tanggal) : formatDate(new Date().toISOString());
 
+  // Reset modal state when letter changes
+  useEffect(() => {
+    setBuktiFile(null);
+    setUploadedBuktiUrl(null);
+    setVerifNote('');
+    setRejectNote('');
+  }, [id]);
+
   useEffect(() => {
     if (letter && company) {
       document.title = `${companyName}_${letter.internal_letter_number}`;
       return () => { document.title = "Vite + React + TS"; };
     }
   }, [letter?.internal_letter_number, company?.name]);
+
+  const handleRequestVerification = async () => {
+    if (!letter) return;
+    if (!window.confirm(`Minta verifikasi pimpinan untuk IL: ${letter.internal_letter_number}?`)) return;
+    setIsRequestingVerif(true);
+    try {
+      await saveIL.mutateAsync({
+        ...letter,
+        verification_status: 'Menunggu Verifikasi',
+        updated_date: new Date().toISOString()
+      });
+      try {
+        await saveNotification.mutateAsync({
+          id: Date.now().toString(),
+          from_user_id: user?.id || 'system',
+          from_user_name: user?.name || 'System',
+          to_user_id: 'pimpinan',
+          type: 'verification_request',
+          ref_type: 'internal_letter',
+          ref_id: letter.id,
+          ref_number: letter.internal_letter_number,
+          message: `${user?.name || 'Staff'} meminta verifikasi Internal Letter: ${letter.internal_letter_number}`,
+          is_read: false,
+          created_date: new Date().toISOString()
+        });
+      } catch { /* notifikasi gagal, tapi status sudah berubah */ }
+    } catch {
+      alert('Gagal mengubah status IL');
+    } finally {
+      setIsRequestingVerif(false);
+    }
+  };
+
+  const handleBuktiUpload = async (file: File) => {
+    setIsUploadingBukti(true);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+      setUploadedBuktiUrl(typeof url === 'string' ? url : (url as any)?.url);
+    } catch {
+      alert('Gagal mengupload bukti transfer');
+    } finally {
+      setIsUploadingBukti(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!letter || !uploadedBuktiUrl) return;
+    setIsProcessingVerif(true);
+    try {
+      await saveIL.mutateAsync({
+        ...letter,
+        verification_status: 'Terverifikasi',
+        verification_note: verifNote,
+        verified_by: user?.name || 'Pimpinan',
+        verified_date: new Date().toISOString(),
+        bukti_tf_url: uploadedBuktiUrl,
+        updated_date: new Date().toISOString()
+      });
+      try {
+        await saveNotification.mutateAsync({
+          id: Date.now().toString(),
+          from_user_id: user?.id || 'pimpinan',
+          from_user_name: user?.name || 'Pimpinan',
+          to_user_id: letter.created_by || 'staff',
+          type: 'verification_result',
+          ref_type: 'internal_letter',
+          ref_id: letter.id,
+          ref_number: letter.internal_letter_number,
+          message: `Internal Letter ${letter.internal_letter_number} telah disetujui oleh ${user?.name || 'Pimpinan'}`,
+          is_read: false,
+          created_date: new Date().toISOString()
+        });
+      } catch { /* notifikasi gagal, tidak kritis */ }
+      setShowApproveModal(false);
+    } catch {
+      alert('Gagal menyimpan verifikasi');
+    } finally {
+      setIsProcessingVerif(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!letter || !rejectNote.trim()) { alert('Mohon isi alasan penolakan.'); return; }
+    setIsProcessingVerif(true);
+    try {
+      await saveIL.mutateAsync({
+        ...letter,
+        verification_status: 'Ditolak',
+        verification_note: rejectNote,
+        verified_by: user?.name || 'Pimpinan',
+        verified_date: new Date().toISOString(),
+        updated_date: new Date().toISOString()
+      });
+      try {
+        await saveNotification.mutateAsync({
+          id: Date.now().toString(),
+          from_user_id: user?.id || 'pimpinan',
+          from_user_name: user?.name || 'Pimpinan',
+          to_user_id: letter.created_by || 'staff',
+          type: 'verification_result',
+          ref_type: 'internal_letter',
+          ref_id: letter.id,
+          ref_number: letter.internal_letter_number,
+          message: `Internal Letter ${letter.internal_letter_number} ditolak: ${rejectNote}`,
+          is_read: false,
+          created_date: new Date().toISOString()
+        });
+      } catch { /* notifikasi gagal, tidak kritis */ }
+      setShowRejectModal(false);
+      setRejectNote('');
+    } catch {
+      alert('Gagal menyimpan penolakan');
+    } finally {
+      setIsProcessingVerif(false);
+    }
+  };
 
   if (isLoadingIL || isLoadingCompany) {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
@@ -120,6 +266,65 @@ export default function InternalLetterDetail() {
             </div>
           }
         />
+
+        {/* Verification Status Banner */}
+        <div className="max-w-[860px] mx-auto mb-4">
+          {/* Badge Status */}
+          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              {letter.verification_status === 'Terverifikasi' ? (
+                <><CheckCircle className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <span className="text-sm font-semibold text-emerald-700">Terverifikasi</span>
+                  {letter.verified_by && <p className="text-xs text-gray-500">oleh {letter.verified_by} · {letter.verified_date ? formatDate(letter.verified_date) : ''}</p>}
+                  {letter.bukti_tf_url && <a href={letter.bukti_tf_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">Lihat Bukti Transfer</a>}
+                </div></>
+              ) : letter.verification_status === 'Ditolak' ? (
+                <><XCircle className="w-5 h-5 text-red-500" />
+                <div>
+                  <span className="text-sm font-semibold text-red-700">Ditolak</span>
+                  {letter.verification_note && <p className="text-xs text-gray-500">Alasan: {letter.verification_note}</p>}
+                </div></>
+              ) : letter.verification_status === 'Menunggu Verifikasi' ? (
+                <><Clock className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-semibold text-amber-700">Menunggu Verifikasi Pimpinan</span></>
+              ) : (
+                <><AlertCircle className="w-5 h-5 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-600">Perlu Verifikasi</span></>
+              )}
+            </div>
+
+            {/* Actions: Staff */}
+            {!user?.is_super_admin && (letter.verification_status === 'Perlu Verifikasi' || letter.verification_status === 'Ditolak') && (
+              <button
+                onClick={handleRequestVerification}
+                disabled={isRequestingVerif}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg transition-colors"
+              >
+                {isRequestingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Minta Verifikasi
+              </button>
+            )}
+
+            {/* Actions: Pimpinan */}
+            {user?.is_super_admin && letter.verification_status === 'Menunggu Verifikasi' && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                  <XCircle className="w-4 h-4" /> Tolak
+                </button>
+                <button
+                  onClick={() => { setUploadedBuktiUrl(null); setBuktiFile(null); setVerifNote(''); setShowApproveModal(true); }}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" /> Setuju
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Document */}
@@ -376,6 +581,139 @@ export default function InternalLetterDetail() {
           </tfoot>
         </table>
       </div>
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-500" /> Tolak Internal Letter
+              </h3>
+              <button onClick={() => setShowRejectModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alasan Penolakan <span className="text-red-500">*</span></label>
+              <textarea
+                value={rejectNote}
+                onChange={e => setRejectNote(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-sm"
+                rows={3}
+                placeholder="Tulis alasan mengapa Internal Letter ini ditolak..."
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-4 bg-gray-50 border-t border-gray-100">
+              <button onClick={() => setShowRejectModal(false)} disabled={isProcessingVerif} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Batal</button>
+              <button onClick={handleReject} disabled={isProcessingVerif || !rejectNote.trim()} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isProcessingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Konfirmasi Tolak
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approve Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-emerald-600" /> Konfirmasi Pembayaran
+              </h3>
+              <button onClick={() => setShowApproveModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-5 space-y-5">
+              
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-blue-900 mb-3">Informasi Transfer Vendor</h4>
+                <div className="grid grid-cols-[100px_1fr] gap-y-2 text-sm">
+                  <div className="text-blue-700">Vendor</div>
+                  <div className="font-medium text-blue-950">{vendor?.vendor_name || letter.vendor_name}</div>
+                  
+                  <div className="text-blue-700">Bank</div>
+                  <div className="font-medium text-blue-950">{vendor?.bank_name || "-"}</div>
+                  
+                  <div className="text-blue-700">Atas Nama</div>
+                  <div className="font-medium text-blue-950">{vendor?.bank_account_name || "-"}</div>
+                  
+                  <div className="text-blue-700">No. Rekening</div>
+                  <div className="font-mono font-medium text-blue-950 text-base">{vendor?.bank_account_number || "-"}</div>
+                  
+                  <div className="text-blue-700 pt-2 border-t border-blue-200 mt-1">Total Nilai</div>
+                  <div className="font-bold text-blue-950 text-lg pt-2 border-t border-blue-200 mt-1">Rp {formatCurrency(letter.total_nilai)}</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Upload Bukti Transfer <span className="text-red-500">*</span></label>
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="file"
+                    ref={buktiInputRef}
+                    className="hidden"
+                    accept="image/*,.pdf"
+                    onChange={e => {
+                      if (e.target.files?.[0]) {
+                        setBuktiFile(e.target.files[0]);
+                        handleBuktiUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  {!uploadedBuktiUrl ? (
+                    <button
+                      onClick={() => buktiInputRef.current?.click()}
+                      disabled={isUploadingBukti}
+                      className="flex items-center justify-center gap-2 w-full py-6 border-2 border-dashed border-gray-300 rounded-xl hover:bg-gray-50 hover:border-blue-400 transition-colors disabled:opacity-50"
+                    >
+                      {isUploadingBukti ? (
+                        <><Loader2 className="w-5 h-5 text-gray-400 animate-spin" /><span className="text-sm text-gray-500">Mengupload...</span></>
+                      ) : (
+                        <><Upload className="w-5 h-5 text-gray-400" /><span className="text-sm text-gray-500">Klik untuk upload bukti transfer</span></>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 border border-emerald-200 bg-emerald-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                        <div className="text-sm">
+                          <p className="font-medium text-emerald-800">{buktiFile?.name || 'Bukti Transfer'}</p>
+                          <a href={uploadedBuktiUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline text-xs">Lihat File</a>
+                        </div>
+                      </div>
+                      <button onClick={() => { setUploadedBuktiUrl(null); setBuktiFile(null); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"><X className="w-4 h-4" /></button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Catatan Verifikasi (Opsional)</label>
+                <textarea
+                  value={verifNote}
+                  onChange={e => setVerifNote(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm"
+                  rows={2}
+                  placeholder="Tambahkan catatan jika ada..."
+                />
+              </div>
+
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-4 bg-gray-50 border-t border-gray-100">
+              <button onClick={() => setShowApproveModal(false)} disabled={isProcessingVerif || isUploadingBukti} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Batal</button>
+              <button onClick={handleApprove} disabled={isProcessingVerif || isUploadingBukti || !uploadedBuktiUrl} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isProcessingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Konfirmasi & Setujui
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

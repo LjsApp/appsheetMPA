@@ -53,7 +53,7 @@ function routeRequest(action, method, body, params) {
       var userRole = roles.find(function(r) { return r.id === user.role_id; });
       var isSuperAdmin = userRole ? (userRole.is_super_admin === true || userRole.is_super_admin === 'TRUE' || userRole.is_super_admin === 'true') : false;
       // Return user without password
-      var safeUser = { id: user.id, name: user.name, email: user.email, role_id: user.role_id, status: user.status, is_super_admin: isSuperAdmin };
+      var safeUser = { id: user.id, name: user.name, email: user.email, role_id: user.role_id, role_name: userRole ? userRole.name : '', status: user.status, is_super_admin: isSuperAdmin };
       return safeUser;
     }
     case 'getUsers':
@@ -275,6 +275,7 @@ function routeRequest(action, method, body, params) {
     case 'getNeracaDetail': {
       const all = getRecords('neraca_details');
       const nid = params.neraca_id || (body && body.neraca_id);
+      if (!nid) return all;
       const found = all.find(r => r.neraca_id === nid);
       return found || null;
     }
@@ -632,7 +633,7 @@ function routeRequest(action, method, body, params) {
       } else {
         // Migrate: add new columns if missing
         var poHeaders = poSheet.getRange(1, 1, 1, poSheet.getLastColumn()).getValues()[0];
-        ['due_date', 'subject', 'ref_date', 'type', 'dp_reference_id'].forEach(function(col) {
+        ['due_date', 'subject', 'ref_date', 'type', 'dp_reference_id', 'franco', 'created_by', 'verification_status', 'verification_note', 'verified_by', 'verified_date'].forEach(function(col) {
           if (poHeaders.indexOf(col) === -1) {
             var lastCol = poSheet.getLastColumn();
             poSheet.getRange(1, lastCol + 1).setValue(col);
@@ -650,12 +651,77 @@ function routeRequest(action, method, body, params) {
         results.push('Created sheet: po_in');
       }
 
-      // 8. Create invoices sheet if not exists
+      // 8. Create invoices sheet if not exists, or migrate columns
       var invSheet = ss.getSheetByName('invoices');
       if (!invSheet) {
         invSheet = ss.insertSheet('invoices');
-        invSheet.appendRow(['id','po_in_id','invoice_number','invoice_date','customer_id','delivery_address','created_date','updated_date']);
+        invSheet.appendRow(['id','po_in_id','invoice_number','invoice_date','customer_id','delivery_address','created_by','verification_status','verification_note','verified_by','verified_date','created_date','updated_date']);
         results.push('Created sheet: invoices');
+      } else {
+        var invHeaders = invSheet.getRange(1, 1, 1, invSheet.getLastColumn()).getValues()[0];
+        ['created_by', 'verification_status', 'verification_note', 'verified_by', 'verified_date'].forEach(function(col) {
+          if (invHeaders.indexOf(col) === -1) {
+            var lastCol = invSheet.getLastColumn();
+            invSheet.getRange(1, lastCol + 1).setValue(col);
+            invHeaders.push(col);
+            results.push('Added column ' + col + ' to invoices');
+          }
+        });
+      }
+
+      // 9. Create notifications sheet if not exists
+      var notifSheet = ss.getSheetByName('notifications');
+      if (!notifSheet) {
+        notifSheet = ss.insertSheet('notifications');
+        notifSheet.appendRow(['id','from_user_id','from_user_name','to_user_id','type','ref_type','ref_id','ref_number','message','is_read','created_date']);
+        results.push('Created sheet: notifications');
+      }
+
+      // 10. Create Belanja sheets
+      var bdInSheet = ss.getSheetByName('belanja_dapur_in');
+      if (!bdInSheet) {
+        bdInSheet = ss.insertSheet('belanja_dapur_in');
+        bdInSheet.appendRow(['id', 'tanggal', 'nominal', 'keterangan', 'bukti_tf', 'created_date', 'updated_date']);
+        results.push('Created sheet: belanja_dapur_in');
+      }
+
+      var bdOutSheet = ss.getSheetByName('belanja_dapur_out');
+      if (!bdOutSheet) {
+        bdOutSheet = ss.insertSheet('belanja_dapur_out');
+        bdOutSheet.appendRow(['id', 'tanggal', 'nominal', 'keterangan', 'bukti_foto', 'created_date', 'updated_date']);
+        results.push('Created sheet: belanja_dapur_out');
+      }
+
+      var bpInSheet = ss.getSheetByName('belanja_proyek_in');
+      if (!bpInSheet) {
+        bpInSheet = ss.insertSheet('belanja_proyek_in');
+        bpInSheet.appendRow(['id', 'tanggal', 'nominal', 'keterangan', 'bukti_tf', 'created_date', 'updated_date']);
+        results.push('Created sheet: belanja_proyek_in');
+      }
+
+      var bpOutSheet = ss.getSheetByName('belanja_proyek_out');
+      if (!bpOutSheet) {
+        bpOutSheet = ss.insertSheet('belanja_proyek_out');
+        bpOutSheet.appendRow(['id', 'po_out_id', 'tanggal', 'nominal', 'keterangan', 'bukti_foto', 'created_date', 'updated_date']);
+        results.push('Created sheet: belanja_proyek_out');
+      }
+
+      // 11. Create internal_letters sheet if not exists, or migrate new verification columns
+      var ilSheet = ss.getSheetByName('internal_letters');
+      if (!ilSheet) {
+        ilSheet = ss.insertSheet('internal_letters');
+        ilSheet.appendRow(['id','po_in_id','po_out_id','quotation_id','neraca_id','vendor_id','vendor_name','customer_id','customer_name','internal_letter_number','tanggal','perihal','franco','jumlah_item','total_nilai','type','dp_reference_id','dokumen','created_by','verification_status','verification_note','verified_by','verified_date','bukti_tf_url','created_date','updated_date']);
+        results.push('Created sheet: internal_letters');
+      } else {
+        var ilHeaders = ilSheet.getRange(1, 1, 1, ilSheet.getLastColumn()).getValues()[0];
+        ['verification_status', 'verification_note', 'verified_by', 'verified_date', 'bukti_tf_url'].forEach(function(col) {
+          if (ilHeaders.indexOf(col) === -1) {
+            var lastCol = ilSheet.getLastColumn();
+            ilSheet.getRange(1, lastCol + 1).setValue(col);
+            ilHeaders.push(col);
+            results.push('Added column ' + col + ' to internal_letters');
+          }
+        });
       }
 
       return results.length > 0 ? results.join('; ') : 'All sheets already up to date';
@@ -769,6 +835,66 @@ function routeRequest(action, method, body, params) {
         return '1/In/MPA/' + String(d2.getMonth() + 1).padStart(2, '0') + '.' + d2.getFullYear();
       }
     }
+
+    // Notifications
+    case 'getNotifications':
+      return getRecords('notifications');
+    case 'saveNotification':
+      if (body.id) {
+        try { return updateRecord('notifications', 'id', body); }
+        catch (e) { return addRecord('notifications', body); }
+      }
+      return addRecord('notifications', body);
+    case 'deleteNotification':
+      return deleteRecord('notifications', 'id', body.id);
+
+    // Belanja Dapur In (Pemasukan)
+    case 'getBelanjaDapurIn':
+      return getRecords('belanja_dapur_in');
+    case 'saveBelanjaDapurIn':
+      if (body.id) {
+        try { return updateRecord('belanja_dapur_in', 'id', body); }
+        catch (e) { return addRecord('belanja_dapur_in', body); }
+      }
+      return addRecord('belanja_dapur_in', body);
+    case 'deleteBelanjaDapurIn':
+      return deleteRecord('belanja_dapur_in', 'id', body.id);
+
+    // Belanja Dapur Out (Pengeluaran)
+    case 'getBelanjaDapurOut':
+      return getRecords('belanja_dapur_out');
+    case 'saveBelanjaDapurOut':
+      if (body.id) {
+        try { return updateRecord('belanja_dapur_out', 'id', body); }
+        catch (e) { return addRecord('belanja_dapur_out', body); }
+      }
+      return addRecord('belanja_dapur_out', body);
+    case 'deleteBelanjaDapurOut':
+      return deleteRecord('belanja_dapur_out', 'id', body.id);
+
+    // Belanja Proyek In (Pemasukan)
+    case 'getBelanjaProyekIn':
+      return getRecords('belanja_proyek_in');
+    case 'saveBelanjaProyekIn':
+      if (body.id) {
+        try { return updateRecord('belanja_proyek_in', 'id', body); }
+        catch (e) { return addRecord('belanja_proyek_in', body); }
+      }
+      return addRecord('belanja_proyek_in', body);
+    case 'deleteBelanjaProyekIn':
+      return deleteRecord('belanja_proyek_in', 'id', body.id);
+
+    // Belanja Proyek Out (Pengeluaran)
+    case 'getBelanjaProyekOut':
+      return getRecords('belanja_proyek_out');
+    case 'saveBelanjaProyekOut':
+      if (body.id) {
+        try { return updateRecord('belanja_proyek_out', 'id', body); }
+        catch (e) { return addRecord('belanja_proyek_out', body); }
+      }
+      return addRecord('belanja_proyek_out', body);
+    case 'deleteBelanjaProyekOut':
+      return deleteRecord('belanja_proyek_out', 'id', body.id);
 
     default:
       throw new Error("Action not found: " + action);

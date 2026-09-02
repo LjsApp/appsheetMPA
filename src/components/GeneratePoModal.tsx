@@ -4,8 +4,9 @@ import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
 import {
   useNeracaItems, useVendorDiscounts, useGetNextPoNumber,
-  useSavePurchaseOrder, useCustomers, usePics, useSavePoIn, useUploadFile
+  useSavePurchaseOrder, useCustomers, usePics, useSavePoIn, useUploadFile, useSaveNotification
 } from '@/hooks/useData';
+import { useAuthStore } from '@/store/authStore';
 import type { NeracaQuotation } from '@/types';
 
 interface GeneratePoModalProps {
@@ -24,6 +25,8 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
   const savePurchaseOrder = useSavePurchaseOrder();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
+  const saveNotification = useSaveNotification();
+  const user = useAuthStore(state => state.user);
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -186,6 +189,8 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
             dokumen: JSON.stringify(docs),
             status: 'Active',
             type: 'DP',
+            verification_status: 'Perlu Verifikasi',
+            created_by: user?.name,
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
           });
@@ -204,6 +209,8 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
             status: 'Active',
             type: 'Sisa',
             dp_reference_id: poDpId,
+            verification_status: 'Perlu Verifikasi',
+            created_by: user?.name,
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
           });
@@ -221,6 +228,8 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
             dokumen: JSON.stringify(docs),
             status: 'Active',
             type: 'Full',
+            verification_status: 'Perlu Verifikasi',
+            created_by: user?.name,
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
           });

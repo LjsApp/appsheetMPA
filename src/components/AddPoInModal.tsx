@@ -33,15 +33,18 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
 
   const selectedQt = useMemo(() => quotations.find(q => q.id === selectedQtId), [quotations, selectedQtId]);
   
-  const customer = useMemo(() =>
-    customers.find(c => c.id === selectedQt?.customer_id),
-    [customers, selectedQt?.customer_id]
-  );
+  const customer = useMemo(() => {
+    if (!selectedQt) return undefined;
+    return customers.find(c => 
+      (selectedQt.customer_id && c.id === selectedQt.customer_id) || 
+      (selectedQt.customer_name && c.company_name === selectedQt.customer_name)
+    );
+  }, [customers, selectedQt]);
 
-  const customerPics = useMemo(() =>
-    pics.filter(p => p.customer_id === selectedQt?.customer_id),
-    [pics, selectedQt?.customer_id]
-  );
+  const customerPics = useMemo(() => {
+    if (!customer) return [];
+    return pics.filter(p => p.customer_id === customer.id);
+  }, [pics, customer]);
 
   const alamatOptions = useMemo(() => {
     if (!customer) return [];

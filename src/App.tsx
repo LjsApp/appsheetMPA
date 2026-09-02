@@ -26,6 +26,9 @@ import InternalLetterDetail from './pages/InternalLetterDetail';
 import CompanySettings from './pages/CompanySettings';
 import Users from './pages/Users';
 import Roles from './pages/Roles';
+import Verifikasi from './pages/Verifikasi';
+import BelanjaDapur from './pages/BelanjaDapur';
+import BelanjaProyek from './pages/BelanjaProyek';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div>
@@ -58,7 +61,10 @@ function App() {
           <Route path="surat-jalan" element={<SuratJalan />} />
           <Route path="surat-jalan/:id" element={<SuratJalanDetail />} />
           <Route path="invoices" element={<Invoices />} />
+          <Route path="verifikasi" element={<Verifikasi />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
+          <Route path="belanja-dapur" element={<BelanjaDapur />} />
+          <Route path="belanja-proyek" element={<BelanjaProyek />} />
           <Route path="internal-letters" element={<InternalLetters />} />
           <Route path="internal-letters/:id" element={<InternalLetterDetail />} />
           <Route path="settings/company" element={<CompanySettings />} />

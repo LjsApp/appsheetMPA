@@ -174,6 +174,10 @@ export interface PurchaseOrder {
   subject?: string;
   ref_date?: string;
   created_by?: string;
+  verification_status?: 'Perlu Verifikasi' | 'Menunggu Verifikasi' | 'Terverifikasi' | 'Ditolak';
+  verification_note?: string;
+  verified_by?: string;
+  verified_date?: string;
   created_date: string;
   updated_date: string;
 }
@@ -196,6 +200,10 @@ export interface Invoice {
   customer_id: string;
   delivery_address: string;
   created_by?: string;
+  verification_status?: 'Perlu Verifikasi' | 'Menunggu Verifikasi' | 'Terverifikasi' | 'Ditolak';
+  verification_note?: string;
+  verified_by?: string;
+  verified_date?: string;
   created_date: string;
   updated_date: string;
 }
@@ -233,6 +241,8 @@ export interface NeracaQuotation {
   dokumen: string;           // URL dokumen (optional)
   status: NeracaQuotationStatus;
   created_by?: string;
+  follow_up_count?: number;
+  last_follow_up_date?: string;
   created_date: string;
   updated_date: string;
 }
@@ -397,6 +407,11 @@ export interface InternalLetter {
   dp_reference_id?: string; // For Sisa: link to DP internal letter
   dokumen: string;         // JSON array of uploaded documents
   created_by?: string;     // Name of user who created this record
+  verification_status?: 'Perlu Verifikasi' | 'Menunggu Verifikasi' | 'Terverifikasi' | 'Ditolak';
+  verification_note?: string;  // Catatan dari pimpinan
+  verified_by?: string;        // Nama pimpinan yang memverifikasi
+  verified_date?: string;      // Tanggal verifikasi
+  bukti_tf_url?: string;       // URL bukti transfer yang diupload pimpinan
   created_date: string;
   updated_date: string;
 }
@@ -420,4 +435,45 @@ export interface AppUser {
   role_name?: string; // Denormalized for display
   status: 'Active' | 'Inactive';
   created_date?: string;
+}
+
+export type NotificationType = 'verification_request' | 'verification_result';
+export type NotificationRefType = 'po' | 'invoice' | 'internal_letter';
+
+export interface AppNotification {
+  id: string;
+  from_user_id: string;
+  from_user_name: string;
+  to_user_id: string; // user ID or 'pimpinan'
+  type: NotificationType;
+  ref_type: NotificationRefType;
+  ref_id: string;
+  ref_number: string;
+  message: string;
+  is_read: boolean | string;
+  created_date: string;
+}
+
+// ==================== BELANJA (PURCHASING) TYPES ====================
+
+export interface BelanjaPemasukan {
+  id: string;
+  tanggal: string;
+  nominal: number;
+  keterangan: string;
+  bukti_tf: string; // URL string
+  created_date?: string;
+  updated_date?: string;
+}
+
+export interface BelanjaPengeluaran {
+  id: string;
+  tanggal: string;
+  nominal: number;
+  keterangan: string;
+  bukti_foto: string; // URL string
+  po_out_id?: string; // Only for Belanja Proyek
+  po_out_number?: string; // Denormalized for display
+  created_date?: string;
+  updated_date?: string;
 }

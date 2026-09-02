@@ -45,7 +45,7 @@ export function getDriveImageUrl(url: string | undefined | null): string {
   // Convert /preview URL to direct image URL
   const match = url.match(/\/file\/d\/([^\/]+)/);
   if (match && match[1]) {
-    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
   }
   return url;
 }

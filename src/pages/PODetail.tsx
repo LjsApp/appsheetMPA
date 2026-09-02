@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, useVendors, useVendorDiscounts, useNeracaItems, useCompany } from '@/hooks/useData';
+import { usePurchaseOrders, useVendors, useVendorDiscounts, useNeracaItems, useCompany, useSavePurchaseOrder, useSaveNotification } from '@/hooks/useData';
+import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from '@/lib/utils';
 
 function getGreeting() {
@@ -16,10 +17,15 @@ function getGreeting() {
 export default function PODetail() {
   const { poId } = useParams<{ poId: string }>();
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
 
-  const { data: purchaseOrders = [], isLoading: isLoadingPo } = usePurchaseOrders();
+  const { data: purchaseOrders = [], isLoading: isLoadingPo, refetch } = usePurchaseOrders();
   const { data: vendors = [] } = useVendors();
   const { data: company, isLoading: isLoadingCompany } = useCompany();
+  const savePO = useSavePurchaseOrder();
+  const saveNotification = useSaveNotification();
+
+  const [isRequestingVerif, setIsRequestingVerif] = useState(false);
 
   const po = purchaseOrders.find(p => p.id === poId);
   const vendor = vendors.find(v => v.id === po?.vendor_id);
@@ -27,13 +33,38 @@ export default function PODetail() {
   const { data: items = [], isLoading: isLoadingItems } = useNeracaItems(po?.neraca_id || '');
   const { data: vds = [], isLoading: isLoadingVds } = useVendorDiscounts(po?.neraca_id || '');
 
-  useEffect(() => {
-    if (po && company) {
-      const cName = company.name || 'SourceQuo System';
-      document.title = `${cName}_${po.po_number}`;
-      return () => { document.title = 'Vite + React + TS'; };
+  const handleRequestVerification = async () => {
+    if (!po) return;
+    if (!window.confirm(`Minta verifikasi pimpinan untuk PO: ${po.po_number}?`)) return;
+    setIsRequestingVerif(true);
+    try {
+      await savePO.mutateAsync({
+        ...po,
+        verification_status: 'Menunggu Verifikasi',
+        updated_date: new Date().toISOString()
+      });
+      try {
+        await saveNotification.mutateAsync({
+          id: Date.now().toString(),
+          from_user_id: user?.id || 'system',
+          from_user_name: user?.name || 'System',
+          to_user_id: 'pimpinan',
+          type: 'verification_request',
+          ref_type: 'po',
+          ref_id: po.id,
+          ref_number: po.po_number,
+          message: `${user?.name || 'Staff'} meminta verifikasi PO Out: ${po.po_number}`,
+          is_read: false,
+          created_date: new Date().toISOString()
+        });
+      } catch { /* ignore */ }
+      refetch();
+    } catch {
+      alert('Gagal mengubah status verifikasi');
+    } finally {
+      setIsRequestingVerif(false);
     }
-  }, [company?.name, po?.po_number]);
+  };
 
   if (isLoadingPo || isLoadingCompany || isLoadingItems || isLoadingVds) {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
@@ -132,6 +163,55 @@ export default function PODetail() {
             </div>
           }
         />
+
+        {/* Verification Status Banner */}
+        <div className="max-w-[860px] mx-auto mb-4">
+          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              {po.verification_status === 'Terverifikasi' ? (
+                <><CheckCircle className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <span className="text-sm font-semibold text-emerald-700">Terverifikasi</span>
+                  {po.verified_by && <p className="text-xs text-gray-500">oleh {po.verified_by} · {po.verified_date ? formatDate(po.verified_date) : ''}</p>}
+                </div></>
+              ) : po.verification_status === 'Ditolak' ? (
+                <><XCircle className="w-5 h-5 text-red-500" />
+                <div>
+                  <span className="text-sm font-semibold text-red-700">Ditolak</span>
+                  {po.verification_note && <p className="text-xs text-gray-500">Alasan: {po.verification_note}</p>}
+                </div></>
+              ) : po.verification_status === 'Menunggu Verifikasi' ? (
+                <><Clock className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-semibold text-amber-700">Menunggu Verifikasi Pimpinan</span></>
+              ) : (
+                <><AlertCircle className="w-5 h-5 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-600">Perlu Verifikasi</span></>
+              )}
+            </div>
+
+            {/* Actions: Staff */}
+            {!user?.is_super_admin && (po.verification_status === 'Perlu Verifikasi' || po.verification_status === 'Ditolak' || !po.verification_status) && (
+              <button
+                onClick={handleRequestVerification}
+                disabled={isRequestingVerif}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg transition-colors"
+              >
+                {isRequestingVerif ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Minta Verifikasi
+              </button>
+            )}
+
+            {/* Actions: Pimpinan */}
+            {user?.is_super_admin && po.verification_status === 'Menunggu Verifikasi' && (
+              <button
+                onClick={() => navigate('/verifikasi')}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+              >
+                Buka Halaman Verifikasi →
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
 
@@ -374,10 +454,18 @@ export default function PODetail() {
                     {/* Signature & QR */}
                     <div className="flex justify-between items-end text-[12pt]">
                       <div className="flex flex-col items-center gap-1">
-                        <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
-                          <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
-                        </div>
-                        <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                        {po.verification_status === 'Terverifikasi' ? (
+                          <>
+                            <div className="w-28 h-28 border border-gray-200 p-1 bg-white overflow-hidden">
+                              <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+                            </div>
+                            <p className="text-[10pt] text-gray-400">Scan untuk verifikasi</p>
+                          </>
+                        ) : (
+                          <div className="w-28 h-28 border-2 border-dashed border-gray-300 flex items-center justify-center p-2 text-center text-[10px] text-gray-400">
+                            Menunggu Verifikasi
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-gray-800 text-center" style={{ minWidth: '200px' }}>
