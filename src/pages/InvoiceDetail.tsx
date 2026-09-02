@@ -683,9 +683,15 @@ export default function InvoiceDetail() {
                     <div>Nomor Rek.</div><div>:</div><div>{bankAccount}</div>
                     <div>Atas Nama</div><div>:</div><div>{bankAccountName}</div>
                   </div>
-                  <div className="mt-2 w-16 h-16 border border-gray-200 p-0.5 bg-white overflow-hidden">
-                    <img src={qrUrl} alt="QR" className="w-full h-full object-contain" />
-                  </div>
+                  {invoice.verification_status === 'Terverifikasi' ? (
+                    <div className="mt-2 w-16 h-16 border border-gray-200 p-0.5 bg-white overflow-hidden">
+                      <img src={qrUrl} alt="QR" className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="mt-2 w-16 h-16 border-2 border-dashed border-gray-300 flex items-center justify-center p-1 text-center text-[7px] text-gray-400">
+                      Menunggu Verifikasi
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-gray-800 text-center" style={{ minWidth: '180px' }}>

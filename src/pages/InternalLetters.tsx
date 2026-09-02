@@ -257,7 +257,7 @@ export default function InternalLetters() {
                               href={letter.bukti_tf_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors whitespace-nowrap"
                             >
                               Lihat Bukti
                             </a>

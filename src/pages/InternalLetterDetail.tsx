@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, Upload, X, Banknote } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
-import { useInternalLetters, useSaveInternalLetter, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems, useUploadFile, useSaveNotification } from "@/hooks/useData";
+import { useInternalLetters, useSaveInternalLetter, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems, useUploadFile, useSaveNotification, useNotifications, useUsers } from "@/hooks/useData";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from "@/lib/utils";
 
@@ -19,6 +19,8 @@ export default function InternalLetterDetail() {
   const saveIL = useSaveInternalLetter();
   const uploadFile = useUploadFile();
   const saveNotification = useSaveNotification();
+  const { data: notifications = [] } = useNotifications();
+  const { data: users = [] } = useUsers();
 
   // Verification state
   const [isRequestingVerif, setIsRequestingVerif] = useState(false);
@@ -161,11 +163,21 @@ export default function InternalLetterDetail() {
         updated_date: new Date().toISOString()
       });
       try {
+        let targetUserId = 'staff';
+        const reqNotifs = notifications.filter(n => n.ref_id === letter.id && n.type === 'verification_request');
+        if (reqNotifs.length > 0) {
+          reqNotifs.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
+          targetUserId = reqNotifs[0].from_user_id;
+        } else if (letter.created_by) {
+          const creator = users.find(u => u.name === letter.created_by || u.id === letter.created_by);
+          if (creator) targetUserId = creator.id;
+        }
+
         await saveNotification.mutateAsync({
           id: Date.now().toString(),
           from_user_id: user?.id || 'pimpinan',
           from_user_name: user?.name || 'Pimpinan',
-          to_user_id: letter.created_by || 'staff',
+          to_user_id: targetUserId,
           type: 'verification_result',
           ref_type: 'internal_letter',
           ref_id: letter.id,
@@ -196,11 +208,21 @@ export default function InternalLetterDetail() {
         updated_date: new Date().toISOString()
       });
       try {
+        let targetUserId = 'staff';
+        const reqNotifs = notifications.filter(n => n.ref_id === letter.id && n.type === 'verification_request');
+        if (reqNotifs.length > 0) {
+          reqNotifs.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
+          targetUserId = reqNotifs[0].from_user_id;
+        } else if (letter.created_by) {
+          const creator = users.find(u => u.name === letter.created_by || u.id === letter.created_by);
+          if (creator) targetUserId = creator.id;
+        }
+
         await saveNotification.mutateAsync({
           id: Date.now().toString(),
           from_user_id: user?.id || 'pimpinan',
           from_user_name: user?.name || 'Pimpinan',
-          to_user_id: letter.created_by || 'staff',
+          to_user_id: targetUserId,
           type: 'verification_result',
           ref_type: 'internal_letter',
           ref_id: letter.id,

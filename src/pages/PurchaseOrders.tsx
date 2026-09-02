@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Printer, Plus, Pencil, X, Upload, FileText } from 'lucide-react';
+import { Loader2, Printer, Plus, Pencil, X, Upload, FileText, SendHorizonal } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useCompany, useVendors, useSaveNotification } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
@@ -331,10 +331,10 @@ export default function PurchaseOrders() {
                               <button
                                 onClick={() => handleRequestVerification(po)}
                                 disabled={requestingVerificationId === po.id}
-                                className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors whitespace-nowrap"
                                 title="Minta Verifikasi"
                               >
-                                {requestingVerificationId === po.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                {requestingVerificationId === po.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <SendHorizonal className="w-3 h-3" />}
                                 Minta Verifikasi
                               </button>
                             )}

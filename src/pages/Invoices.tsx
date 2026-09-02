@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil } from 'lucide-react';
+import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -89,7 +89,6 @@ export default function Invoices() {
 
       setShowModal(false);
       resetModal();
-      navigate(`/invoices/${saved?.id || data.id}`);
     } catch {
       alert('Gagal membuat Invoice');
     } finally {
@@ -398,10 +397,10 @@ export default function Invoices() {
                           <button
                             onClick={() => handleRequestVerification(item)}
                             disabled={requestingVerificationId === item.id}
-                            className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors whitespace-nowrap"
                             title="Minta Verifikasi"
                           >
-                            {requestingVerificationId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                            {requestingVerificationId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <SendHorizonal className="w-3 h-3" />}
                             Minta Verifikasi
                           </button>
                         )}
