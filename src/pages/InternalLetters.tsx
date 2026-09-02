@@ -225,7 +225,7 @@ export default function InternalLetters() {
                         <td className="px-6 py-4 text-center text-gray-600">{itemsCount}</td>
 
                         <td className="px-6 py-4 text-right font-semibold text-gray-900">
-                          Rp {formatCurrency(Number(letter.total_nilai))}
+                          {formatCurrency(Number(letter.total_nilai))}
                         </td>
 
                         <td className="px-6 py-4">

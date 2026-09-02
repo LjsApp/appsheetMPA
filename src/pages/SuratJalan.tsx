@@ -102,7 +102,7 @@ export default function SuratJalanList() {
         created_date: new Date().toISOString(),
         updated_date: new Date().toISOString(),
       };
-      const saved = await saveSJ.mutateAsync(data);
+      await saveSJ.mutateAsync(data);
       setShowModal(false);
       setSelectedPoId('');
       // navigate(`/surat-jalan/${saved?.id || data.id}`);
@@ -160,7 +160,7 @@ export default function SuratJalanList() {
               <tbody className="divide-y divide-gray-100">
                 {paginatedData.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-4 align-top border-r border-gray-100 bg-white">
+                    <td className="px-5 py-4 align-middle border-r border-gray-100 bg-white">
                       <div className="font-semibold text-gray-900">{item.customer_name}</div>
                       <div className="font-mono text-xs text-gray-500 mt-0.5">{item.no_po}</div>
                       <div className="text-xs text-gray-400 max-w-[160px] truncate mt-0.5" title={item.judul_po}>{item.judul_po}</div>

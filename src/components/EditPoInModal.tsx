@@ -38,7 +38,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
   const { data: pos = [] } = usePurchaseOrders();
-  const hasPoOut = poIn ? pos.some(p => p.po_in_id === poIn.id) : false;
+  const hasPoOut = poIn ? pos.some(p => p.neraca_id === poIn.neraca_id) : false;
 
   const [selectedQtId, setSelectedQtId] = useState('');
   

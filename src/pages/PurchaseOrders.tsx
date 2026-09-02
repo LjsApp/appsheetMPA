@@ -280,7 +280,7 @@ export default function PurchaseOrders() {
                           {po.jumlah_item}
                         </td>
                         <td className="px-6 py-4 text-right font-semibold text-gray-900">
-                          Rp {formatCurrency(Number(po.total_nilai))}
+                          {formatCurrency(Number(po.total_nilai))}
                         </td>
                         <td className="px-6 py-4">
                           {po.verification_status === 'Terverifikasi' ? (

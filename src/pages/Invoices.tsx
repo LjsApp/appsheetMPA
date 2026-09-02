@@ -28,7 +28,7 @@ export default function Invoices() {
   const [editModal, setEditModal] = useState<{ isOpen: boolean; invoice: typeof invoices[0] | null }>({ isOpen: false, invoice: null });
   
   // Payment Modal States
-  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; invoice: typeof invoices[0] | null }>({ isOpen: false, invoice: null });
+  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; invoice: any }>({ isOpen: false, invoice: null });
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
   const [paymentNote, setPaymentNote] = useState('');
@@ -489,8 +489,8 @@ export default function Invoices() {
                     </td>
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">{item.invoice_number}</td>
                     <td className="px-5 py-4 text-gray-600 whitespace-nowrap text-xs">{formatDate(item.invoice_date)}</td>
-                    <td className="px-5 py-4 align-top max-w-[200px] truncate text-gray-900" title={item.delivery_address}>{item.delivery_address || '-'}</td>
-                    <td className="px-5 py-4 align-top">
+                    <td className="px-5 py-4 align-middle max-w-[200px] truncate text-gray-900" title={item.delivery_address}>{item.delivery_address || '-'}</td>
+                    <td className="px-5 py-4 align-middle">
                       {item.verification_status === 'Terverifikasi' ? (
                         <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
                           Terverifikasi
@@ -512,7 +512,7 @@ export default function Invoices() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4 align-top">
+                    <td className="px-5 py-4 align-middle">
                       {item.payment_status === 'Lunas' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20">
                           <BadgeCheck className="w-3 h-3" />

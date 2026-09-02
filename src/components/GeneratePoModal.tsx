@@ -4,7 +4,7 @@ import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
 import {
   useNeracaItems, useVendorDiscounts, useGetNextPoNumber,
-  useSavePurchaseOrder, useCustomers, usePics, useSavePoIn, useUploadFile, useSaveNotification
+  useSavePurchaseOrder, useCustomers, usePics, useSavePoIn, useUploadFile
 } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 import type { NeracaQuotation } from '@/types';
@@ -25,7 +25,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
   const savePurchaseOrder = useSavePurchaseOrder();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
-  const saveNotification = useSaveNotification();
+
   const user = useAuthStore(state => state.user);
 
   const [isGenerating, setIsGenerating] = useState(false);

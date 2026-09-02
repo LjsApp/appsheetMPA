@@ -39,16 +39,7 @@ type MenuItem =
   | { label: string; icon: React.ElementType; path?: never; group?: never; submenus: (SubItem | GroupItem)[] };
 
 const MENU_ITEMS: MenuItem[] = [
-  {
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    submenus: [
-      { label: 'Umum', icon: LayoutDashboard, path: '/' },
-      { label: 'Customer', icon: Users, path: '/dashboard/customer' },
-      { label: 'Vendor', icon: Building2, path: '/dashboard/vendor' },
-      { label: 'Proyek', icon: FileText, path: '/dashboard/proyek' },
-    ],
-  },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Customers',  icon: Users,           path: '/customers' },
   { label: 'Vendors',    icon: Building2,        path: '/vendors' },
   { label: 'Products',   icon: Package,          path: '/products' },
@@ -106,8 +97,6 @@ export default function MainLayout() {
   const canAccess = (path: string) => {
     if (allowedPaths === null) return true; // super admin
     if (allowedPaths.includes(path)) return true;
-    // If user has dashboard access ('/'), also allow all /dashboard/* sub-routes
-    if (path.startsWith('/dashboard/') && allowedPaths.includes('/')) return true;
     return false;
   };
 
@@ -136,9 +125,6 @@ export default function MainLayout() {
     // Determine base path (e.g., /neraca/123 -> /neraca)
     const segments = location.pathname.split('/');
     const basePath = segments[1] ? '/' + segments[1] : '/';
-    
-    // Allow /dashboard/* sub-routes if user has '/' access
-    if (location.pathname.startsWith('/dashboard/') && allowedPaths.includes('/')) return;
     
     // Allow if base path is in allowed paths, or if the exact path is allowed
     if (!allowedPaths.includes(basePath) && !allowedPaths.includes(location.pathname)) {
@@ -185,8 +171,11 @@ export default function MainLayout() {
         "bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out print:hidden",
         isSidebarOpen ? "w-64" : "w-[72px]"
       )}>
-        <div className={cn("h-16 flex items-center border-b border-gray-200 font-bold text-blue-600 transition-all", isSidebarOpen ? "px-6 text-xl" : "px-4 justify-center text-sm")}>
-          {isSidebarOpen ? "SourceQuo" : "SQ"}
+        <div className={cn("h-16 flex items-center border-b border-gray-200 transition-all", isSidebarOpen ? "px-5 gap-2.5" : "px-0 justify-center")}>
+          <img src="/logo.png" alt="SAPP" className="w-8 h-8 object-contain shrink-0" />
+          {isSidebarOpen && (
+            <span className="text-xl font-extrabold text-blue-700 tracking-tight">SAPP</span>
+          )}
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4">
