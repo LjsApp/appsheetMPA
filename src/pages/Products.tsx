@@ -202,7 +202,7 @@ export default function Products() {
                       </div>
                       <div className="flex-shrink-0 text-right">
                         <div className="text-xs text-gray-400 mb-1">Harga Beli Rata-rata</div>
-                        <div className="text-sm font-semibold text-gray-900">Rp {formatCurrency(avgBeli)}</div>
+                        <div className="text-sm font-semibold text-gray-900">{formatCurrency(avgBeli)}</div>
                       </div>
                     </div>
 
@@ -210,12 +210,12 @@ export default function Products() {
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
                         <Tag className="w-3 h-3" />
-                        Beli: Rp {formatCurrency(latestRow?.hargaBeli)}
+                        Beli: {formatCurrency(latestRow?.hargaBeli)}
                       </span>
                       {latestRow?.hargaJual > 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                          <DollarSign className="w-3 h-3" />
-                          Jual: Rp {formatCurrency(latestRow.hargaJual)}
+                          <Tag className="w-3 h-3" />
+                          Jual: {formatCurrency(latestRow.hargaJual)}
                         </span>
                       )}
                       {latestRow?.item.qty && (
@@ -267,10 +267,10 @@ export default function Products() {
                               </td>
                               <td className="px-4 py-3 font-medium text-gray-800">{row.vendorName}</td>
                               <td className="px-4 py-3 text-right font-mono text-gray-900">
-                                Rp {formatCurrency(row.hargaBeli)}
+                                {formatCurrency(row.hargaBeli)}
                               </td>
                               <td className="px-4 py-3 text-right font-mono text-emerald-700 font-medium">
-                                {row.hargaJual > 0 ? `Rp ${formatCurrency(row.hargaJual)}` : '-'}
+                                {row.hargaJual > 0 ? formatCurrency(row.hargaJual) : '-'}
                               </td>
                               <td className="px-4 py-3 text-center text-gray-600">
                                 {row.item.qty}

@@ -120,7 +120,6 @@ export default function PurchaseOrders() {
         franco: editFranco,
         dokumen: JSON.stringify(finalDocs),
         updated_date: new Date().toISOString(),
-        verification_status: 'Perlu Verifikasi',
       });
 
       setEditModal({ isOpen: false, po: null });

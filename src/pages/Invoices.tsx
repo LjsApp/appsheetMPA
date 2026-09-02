@@ -105,7 +105,6 @@ export default function Invoices() {
         invoice_number: invoiceNumber,
         invoice_date: invoiceDate,
         delivery_address: deliveryAddress,
-        verification_status: 'Perlu Verifikasi' as any,
         updated_date: new Date().toISOString(),
       });
 
@@ -222,11 +221,14 @@ export default function Invoices() {
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
               >
                 <option value="">-- Pilih PO In --</option>
-                {poIns.map(po => (
-                  <option key={po.id} value={po.id}>
-                    {po.po_in_number || po.id} — {po.customer_name}
-                  </option>
-                ))}
+                {poIns.map(po => {
+                  const isUsed = invoices.some(inv => inv.po_in_id === po.id);
+                  return (
+                    <option key={po.id} value={po.id} disabled={isUsed}>
+                      {po.po_in_number || po.id} — {po.customer_name} {isUsed ? '(Sudah dibuat)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
