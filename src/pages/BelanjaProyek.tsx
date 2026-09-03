@@ -431,7 +431,7 @@ export default function BelanjaProyek() {
 
       {/* Modal In */}
       {modalIn.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">{modalIn.data ? 'Edit Pemasukan' : 'Tambah Pemasukan'}</h2>
@@ -501,7 +501,7 @@ export default function BelanjaProyek() {
 
       {/* Modal Out */}
       {modalOut.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">{modalOut.data ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}</h2>
@@ -769,7 +769,7 @@ export default function BelanjaProyek() {
 
       {/* Modal In */}
       {modalIn.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">{modalIn.data ? 'Edit Pemasukan' : 'Tambah Pemasukan'}</h2>
@@ -846,7 +846,7 @@ export default function BelanjaProyek() {
 
       {/* Modal Out */}
       {modalOut.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">{modalOut.data ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}</h2>

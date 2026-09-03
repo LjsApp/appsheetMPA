@@ -577,139 +577,143 @@ export default function Quotations() {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Row 1: No. Quotation & Date */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">No. Quotation</label>
-                  <input
-                    value={editQtNumber}
-                    onChange={e => setEditQtNumber(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder="No. Quotation"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
-                  <input
-                    type="date"
-                    value={editQtDate}
-                    onChange={e => setEditQtDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Subject full width */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject (Judul Permintaan)</label>
-                <input
-                  value={editQtSubject}
-                  onChange={e => setEditQtSubject(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="Judul permintaan quotation"
-                />
-              </div>
-
-              {/* Row 3: Ref & Ref Date */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref (No Permintaan)</label>
-                  <input
-                    value={editQtRef}
-                    onChange={e => setEditQtRef(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder="Ref (No Permintaan)"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref Date</label>
-                  <input
-                    type="date"
-                    value={editQtRefDate}
-                    onChange={e => setEditQtRefDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-2 text-sm text-gray-600 mb-4">
+                Customer: <span className="font-semibold text-gray-800">{editModal.quotation.customer_name}</span>
               </div>
               
-              {/* Document Upload */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Upload Dokumen Inquiry</label>
-                <label className={`
-                  flex flex-col items-center justify-center w-full h-16 
-                  border-2 border-dashed rounded-lg cursor-pointer transition-colors
-                  ${isUploading ? 'bg-gray-50 border-gray-300' : 'bg-gray-50 border-gray-300 hover:bg-blue-50 hover:border-blue-400'}
-                `}>
-                  <div className="flex items-center gap-2 text-gray-500">
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                        <span className="text-sm">Mengupload...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        <span className="text-sm">Klik untuk upload (bisa lebih dari satu)</span>
-                      </>
+              <div className="grid grid-cols-2 gap-6">
+                {/* Kolom Kiri */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">No. Quotation</label>
+                    <input
+                      value={editQtNumber}
+                      onChange={e => setEditQtNumber(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="No. Quotation"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
+                    <input
+                      type="date"
+                      value={editQtDate}
+                      onChange={e => setEditQtDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject (Judul Permintaan)</label>
+                    <input
+                      value={editQtSubject}
+                      onChange={e => setEditQtSubject(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Judul permintaan quotation"
+                    />
+                  </div>
+                </div>
+
+                {/* Kolom Kanan */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref (No Permintaan)</label>
+                    <input
+                      value={editQtRef}
+                      onChange={e => setEditQtRef(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Ref (No Permintaan)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref Date</label>
+                    <input
+                      type="date"
+                      value={editQtRefDate}
+                      onChange={e => setEditQtRefDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  
+                  {/* Document Upload */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Upload Dokumen Inquiry</label>
+                    <label className={`
+                      flex flex-col items-center justify-center w-full h-16 
+                      border-2 border-dashed rounded-lg cursor-pointer transition-colors
+                      ${isUploading ? 'bg-gray-50 border-gray-300' : 'bg-gray-50 border-gray-300 hover:bg-blue-50 hover:border-blue-400'}
+                    `}>
+                      <div className="flex items-center gap-2 text-gray-500">
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                            <span className="text-sm">Mengupload...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4" />
+                            <span className="text-sm">Klik untuk upload</span>
+                          </>
+                        )}
+                      </div>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        multiple
+                        disabled={isUploading}
+                        onChange={async (e) => {
+                          if (!e.target.files?.length) return;
+                          setIsUploading(true);
+                          try {
+                            const newDocs: { name: string; url: string }[] = [];
+                            const files = Array.from(e.target.files);
+                            for (const file of files) {
+                              const base64 = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.readAsDataURL(file);
+                                reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                                reader.onerror = reject;
+                              });
+                              const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+                              newDocs.push({ name: file.name, url });
+                            }
+                            setEditQtDocs(prev => [...prev, ...newDocs]);
+                          } catch (error: any) {
+                            alert('Gagal mengupload file: ' + error.message);
+                          } finally {
+                            setIsUploading(false);
+                            if (e.target) e.target.value = '';
+                          }
+                        }}
+                      />
+                    </label>
+
+                    {editQtDocs.length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {editQtDocs.map((doc, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-100">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <FileText className="w-4 h-4 shrink-0" />
+                              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-xs">
+                                {doc.name}
+                              </a>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeUploadedDoc(idx)}
+                              className="p-1 text-emerald-600 hover:bg-emerald-100 rounded shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    multiple
-                    disabled={isUploading}
-                    onChange={async (e) => {
-                      if (!e.target.files?.length) return;
-                      setIsUploading(true);
-                      try {
-                        const newDocs: { name: string; url: string }[] = [];
-                        const files = Array.from(e.target.files);
-                        for (const file of files) {
-                          const base64 = await new Promise<string>((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.readAsDataURL(file);
-                            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-                            reader.onerror = reject;
-                          });
-                          const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-                          newDocs.push({ name: file.name, url });
-                        }
-                        setEditQtDocs(prev => [...prev, ...newDocs]);
-                      } catch (error: any) {
-                        alert('Gagal mengupload file: ' + error.message);
-                      } finally {
-                        setIsUploading(false);
-                        if (e.target) e.target.value = '';
-                      }
-                    }}
-                  />
-                </label>
-
-                {editQtDocs.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {editQtDocs.map((doc, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-100">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <FileText className="w-4 h-4 shrink-0" />
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-xs">
-                            {doc.name}
-                          </a>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeUploadedDoc(idx)}
-                          className="p-1 text-emerald-600 hover:bg-emerald-100 rounded shrink-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-5 pb-5 pt-3 border-t shrink-0">
+            <div className="flex justify-end gap-2 px-6 pb-6 pt-3 border-t border-gray-100 shrink-0">
               <Button variant="secondary" onClick={() => setEditModal({ isOpen: false, quotation: null })}>Batal</Button>
               <Button onClick={handleSaveEdit} loading={isSavingEdit}>Simpan</Button>
             </div>
@@ -719,7 +723,7 @@ export default function Quotations() {
 
       {/* Add Quotation Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl flex flex-col max-h-[85vh]">
             <div className="flex items-center justify-between p-5 border-b shrink-0">
               <h2 className="text-lg font-bold text-gray-900">Tambah Quotation</h2>

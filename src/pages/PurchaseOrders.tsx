@@ -372,7 +372,7 @@ export default function PurchaseOrders() {
 
       {/* Edit PO Out Modal */}
       {editModal.isOpen && editModal.po && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Edit PO Out</h2>
