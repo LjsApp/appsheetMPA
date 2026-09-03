@@ -88,7 +88,7 @@ export interface Inquiry {
   updated_date: string;
 }
 
-export type InquiryStatus = 'Jalan' | 'Batal' | 'Telat' | 'Neraca';
+export type InquiryStatus = 'Jalan' | 'Batal' | 'Telat' | 'Neraca' | 'Quotation' | 'PO' | 'Invoice' | 'Selesai';
 
 export interface Neraca {
   id: string;

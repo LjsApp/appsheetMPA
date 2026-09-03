@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink, Edit2 } from 'lucide-react';
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import Modal from '@/components/Modal';
 import { useForm } from 'react-hook-form';
 import { FileCheck2, Copy } from 'lucide-react';
 import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useDuplicateNeraca, usePurchaseOrders } from '@/hooks/useData';
+import TableToolbar from '@/components/TableToolbar';
 import type { Neraca } from '@/types';
 import { formatDate } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
@@ -14,6 +15,8 @@ import { useAuthStore } from '@/store/authStore';
 export default function Neracas() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -49,13 +52,23 @@ export default function Neracas() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Neraca>();
 
-  const filteredInquiries = allInquiries
-    .filter(i => i.status === 'Neraca')
-    .filter(i =>
-      (i.request_number || '').toLowerCase().includes(search.toLowerCase()) ||
-      (i.request_title || '').toLowerCase().includes(search.toLowerCase()) ||
-      (i.customer_name || '').toLowerCase().includes(search.toLowerCase())
-    );
+  const filteredInquiries = useMemo(() => {
+    const s = search.toLowerCase();
+    return allInquiries
+      .filter(i => i.status === 'Neraca')
+      .filter(i =>
+        !s ||
+        (i.request_number || '').toLowerCase().includes(s) ||
+        (i.request_title || '').toLowerCase().includes(s) ||
+        (i.customer_name || '').toLowerCase().includes(s)
+      );
+  }, [allInquiries, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInquiries.length / rowsPerPage));
+  const paginatedInquiries = filteredInquiries.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
@@ -126,15 +139,15 @@ export default function Neracas() {
         <Button variant="secondary" onClick={handleInit} loading={initSheets.isPending}>Init Database</Button>
       </div>
 
-      <div className="flex justify-end">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari inquiry..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
-        </div>
-      </div>
-
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <TableToolbar
+          search={search}
+          onSearchChange={v => { setSearch(v); setCurrentPage(1); }}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={v => { setRowsPerPage(v); setCurrentPage(1); }}
+          totalRows={filteredInquiries.length}
+          searchPlaceholder="Cari no permintaan, judul, customer..."
+        />
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100 text-sm">
             <thead>
@@ -151,10 +164,10 @@ export default function Neracas() {
             <tbody className="divide-y divide-gray-50">
               {isLoadingInq ? (
                 <tr><td colSpan={7} className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" /></td></tr>
-              ) : filteredInquiries.length === 0 ? (
+              ) : paginatedInquiries.length === 0 ? (
                 <tr><td colSpan={7} className="p-8 text-center text-gray-400">Belum ada inquiry di tahap Neraca.</td></tr>
               ) : (
-                filteredInquiries.map(inq => {
+                paginatedInquiries.map(inq => {
                   const isExpanded = expandedRows[inq.id];
                   const inqNeracas = neracas.filter(n => n.inquiry_id === inq.id);
                   return (
@@ -276,6 +289,13 @@ export default function Neracas() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 text-sm bg-white">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">←</button>
+            <span className="text-gray-500">Hal {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">→</button>
+          </div>
+        )}
       </div>
 
       {/* Modal — name only */}

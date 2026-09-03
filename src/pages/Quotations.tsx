@@ -118,7 +118,6 @@ export default function Quotations() {
   const [editQtDocs, setEditQtDocs] = useState<{name: string, url: string}[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   const saveInquiry = useSaveInquiry();
   const uploadFile = useUploadFile();
@@ -570,33 +569,38 @@ export default function Quotations() {
 
       {/* Edit Quotation Modal */}
       {editModal.isOpen && editModal.quotation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-5 border-b shrink-0">
               <h2 className="text-base font-semibold text-gray-900">Edit Quotation</h2>
               <button onClick={() => setEditModal({ isOpen: false, quotation: null })} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">No. Quotation</label>
-                <input
-                  value={editQtNumber}
-                  onChange={e => setEditQtNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="No. Quotation"
-                />
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Row 1: No. Quotation & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">No. Quotation</label>
+                  <input
+                    value={editQtNumber}
+                    onChange={e => setEditQtNumber(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="No. Quotation"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
+                  <input
+                    type="date"
+                    value={editQtDate}
+                    onChange={e => setEditQtDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
-                <input
-                  type="date"
-                  value={editQtDate}
-                  onChange={e => setEditQtDate(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
+
+              {/* Row 2: Subject full width */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject (Judul Permintaan)</label>
                 <input
@@ -606,6 +610,8 @@ export default function Quotations() {
                   placeholder="Judul permintaan quotation"
                 />
               </div>
+
+              {/* Row 3: Ref & Ref Date */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref (No Permintaan)</label>
@@ -631,22 +637,21 @@ export default function Quotations() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Upload Dokumen Inquiry</label>
                 <label className={`
-                  flex flex-col items-center justify-center w-full h-20 
-                  border-2 border-dashed rounded-lg cursor-pointer
-                  transition-colors
+                  flex flex-col items-center justify-center w-full h-16 
+                  border-2 border-dashed rounded-lg cursor-pointer transition-colors
                   ${isUploading ? 'bg-gray-50 border-gray-300' : 'bg-gray-50 border-gray-300 hover:bg-blue-50 hover:border-blue-400'}
                 `}>
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <div className="flex items-center gap-2 text-gray-500">
                     {isUploading ? (
-                      <div className="flex flex-col items-center">
-                        <Loader2 className="w-5 h-5 text-blue-500 animate-spin mb-1" />
-                        <p className="text-xs text-gray-500">Mengupload... {uploadProgress}%</p>
-                      </div>
+                      <>
+                        <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                        <span className="text-sm">Mengupload...</span>
+                      </>
                     ) : (
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <>
                         <Upload className="w-4 h-4" />
                         <span className="text-sm">Klik untuk upload (bisa lebih dari satu)</span>
-                      </div>
+                      </>
                     )}
                   </div>
                   <input 
@@ -675,7 +680,6 @@ export default function Quotations() {
                         alert('Gagal mengupload file: ' + error.message);
                       } finally {
                         setIsUploading(false);
-                        setUploadProgress(0);
                         if (e.target) e.target.value = '';
                       }
                     }}
@@ -683,20 +687,19 @@ export default function Quotations() {
                 </label>
 
                 {editQtDocs.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-medium text-gray-700">Sudah terupload:</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     {editQtDocs.map((doc, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-100">
                         <div className="flex items-center gap-2 overflow-hidden">
                           <FileText className="w-4 h-4 shrink-0" />
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-xs">
                             {doc.name}
                           </a>
                         </div>
                         <button
                           type="button"
                           onClick={() => removeUploadedDoc(idx)}
-                          className="p-1 text-emerald-600 hover:bg-emerald-100 rounded"
+                          className="p-1 text-emerald-600 hover:bg-emerald-100 rounded shrink-0"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -706,7 +709,7 @@ export default function Quotations() {
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-5 pb-5">
+            <div className="flex justify-end gap-2 px-5 pb-5 pt-3 border-t shrink-0">
               <Button variant="secondary" onClick={() => setEditModal({ isOpen: false, quotation: null })}>Batal</Button>
               <Button onClick={handleSaveEdit} loading={isSavingEdit}>Simpan</Button>
             </div>

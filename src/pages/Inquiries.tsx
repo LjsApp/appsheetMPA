@@ -7,16 +7,22 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
 import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
-import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
+import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile, useNeracas, useNeracaQuotations, usePurchaseOrders, useInvoices } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 
 const INQUIRY_STATUSES: Inquiry['status'][] = ['Jalan', 'Batal', 'Telat'];
 
 // Helpers
+// Color mapping for effective status tabs
 function getStatusColor(status: string) {
   if (status === 'Jalan') return 'bg-emerald-100 text-emerald-700';
   if (status === 'Telat') return 'bg-red-100 text-red-700';
   if (status === 'Batal') return 'bg-gray-100 text-gray-500';
+  if (status === 'Neraca') return 'bg-blue-100 text-blue-700';
+  if (status === 'Quotation') return 'bg-indigo-100 text-indigo-700';
+  if (status === 'PO') return 'bg-purple-100 text-purple-700';
+  if (status === 'Invoice') return 'bg-orange-100 text-orange-700';
+  if (status === 'Selesai') return 'bg-teal-100 text-teal-700';
   return 'bg-gray-100 text-gray-500';
 }
 
@@ -55,6 +61,10 @@ export default function Inquiries() {
   const { data: inquiries = [], isLoading, isError } = useInquiries();
   const { data: customers = [] } = useCustomers();
   const { data: pics = [] } = usePics();
+  const { data: allNeracas = [] } = useNeracas();
+  const { data: allQuotations = [] } = useNeracaQuotations();
+  const { data: allPoIns = [] } = usePurchaseOrders();
+  const { data: allInvoices = [] } = useInvoices();
   const saveInquiry = useSaveInquiry();
   const deleteInquiry = useDeleteInquiry();
   const uploadFile = useUploadFile();
@@ -62,6 +72,31 @@ export default function Inquiries() {
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Inquiry>();
   const watchCustomerId = watch('customer_id');
   const user = useAuthStore(state => state.user);
+
+  // Compute effective progress status for an inquiry
+  const getEffectiveStatus = useCallback((inq: Inquiry): Inquiry['status'] => {
+    // Jika status stored adalah Batal, tetap Batal
+    if (inq.status === 'Batal') return 'Batal';
+    // Cari neraca terkait
+    const myNeracas = allNeracas.filter(n => n.inquiry_id === inq.id);
+    if (myNeracas.length === 0) return inq.status; // Jalan / Telat
+    // Cari quotation terkait (via neraca_id)
+    const myNeracaIds = myNeracas.map(n => n.id);
+    const myQuotations = allQuotations.filter(q => myNeracaIds.includes(q.neraca_id));
+    if (myQuotations.length === 0) return 'Neraca';
+    // Cari PO In terkait (via quotation_id)
+    const myQtIds = myQuotations.map(q => q.id);
+    const myPoIns = allPoIns.filter(p => myQtIds.includes(p.quotation_id));
+    if (myPoIns.length === 0) return 'Quotation';
+    // Cari Invoice terkait (via po_in_id)
+    const myPoInIds = myPoIns.map(p => p.id);
+    const myInvoices = allInvoices.filter(inv => myPoInIds.includes(inv.po_in_id));
+    if (myInvoices.length === 0) return 'PO';
+    // Cek apakah semua invoice sudah Lunas
+    const hasLunas = myInvoices.some(inv => inv.payment_status === 'Lunas');
+    if (hasLunas) return 'Selesai';
+    return 'Invoice';
+  }, [allNeracas, allQuotations, allPoIns, allInvoices]);
 
   // Filter PICs by selected customer
   const filteredPics = pics.filter(p => p.customer_id === watchCustomerId);
@@ -85,14 +120,15 @@ export default function Inquiries() {
   const filtered = useMemo(() => {
     return inquiries
       .filter(i => {
+        const effectiveStatus = getEffectiveStatus(i);
         const matchesSearch =
           (i.request_number || '').toLowerCase().includes(search.toLowerCase()) ||
           (i.request_title || '').toLowerCase().includes(search.toLowerCase()) ||
           (i.customer_name || '').toLowerCase().includes(search.toLowerCase());
-        const matchesTab = activeTab === 'All' || i.status === activeTab;
+        const matchesTab = activeTab === 'All' || effectiveStatus === activeTab;
         return matchesSearch && matchesTab;
       });
-  }, [inquiries, search, activeTab]);
+  }, [inquiries, search, activeTab, getEffectiveStatus]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const paginated = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -263,21 +299,30 @@ export default function Inquiries() {
       } catch { return '-'; }
     }},
     ...(user?.is_super_admin ? [{ key: 'created_by', label: 'Dikerjakan Oleh', render: (v: unknown) => <span className="text-gray-500 text-xs italic">{String(v || '-')}</span> }] : []),
-    { key: 'status', label: 'Status', render: (v: unknown) => (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(String(v))}`}>
-        {String(v)}
-      </span>
-    )},
+    { key: 'status', label: 'Status', render: (_v: unknown, row: any) => {
+      const effStatus = getEffectiveStatus(row as Inquiry);
+      return (
+        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(effStatus)}`}>
+          {effStatus}
+        </span>
+      );
+    }},
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center justify-end gap-2">
-        <button 
-          onClick={e => { e.stopPropagation(); handleMoveToNeraca(row); }}
-          className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-600 transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-emerald-200"
-          title="Pindahkan ke Neraca"
-          disabled={saveInquiry.isPending}
-        >
-          <span>Ke Neraca</span>
-        </button>
+        {(() => {
+          const effStatus = getEffectiveStatus(row as Inquiry);
+          const canMoveToNeraca = effStatus === 'Jalan' || effStatus === 'Telat';
+          return canMoveToNeraca ? (
+            <button 
+              onClick={e => { e.stopPropagation(); handleMoveToNeraca(row); }}
+              className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-600 transition-colors flex items-center gap-1 text-xs font-medium border border-transparent hover:border-emerald-200"
+              title="Pindahkan ke Neraca"
+              disabled={saveInquiry.isPending}
+            >
+              <span>Ke Neraca</span>
+            </button>
+          ) : null;
+        })()}
         <button onClick={e => { e.stopPropagation(); openEdit(row); }}
           className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"><Edit2 className="w-4 h-4" /></button>
         <button onClick={e => { e.stopPropagation(); handleDelete(row.id); }}
@@ -334,7 +379,7 @@ export default function Inquiries() {
       {/* Tabs & Toolbar */}
       <div className="flex flex-col gap-4">
         <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto w-full sm:w-fit">
-          {(['All', ...INQUIRY_STATUSES] as const).map(tab => (
+          {(['All', 'Jalan', 'Neraca', 'Quotation', 'PO', 'Invoice', 'Selesai', 'Batal', 'Telat'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab as any); setCurrentPage(1); }}
