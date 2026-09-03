@@ -244,7 +244,7 @@ export default function Invoices() {
         item.no_po.toLowerCase().includes(term)
       );
     });
-  }, [invoices, poIns, searchTerm]);
+  }, [invoices, poIns, searchTerm, paymentStatusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(dataWithDetails.length / rowsPerPage));
   const paginatedData = dataWithDetails.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);

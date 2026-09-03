@@ -762,7 +762,7 @@ export default function NeracaDetail() {
                   <table className="min-w-full divide-y divide-gray-100 text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-gray-500">Item Customer</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-500">Vendor</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-500">Qty</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-500">Harga Beli Satuan</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-500">Total Beli</th>
@@ -783,7 +783,16 @@ export default function NeracaDetail() {
 
                         return (
                           <tr key={idx}>
-                            <td className="px-3 py-2 text-gray-800">{i.item_customer}</td>
+                            <td className="px-3 py-2 text-gray-800 text-justify">
+                              <div className="mb-4">
+                                <div>item customer :</div>
+                                <div>{i.item_customer}</div>
+                              </div>
+                              <div>
+                                <div><strong>offer to :</strong></div>
+                                <div>{i.item_vendor}</div>
+                              </div>
+                            </td>
                             <td className="px-3 py-2 text-right">{i.qty}</td>
                             <td className="px-3 py-2 text-right">Rp {fmt(Number(i.harga_beli) || 0)}</td>
                             <td className="px-3 py-2 text-right">Rp {fmt(totalBeliRow)}</td>

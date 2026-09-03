@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart, Edit2, Search, Calendar, MessageCircle } from 'lucide-react';
+import { FileCheck2, Loader2, Trash2, Plus, X, Printer, ShoppingCart, Edit2, Search, Calendar, MessageCircle, Upload, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import type { NeracaQuotation } from '@/types';
 import {
   useNeracaQuotations, useDeleteNeracaQuotation,
-  useInquiries, usePurchaseOrders,
+  useInquiries, useSaveInquiry, usePurchaseOrders,
   useNeracas, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi,
-  useNeracaItems, useNeracaDetail, usePics
+  useNeracaItems, useNeracaDetail, usePics, useUploadFile
 } from '@/hooks/useData';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 import { formatDate, formatCurrency } from '@/lib/utils';
@@ -113,8 +113,15 @@ export default function Quotations() {
   const [editQtNumber, setEditQtNumber] = useState('');
   const [editQtDate, setEditQtDate] = useState('');
   const [editQtSubject, setEditQtSubject] = useState('');
+  const [editQtRef, setEditQtRef] = useState('');
+  const [editQtRefDate, setEditQtRefDate] = useState('');
+  const [editQtDocs, setEditQtDocs] = useState<{name: string, url: string}[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
+  const saveInquiry = useSaveInquiry();
+  const uploadFile = useUploadFile();
   const toggleNeracaSelection = (id: string) => {
     setSelectedNeracaIds(prev => {
       const next = new Set(prev);
@@ -166,10 +173,8 @@ export default function Quotations() {
           inquiry_id: inquiry.id,
           customer_id: inquiry.customer_id || '',
           customer_name: inquiry.customer_name || '',
-          request_title: inquiry.request_title || '',
           nilai: grandTotal,
           dokumen: '',
-          status: 'Draft' as const,
           created_by: user?.name || '',
           created_date: new Date().toISOString().split('T')[0],
           updated_date: new Date().toISOString().split('T')[0],
@@ -202,7 +207,34 @@ export default function Quotations() {
     } else {
       setEditQtDate('');
     }
-    setEditQtSubject(q.request_title || '');
+    
+    const inq = inquiries.find(i => i.id === q.inquiry_id);
+    if (inq) {
+      setEditQtSubject(inq.request_title || '');
+      setEditQtRef(inq.request_number || '');
+      
+      const inqDate = inq.request_date ? new Date(inq.request_date) : null;
+      if (inqDate && !isNaN(inqDate.getTime())) {
+        const y = inqDate.getFullYear();
+        const m = String(inqDate.getMonth() + 1).padStart(2, '0');
+        const dStr = String(inqDate.getDate()).padStart(2, '0');
+        setEditQtRefDate(`${y}-${m}-${dStr}`);
+      } else {
+        setEditQtRefDate('');
+      }
+
+      try {
+        const parsedDocs = inq.documents ? JSON.parse(inq.documents) : [];
+        setEditQtDocs(Array.isArray(parsedDocs) ? parsedDocs : []);
+      } catch {
+        setEditQtDocs([]);
+      }
+    } else {
+      setEditQtSubject('');
+      setEditQtRef('');
+      setEditQtRefDate('');
+      setEditQtDocs([]);
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -213,15 +245,31 @@ export default function Quotations() {
         ...editModal.quotation,
         quotation_number: editQtNumber,
         created_date: editQtDate ? new Date(editQtDate).toISOString() : editModal.quotation.created_date,
-        request_title: editQtSubject,
         updated_date: new Date().toISOString().split('T')[0],
       });
+      
+      const inq = inquiries.find(i => i.id === editModal.quotation?.inquiry_id);
+      if (inq) {
+        await saveInquiry.mutateAsync({
+          ...inq,
+          request_title: editQtSubject,
+          request_number: editQtRef,
+          request_date: editQtRefDate ? new Date(editQtRefDate).toISOString() : inq.request_date,
+          documents: JSON.stringify(editQtDocs),
+          updated_date: new Date().toISOString().split('T')[0],
+        });
+      }
+      
       setEditModal({ isOpen: false, quotation: null });
     } catch (e: any) {
       alert('Gagal menyimpan: ' + e.message);
     } finally {
       setIsSavingEdit(false);
     }
+  };
+
+  const removeUploadedDoc = (idx: number) => {
+    setEditQtDocs(prev => prev.filter((_, i) => i !== idx));
   };
 
   // Deduplicate: keep only one (latest) quotation per neraca_id
@@ -270,11 +318,14 @@ export default function Quotations() {
   const filteredQuotations = useMemo(() => {
     if (!search) return uniqueQuotations;
     const s = search.toLowerCase();
-    return uniqueQuotations.filter(q =>
-      (q.quotation_number || '').toLowerCase().includes(s) ||
-      (q.customer_name || '').toLowerCase().includes(s) ||
-      (q.request_title || '').toLowerCase().includes(s)
-    );
+    return uniqueQuotations.filter(q => {
+      const inq = inquiries.find(i => i.id === q.inquiry_id);
+      return (
+        (q.quotation_number || '').toLowerCase().includes(s) ||
+        (q.customer_name || '').toLowerCase().includes(s) ||
+        (inq?.request_title || '').toLowerCase().includes(s)
+      );
+    });
   }, [uniqueQuotations, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredQuotations.length / rowsPerPage));
@@ -428,7 +479,10 @@ export default function Quotations() {
                         )}
                         <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
                           <div>{q.quotation_number}</div>
-                          {q.request_title && <div className="text-[11px] text-gray-400 font-sans mt-0.5 max-w-[160px] truncate" title={q.request_title}>{q.request_title}</div>}
+                          {(() => {
+                            const inqForRow = inquiries.find(i => i.id === q.inquiry_id);
+                            return inqForRow?.request_title ? <div className="text-[11px] text-gray-400 font-sans mt-0.5 max-w-[160px] truncate" title={inqForRow.request_title}>{inqForRow.request_title}</div> : null;
+                          })()}
                         </td>
                         <td className="px-5 py-4 text-right font-semibold text-gray-900">
                           {Number(q.nilai) > 0 ? formatCurrency(Number(q.nilai)) : <span className="text-gray-400 font-normal text-xs">-</span>}
@@ -544,13 +598,112 @@ export default function Quotations() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Judul Permintaan</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject (Judul Permintaan)</label>
                 <input
                   value={editQtSubject}
                   onChange={e => setEditQtSubject(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                   placeholder="Judul permintaan quotation"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref (No Permintaan)</label>
+                  <input
+                    value={editQtRef}
+                    onChange={e => setEditQtRef(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Ref (No Permintaan)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Ref Date</label>
+                  <input
+                    type="date"
+                    value={editQtRefDate}
+                    onChange={e => setEditQtRefDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              </div>
+              
+              {/* Document Upload */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Upload Dokumen Inquiry</label>
+                <label className={`
+                  flex flex-col items-center justify-center w-full h-20 
+                  border-2 border-dashed rounded-lg cursor-pointer
+                  transition-colors
+                  ${isUploading ? 'bg-gray-50 border-gray-300' : 'bg-gray-50 border-gray-300 hover:bg-blue-50 hover:border-blue-400'}
+                `}>
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {isUploading ? (
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="w-5 h-5 text-blue-500 animate-spin mb-1" />
+                        <p className="text-xs text-gray-500">Mengupload... {uploadProgress}%</p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Upload className="w-4 h-4" />
+                        <span className="text-sm">Klik untuk upload (bisa lebih dari satu)</span>
+                      </div>
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    multiple
+                    disabled={isUploading}
+                    onChange={async (e) => {
+                      if (!e.target.files?.length) return;
+                      setIsUploading(true);
+                      try {
+                        const newDocs: { name: string; url: string }[] = [];
+                        const files = Array.from(e.target.files);
+                        for (const file of files) {
+                          const base64 = await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(file);
+                            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                            reader.onerror = reject;
+                          });
+                          const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+                          newDocs.push({ name: file.name, url });
+                        }
+                        setEditQtDocs(prev => [...prev, ...newDocs]);
+                      } catch (error: any) {
+                        alert('Gagal mengupload file: ' + error.message);
+                      } finally {
+                        setIsUploading(false);
+                        setUploadProgress(0);
+                        if (e.target) e.target.value = '';
+                      }
+                    }}
+                  />
+                </label>
+
+                {editQtDocs.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-700">Sudah terupload:</p>
+                    {editQtDocs.map((doc, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm border border-emerald-100">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileText className="w-4 h-4 shrink-0" />
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">
+                            {doc.name}
+                          </a>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeUploadedDoc(idx)}
+                          className="p-1 text-emerald-600 hover:bg-emerald-100 rounded"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-5">

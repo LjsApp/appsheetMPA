@@ -595,7 +595,7 @@ function routeRequest(action, method, body, params) {
       var nqSheet = ss.getSheetByName('neraca_quotations');
       if (!nqSheet) {
         nqSheet = ss.insertSheet('neraca_quotations');
-        nqSheet.appendRow(['id','quotation_number','neraca_id','inquiry_id','customer_id','customer_name','request_title','nilai','dokumen','status','created_date','updated_date']);
+        nqSheet.appendRow(['id','quotation_number','neraca_id','inquiry_id','customer_id','customer_name','nilai','dokumen','created_by','follow_up_count','last_follow_up_date','created_date','updated_date']);
         results.push('Created sheet: neraca_quotations');
       }
 

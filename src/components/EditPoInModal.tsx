@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
-import { useNeracaQuotations, useCustomers, usePics, useSavePoIn, useUploadFile, usePurchaseOrders } from '@/hooks/useData';
+import { useNeracaQuotations, useCustomers, usePics, useSavePoIn, useUploadFile, usePurchaseOrders, useInquiries } from '@/hooks/useData';
 import type { POIn } from '@/types';
 
 interface EditPoInModalProps {
@@ -34,6 +34,7 @@ function parseDocs(raw: string | undefined | null): { name: string; url: string 
 export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQuotationIds }: EditPoInModalProps) {
   const { data: quotations = [] } = useNeracaQuotations();
   const { data: customers = [] } = useCustomers();
+  const { data: inquiries = [] } = useInquiries();
   const { data: pics = [] } = usePics();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
@@ -111,7 +112,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
     } else {
       // Reset form for a new quotation
       setPoInNumber('');
-      setJudul(selectedQt?.request_title || '');
+      setJudul(selectedQt?.inquiry_id ? (inquiries?.find((i: any) => i.id === selectedQt.inquiry_id)?.request_title || '') : '');
       setTanggal(new Date().toISOString().split('T')[0]);
       setTanggalBatas('');
       setPicId('');

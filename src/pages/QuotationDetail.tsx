@@ -1,8 +1,8 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, Send, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import StatusBadge from '@/components/StatusBadge';
+
 import { useNeracaQuotations, useSaveNeracaQuotation, useNeracaItems, useNeracaDetail, useCompany, useInquiries, useCustomers, usePics } from '@/hooks/useData';
 import { getDeliveryWeeks } from '@/lib/neracaUtils';
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from '@/lib/utils';
@@ -183,17 +183,11 @@ export default function QuotationDetail() {
       <div className="no-print">
         <PageHeader
           title={`Quotation ${quotation.quotation_number}`}
-          subtitle={`${quotation.customer_name} · ${quotation.request_title}`}
+          subtitle={`${quotation.customer_name} · ${inquiry?.request_title || ''}`}
           action={
             <div className="flex items-center gap-2">
-              <StatusBadge label={quotation.status} />
               <Button variant="secondary" onClick={() => navigate('/quotations')}><RotateCcw className="w-4 h-4" /> Kembali</Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
-              {quotation.status === 'Draft' && (
-                <Button onClick={() => saveQuotation.mutate({ ...quotation, status: 'Send' })} loading={saveQuotation.isPending}>
-                  <Send className="w-4 h-4" /> Kirim ke Customer
-                </Button>
-              )}
             </div>
           }
         />
@@ -287,8 +281,8 @@ export default function QuotationDetail() {
                     <div className="space-y-0.5">
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Qtn No</span><span className="text-gray-700 mr-2">:</span><span className="font-bold text-gray-900">{quotation.quotation_number}</span></div>
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{formatDate(quotation.created_date)}</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Subject</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{quotation.request_title}</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">Wa / Email</span></div>
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Subject</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{inquiry?.request_title}</span></div>
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{inquiry?.request_number || 'Wa / Email'}</span></div>
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{inquiry?.request_date ? formatDate(inquiry.request_date) : '-'}</span></div>
                     </div>
                   </div>
@@ -296,7 +290,7 @@ export default function QuotationDetail() {
                   {/* Greeting */}
                   <div className="mb-4 text-gray-800 text-[12pt]">
                     <p>Dear Sir/Madam,</p>
-                    <p className="mt-1">Here we submit the quotation for <span className="font-medium">{quotation.request_title}</span> as you request:</p>
+                    <p className="mt-1">Here we submit the quotation for <span className="font-medium">{inquiry?.request_title}</span> as you request:</p>
                   </div>
 
                   {/* Items Table */}

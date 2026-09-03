@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, Loader2, FileText, Package, Plus, Download, Edit } from 'lucide-react';
+import { Trash2, Loader2, FileText, Plus, Download, Edit } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import AddPoInModal from '@/components/AddPoInModal';
@@ -81,43 +81,7 @@ export default function POInList() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Package className="w-5 h-5 text-purple-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Total PO In</p>
-            <p className="text-xl font-bold text-gray-900">{poIns.length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <FileText className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Dengan Dokumen</p>
-            <p className="text-xl font-bold text-gray-900">{poIns.filter(p => getDocs(p).length > 0).length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Plus className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Bulan Ini</p>
-            <p className="text-xl font-bold text-gray-900">
-              {poIns.filter(p => {
-                if (!p.tanggal) return false;
-                const d = new Date(p.tanggal);
-                const now = new Date();
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-              }).length}
-            </p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

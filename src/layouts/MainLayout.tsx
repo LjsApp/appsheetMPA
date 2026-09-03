@@ -373,7 +373,7 @@ export default function MainLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10 transition-all print:hidden">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-[100] relative transition-all print:hidden">
           <div className="flex-1 flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}

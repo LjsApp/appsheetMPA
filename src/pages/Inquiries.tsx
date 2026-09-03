@@ -84,7 +84,6 @@ export default function Inquiries() {
 
   const filtered = useMemo(() => {
     return inquiries
-      .filter(i => i.status !== 'Neraca')
       .filter(i => {
         const matchesSearch =
           (i.request_number || '').toLowerCase().includes(search.toLowerCase()) ||

@@ -243,10 +243,8 @@ export interface NeracaQuotation {
   inquiry_id: string;
   customer_id: string;
   customer_name: string;
-  request_title: string;     // judul permintaan dari inquiry
   nilai: number;             // grand_total dari neraca
   dokumen: string;           // URL dokumen (optional)
-  status: NeracaQuotationStatus;
   created_by?: string;
   follow_up_count?: number;
   last_follow_up_date?: string;
