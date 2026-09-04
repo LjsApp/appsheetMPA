@@ -290,8 +290,8 @@ export default function Inquiries() {
           <div className="flex flex-wrap gap-1">
             {docs.map((d, i) => (
               <a key={i} href={d.url} target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs hover:bg-blue-100">
-                <FileText className="w-3 h-3" />{d.name}
+                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors">
+                Dok.{i + 1}
               </a>
             ))}
           </div>

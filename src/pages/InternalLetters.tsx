@@ -220,7 +220,7 @@ export default function InternalLetters() {
                           )}
                         </td>
 
-                        <td className="px-6 py-4 font-medium text-gray-900">{letter.vendor_name}</td>
+                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{letter.vendor_name}</td>
 
                         <td className="px-6 py-4 text-center text-gray-600">{itemsCount}</td>
 

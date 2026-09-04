@@ -472,7 +472,6 @@ export default function Invoices() {
                 <tr>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Invoice</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal Invoice</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Alamat Pengiriman</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Verifikasi</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Bayar</th>
@@ -487,8 +486,10 @@ export default function Invoices() {
                       <div className="font-semibold text-gray-900">{item.customer_name}</div>
                       <div className="font-mono text-xs text-gray-500 mt-0.5">{item.no_po}</div>
                     </td>
-                    <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">{item.invoice_number}</td>
-                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap text-xs">{formatDate(item.invoice_date)}</td>
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
+                      <div>{item.invoice_number}</div>
+                      <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(item.invoice_date)}</div>
+                    </td>
                     <td className="px-5 py-4 align-middle max-w-[200px] truncate text-gray-900" title={item.delivery_address}>{item.delivery_address || '-'}</td>
                     <td className="px-5 py-4 align-middle">
                       {item.verification_status === 'Terverifikasi' ? (

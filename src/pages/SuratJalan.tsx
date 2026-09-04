@@ -151,7 +151,6 @@ export default function SuratJalanList() {
                 <tr>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Surat Jalan</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Pengiriman / Resi</th>
                   {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
@@ -165,11 +164,9 @@ export default function SuratJalanList() {
                       <div className="font-mono text-xs text-gray-500 mt-0.5">{item.no_po}</div>
                       <div className="text-xs text-gray-400 max-w-[160px] truncate mt-0.5" title={item.judul_po}>{item.judul_po}</div>
                     </td>
-                    <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">{item.sj_number}</td>
-                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap text-xs">
-                      {new Date(item.created_date).toLocaleDateString('id-ID', {
-                        day: 'numeric', month: 'short', year: 'numeric'
-                      })}
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
+                      <div>{item.sj_number}</div>
+                      <div className="text-[11px] text-gray-400 font-sans mt-0.5">{new Date(item.created_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                     </td>
                     <td className="px-5 py-4 text-xs">
                       {(() => {

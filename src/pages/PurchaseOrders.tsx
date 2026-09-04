@@ -5,7 +5,7 @@ import { Loader2, Printer, Plus, Pencil, X, Upload, FileText, SendHorizonal } fr
 import { PageHeader, Button } from '@/components/ui';
 import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useSaveNotification } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
 import GeneratePoModal from '@/components/GeneratePoModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -269,6 +269,7 @@ export default function PurchaseOrders() {
                               </span>
                             )}
                           </div>
+                          {po.created_date && <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(po.created_date)}</div>}
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                           {po.vendor_name}

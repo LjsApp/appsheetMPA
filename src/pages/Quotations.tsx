@@ -283,17 +283,7 @@ export default function Quotations() {
     return Array.from(map.values());
   }, [quotations]);
 
-  const getInquiryDocument = (inquiryId: string) => {
-    const inq = inquiries.find(i => i.id === inquiryId);
-    if (!inq || !inq.documents) return null;
-    try {
-      const docs = JSON.parse(inq.documents);
-      if (Array.isArray(docs) && docs.length > 0) return docs[0].url;
-      return docs;
-    } catch {
-      return inq.documents;
-    }
-  };
+
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; title: string; quotation: NeracaQuotation | null }>({ isOpen: false, id: null, title: '', quotation: null });
   const [search, setSearch] = useState('');
@@ -377,7 +367,6 @@ export default function Quotations() {
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Nilai</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dokumen</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status PO</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
                 {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
               </tr>
@@ -406,7 +395,7 @@ export default function Quotations() {
                   return group.map((q, idx) => {
                     const activePOs = purchaseOrders.filter(p => p.quotation_id === q.id);
                     const hasPO = activePOs.length > 0;
-                    const docUrl = getInquiryDocument(q.inquiry_id);
+                    
                     
                     const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
                     const now = Date.now();
@@ -478,20 +467,30 @@ export default function Quotations() {
                         )}
                         <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
                           <div>{q.quotation_number}</div>
-                          {(() => {
-                            const inqForRow = inquiries.find(i => i.id === q.inquiry_id);
-                            return inqForRow?.request_title ? <div className="text-[11px] text-gray-400 font-sans mt-0.5 max-w-[160px] truncate" title={inqForRow.request_title}>{inqForRow.request_title}</div> : null;
-                          })()}
+                          <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(q.created_date)}</div>
                         </td>
                         <td className="px-5 py-4 text-right font-semibold text-gray-900">
                           {Number(q.nilai) > 0 ? formatCurrency(Number(q.nilai)) : <span className="text-gray-400 font-normal text-xs">-</span>}
                         </td>
                         <td className="px-5 py-4">
-                          {docUrl ? (
-                            <a href={docUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline hover:text-blue-800">Lihat Dok.</a>
-                          ) : (
-                            <span className="text-gray-300 text-xs">-</span>
-                          )}
+                          {(() => {
+                            let docs: {name: string; url: string}[] = [];
+                            try { 
+                              const inq = inquiries.find(i => i.id === q.inquiry_id);
+                              docs = inq?.documents ? JSON.parse(inq.documents) : [];
+                            } catch {}
+                            if (docs.length === 0) return <span className="text-gray-300 text-xs">-</span>;
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {docs.map((doc, i) => (
+                                  <a key={i} href={doc.url} target="_blank" rel="noreferrer"
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors">
+                                    Dok.{i + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-4">
                           {hasPO ? (
@@ -506,7 +505,6 @@ export default function Quotations() {
                             <span className="inline-flex items-center px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-500">Belum PO</span>
                           )}
                         </td>
-                        <td className="px-5 py-4 text-xs text-gray-500">{formatDate(q.created_date)}</td>
                         {user?.is_super_admin && <td className="px-5 py-4 text-xs italic text-gray-500">{q.created_by || '-'}</td>}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
