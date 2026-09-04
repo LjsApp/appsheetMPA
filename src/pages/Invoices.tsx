@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal, BadgeCheck, HandCoins } from 'lucide-react';
+import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal, BadgeCheck, HandCoins, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -498,7 +498,7 @@ export default function Invoices() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Verifikasi</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Bayar</th>
                   {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase min-w-[200px]">Bukti Transfer</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -548,8 +548,21 @@ export default function Invoices() {
                       )}
                     </td>
                     {user?.is_super_admin && <td className="px-5 py-4 align-top italic text-gray-500">{users.find(u => u.id === item.created_by)?.name || item.created_by || '-'}</td>}
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-5 py-4 align-top">
+                      {item.payment_status === 'Lunas' && (
+                        <div className="mb-3 space-y-1.5">
+                          {item.payment_date && <div className="text-[11px] text-gray-600">Tgl: <span className="font-medium text-gray-900">{formatDate(item.payment_date)}</span></div>}
+                          {item.payment_proof_url && (
+                            <a href={item.payment_proof_url} target="_blank" rel="noreferrer"
+                               className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors">
+                              <FileText className="w-3 h-3 mr-1" />
+                              Dokumen Bukti
+                            </a>
+                          )}
+                          {item.payment_note && <div className="text-[11px] text-gray-500 italic max-w-[200px]">"{item.payment_note}"</div>}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-start gap-2 flex-wrap">
                         {item.verification_status === 'Terverifikasi' && item.payment_status !== 'Lunas' && (
                           <button
                             onClick={() => setPaymentModal({ isOpen: true, invoice: item })}
