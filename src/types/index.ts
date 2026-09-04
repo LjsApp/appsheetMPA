@@ -172,6 +172,7 @@ export interface PurchaseOrder {
   due_date?: string;
   franco?: string;
   subject?: string;
+  ref?: string;
   ref_date?: string;
   created_by?: string;
   verification_status?: 'Perlu Verifikasi' | 'Menunggu Verifikasi' | 'Terverifikasi' | 'Ditolak';

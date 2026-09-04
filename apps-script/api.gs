@@ -633,7 +633,7 @@ function routeRequest(action, method, body, params) {
       } else {
         // Migrate: add new columns if missing
         var poHeaders = poSheet.getRange(1, 1, 1, poSheet.getLastColumn()).getValues()[0];
-        ['due_date', 'subject', 'ref_date', 'type', 'dp_reference_id', 'franco', 'created_by', 'verification_status', 'verification_note', 'verified_by', 'verified_date'].forEach(function(col) {
+        ['due_date', 'subject', 'ref_date', 'ref', 'type', 'dp_reference_id', 'franco', 'created_by', 'verification_status', 'verification_note', 'verified_by', 'verified_date'].forEach(function(col) {
           if (poHeaders.indexOf(col) === -1) {
             var lastCol = poSheet.getLastColumn();
             poSheet.getRange(1, lastCol + 1).setValue(col);

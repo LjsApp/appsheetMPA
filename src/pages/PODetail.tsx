@@ -309,7 +309,7 @@ export default function PODetail() {
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Po No</span><span className="text-gray-700 mr-2">:</span><span className="font-bold text-gray-900">{po.po_number}</span></div>
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{letterDate}</span></div>
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Subject</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{subject}</span></div>
-                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">Wa / Email</span></div>
+                      <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{po.ref || '-'}</span></div>
                       <div className="flex"><span className="text-gray-700 w-24 shrink-0">Ref Date</span><span className="text-gray-700 mr-2">:</span><span className="text-gray-800">{po.ref_date ? formatDate(po.ref_date) : '-'}</span></div>
                     </div>
                   </div>
@@ -439,7 +439,7 @@ export default function PODetail() {
                     <h3 className="font-bold text-gray-900 mb-2">Term and Condition</h3>
                     <div className="grid grid-cols-[120px_10px_1fr] gap-y-1 text-gray-800">
                       <div className="font-medium">Due Date</div><div>:</div><div>{po.due_date ? formatDate(po.due_date) : '-'}</div>
-                      <div className="font-medium">Franco</div><div>:</div><div>{po.franco || '-'}</div>
+                      <div className="font-medium">Franco</div><div>:</div><div>Surabaya</div>
                       <div className="font-medium">Shipping Address</div><div>:</div><div>{company?.address || '-'}</div>
                       <div className="font-medium">Packaging</div><div>:</div><div>Package must be sure to be good, secure and safe, to prevent any damage.</div>
                     </div>

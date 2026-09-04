@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Plus, Pencil, X, Upload, FileText, SendHorizonal } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useCompany, useVendors, useSaveNotification } from '@/hooks/useData';
+import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useSaveNotification } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
@@ -16,8 +16,8 @@ export default function PurchaseOrders() {
   const navigate = useNavigate();
   const { data: purchaseOrders = [], isLoading: loadingPOs, refetch: refetchPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
-  const { data: company } = useCompany();
-  const { data: vendors = [] } = useVendors();
+  
+  
   const savePO = useSavePurchaseOrder();
   const saveNotification = useSaveNotification();
   const isLoading = loadingPOs || loadingPoIns;
@@ -37,7 +37,7 @@ export default function PurchaseOrders() {
   const [editDueDate, setEditDueDate] = useState('');
   const [editSubject, setEditSubject] = useState('');
   const [editRefDate, setEditRefDate] = useState('');
-  const [editFranco, setEditFranco] = useState('');
+  const [editRef, setEditRef] = useState('');
   const [existingDocs, setExistingDocs] = useState<any[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,11 +63,10 @@ export default function PurchaseOrders() {
   const openEdit = (po: PurchaseOrder) => {
     setEditPoNumber(po.po_number || '');
     setEditCreatedDate(toDateInput(po.created_date));
-    setEditDueDate(toDateInput(po.due_date));
+    setEditDueDate(po.due_date || '');
     setEditSubject(po.subject || '');
-    setEditRefDate(toDateInput(po.ref_date));
-    setEditFranco(po.franco || '');
-    
+    setEditRefDate(po.ref_date || '');
+    setEditRef(po.ref || '');
     let docs: any[] = [];
     if (po.dokumen) {
       try { docs = JSON.parse(po.dokumen); } catch {}
@@ -117,7 +116,7 @@ export default function PurchaseOrders() {
         due_date: editDueDate || undefined,
         subject: editSubject,
         ref_date: editRefDate || undefined,
-        franco: editFranco,
+        ref: editRef,
         dokumen: JSON.stringify(finalDocs),
         updated_date: new Date().toISOString(),
       });
@@ -370,17 +369,17 @@ export default function PurchaseOrders() {
         )}
       </div>
 
-      {/* Edit PO Out Modal */}
+      {/* Edit Modal */}
       {editModal.isOpen && editModal.po && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Edit PO Out</h2>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+              <h2 className="text-base font-semibold text-gray-900">Edit Dokumen Vendor</h2>
               <button onClick={() => setEditModal({ isOpen: false, po: null })} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto">
               <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-2 text-sm text-gray-600 mb-4">
                 Vendor: <span className="font-semibold text-gray-800">{editModal.po.vendor_name}</span>
               </div>
@@ -438,46 +437,17 @@ export default function PurchaseOrders() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Franco</label>
-                    <div className="space-y-2">
-                      <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${editFranco === company?.address ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-violet-300'}`}>
-                        <div className="mt-0.5">
-                          <input 
-                            type="radio" 
-                            name="franco"
-                            className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
-                            checked={editFranco === company?.address}
-                            onChange={() => setEditFranco(company?.address || "")}
-                          />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">Alamat Perusahaan</div>
-                          <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{company?.address || "-"}</div>
-                        </div>
-                      </label>
-
-                      {editModal.po?.vendor_id && (
-                        <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${editFranco === vendors.find(v => v.id === editModal.po?.vendor_id)?.address ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-violet-300'}`}>
-                          <div className="mt-0.5">
-                            <input 
-                              type="radio" 
-                              name="franco"
-                              className="w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
-                              checked={editFranco === vendors.find(v => v.id === editModal.po?.vendor_id)?.address}
-                              onChange={() => setEditFranco(vendors.find(v => v.id === editModal.po?.vendor_id)?.address || "")}
-                            />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">Alamat Vendor</div>
-                            <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{vendors.find(v => v.id === editModal.po?.vendor_id)?.address || "-"}</div>
-                          </div>
-                        </label>
-                      )}
-                    </div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Ref (No Permintaan)</label>
+                    <input
+                      value={editRef}
+                      onChange={e => setEditRef(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      placeholder="Ref"
+                    />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen PO Out</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Dokumen Vendor</label>
                   
                   {/* Existing docs */}
                   {existingDocs.length > 0 && (
