@@ -7,7 +7,7 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
 import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
-import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile, useNeracas, useNeracaQuotations, usePurchaseOrders, useInvoices } from '@/hooks/useData';
+import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 
 const INQUIRY_STATUSES: Inquiry['status'][] = ['Jalan', 'Batal', 'Telat'];
@@ -61,10 +61,6 @@ export default function Inquiries() {
   const { data: inquiries = [], isLoading, isError } = useInquiries();
   const { data: customers = [] } = useCustomers();
   const { data: pics = [] } = usePics();
-  const { data: allNeracas = [] } = useNeracas();
-  const { data: allQuotations = [] } = useNeracaQuotations();
-  const { data: allPoIns = [] } = usePurchaseOrders();
-  const { data: allInvoices = [] } = useInvoices();
   const saveInquiry = useSaveInquiry();
   const deleteInquiry = useDeleteInquiry();
   const uploadFile = useUploadFile();
@@ -74,29 +70,10 @@ export default function Inquiries() {
   const user = useAuthStore(state => state.user);
 
   // Compute effective progress status for an inquiry
+  // We now rely purely on the database status which is actively synced across the app
   const getEffectiveStatus = useCallback((inq: Inquiry): Inquiry['status'] => {
-    // Jika status stored adalah Batal, tetap Batal
-    if (inq.status === 'Batal') return 'Batal';
-    // Cari neraca terkait
-    const myNeracas = allNeracas.filter(n => n.inquiry_id === inq.id);
-    if (myNeracas.length === 0) return inq.status; // Jalan / Telat
-    // Cari quotation terkait (via neraca_id)
-    const myNeracaIds = myNeracas.map(n => n.id);
-    const myQuotations = allQuotations.filter(q => myNeracaIds.includes(q.neraca_id));
-    if (myQuotations.length === 0) return 'Neraca';
-    // Cari PO In terkait (via quotation_id)
-    const myQtIds = myQuotations.map(q => q.id);
-    const myPoIns = allPoIns.filter(p => myQtIds.includes(p.quotation_id));
-    if (myPoIns.length === 0) return 'Quotation';
-    // Cari Invoice terkait (via po_in_id)
-    const myPoInIds = myPoIns.map(p => p.id);
-    const myInvoices = allInvoices.filter(inv => myPoInIds.includes(inv.po_in_id));
-    if (myInvoices.length === 0) return 'PO';
-    // Cek apakah semua invoice sudah Lunas
-    const hasLunas = myInvoices.some(inv => inv.payment_status === 'Lunas');
-    if (hasLunas) return 'Selesai';
-    return 'Invoice';
-  }, [allNeracas, allQuotations, allPoIns, allInvoices]);
+    return inq.status;
+  }, []);
 
   // Filter PICs by selected customer
   const filteredPics = pics.filter(p => p.customer_id === watchCustomerId);

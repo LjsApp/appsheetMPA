@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
-import { useNeracaQuotations, useSavePoIn, useUploadFile } from '@/hooks/useData';
+import { useNeracaQuotations, useSavePoIn, useUploadFile, useInquiries, useNeracas, useSaveInquiry } from '@/hooks/useData';
 
 interface AddPoInModalProps {
   isOpen: boolean;
@@ -13,7 +13,10 @@ interface AddPoInModalProps {
 
 export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotationIds }: AddPoInModalProps) {
   const { data: quotations = [] } = useNeracaQuotations();
+  const { data: neracas = [] } = useNeracas();
+  const { data: inquiries = [] } = useInquiries();
   const savePoIn = useSavePoIn();
+  const saveInquiry = useSaveInquiry();
   const uploadFile = useUploadFile();
 
   const [selectedQtId, setSelectedQtId] = useState('');
@@ -81,6 +84,12 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
         created_date: new Date().toISOString(),
         updated_date: new Date().toISOString(),
       });
+
+      const neraca = neracas.find(n => n.id === selectedQt.neraca_id);
+      const inquiry = inquiries.find(i => i.id === neraca?.inquiry_id);
+      if (inquiry && inquiry.status !== 'PO' && inquiry.status !== 'Invoice' && inquiry.status !== 'Selesai') {
+        saveInquiry.mutate({ ...inquiry, status: 'PO', updated_date: new Date().toISOString() });
+      }
 
       if (onSuccess) onSuccess();
       handleClose();
