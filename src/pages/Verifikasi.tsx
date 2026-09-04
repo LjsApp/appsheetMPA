@@ -490,7 +490,7 @@ export default function Verifikasi() {
 
       {/* ─── PO/Invoice Reject Modal ─── */}
       {rejectModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Tolak Dokumen</h2>
@@ -510,7 +510,7 @@ export default function Verifikasi() {
 
       {/* ─── IL Approve Modal (dengan upload bukti transfer) ─── */}
       {ilApproveModal.isOpen && ilApproveModal.letter && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2"><Banknote className="w-5 h-5 text-emerald-600" /> Konfirmasi Persetujuan IL</h2>
@@ -571,7 +571,7 @@ export default function Verifikasi() {
 
       {/* ─── IL Reject Modal ─── */}
       {ilRejectModal.isOpen && ilRejectModal.letter && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2"><X className="w-5 h-5 text-red-500" /> Tolak Internal Letter</h2>

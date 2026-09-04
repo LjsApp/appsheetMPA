@@ -16,7 +16,7 @@ import {
   useNeracaItems, useSaveNeracaItem, useDeleteNeracaItem,
   useVendors,
   useVendorDiscounts, useSaveVendorDiscount, useDeleteVendorDiscount,
-  useNeracaQuotations, usePurchaseOrders
+  useNeracaQuotations, usePoIns, useInvoices
 } from '@/hooks/useData';
 
 // ==================== Constants ====================
@@ -109,12 +109,19 @@ export default function NeracaDetail() {
   const saveItem = useSaveNeracaItem();
   const deleteItem = useDeleteNeracaItem();
   const { data: vendors = [] } = useVendors();
-  // --- Lock status: locked if this neraca already has Quotations or POs ---
+  // --- Lock status: locked if this neraca already has Invoices ---
   const { data: allQuotations = [] } = useNeracaQuotations();
-  const { data: allPOs = [] } = usePurchaseOrders();
-  const hasQuotation = allQuotations.some(q => q.neraca_id === neracaId);
-  const hasPO = allPOs.some(p => p.neraca_id === neracaId);
-  const isLocked = hasQuotation || hasPO;
+  const { data: allPoIns = [] } = usePoIns();
+  const { data: allInvoices = [] } = useInvoices();
+
+  const myQuotations = allQuotations.filter(q => q.neraca_id === neracaId);
+  const myQtIds = myQuotations.map(q => q.id);
+  const myPoIns = allPoIns.filter((p: any) => myQtIds.includes(p.quotation_id));
+  const myPoInIds = myPoIns.map((p: any) => p.id);
+  const myInvoices = allInvoices.filter((inv: any) => myPoInIds.includes(inv.po_in_id));
+
+  const hasInvoice = myInvoices.length > 0;
+  const isLocked = hasInvoice;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -369,7 +376,7 @@ export default function NeracaDetail() {
                 <div className="flex items-start gap-3 px-5 py-3 bg-amber-50 border-b border-amber-200">
                   <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-amber-800">
-                    <span className="font-semibold">Neraca Terkunci</span> — Neraca ini sudah memiliki {hasQuotation && 'Quotation'}{hasQuotation && hasPO && ' dan '}{hasPO && 'PO Out'}. Hapus Quotation &amp; PO Out terlebih dahulu untuk dapat mengedit item.
+                    <span className="font-semibold">Neraca Terkunci</span> - Neraca ini sudah mencapai tahap Invoice. Hapus Invoice terkait terlebih dahulu untuk dapat mengedit item.
                   </div>
                   <Lock className="w-4 h-4 text-amber-600 ml-auto flex-shrink-0" />
                 </div>

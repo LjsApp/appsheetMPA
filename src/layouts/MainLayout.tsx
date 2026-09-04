@@ -383,13 +383,13 @@ export default function MainLayout() {
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <NotificationBell />
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm ml-2">
               {user?.name?.[0]?.toUpperCase() || 'U'}
             </div>
             {isSidebarOpen !== false && (
               <span className="text-sm font-medium text-gray-800">{user?.name || 'User'}</span>
             )}
+            <NotificationBell />
             <button
               onClick={handleLogout}
               className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors ml-2"
