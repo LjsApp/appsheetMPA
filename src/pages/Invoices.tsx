@@ -251,7 +251,7 @@ export default function Invoices() {
 
   const selectedPo = poIns.find(p => p.id === selectedPoId);
 
-  const ModalContent = ({ isEdit }: { isEdit: boolean }) => (
+  const renderModal = (isEdit: boolean) => (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -365,7 +365,7 @@ export default function Invoices() {
   );
 
 
-  const PaymentModalContent = () => (
+  const renderPaymentModal = () => (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -587,9 +587,9 @@ export default function Invoices() {
         )}
       </div>
 
-      {showModal && <ModalContent isEdit={false} />}
-      {editModal.isOpen && <ModalContent isEdit={true} />}
-      {paymentModal.isOpen && <PaymentModalContent />}
+      {showModal && renderModal(false)}
+      {editModal.isOpen && renderModal(true)}
+      {paymentModal.isOpen && renderPaymentModal()}
 
       <DeleteConfirmModal
         isOpen={deleteModal.isOpen}

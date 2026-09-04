@@ -666,11 +666,11 @@ function routeRequest(action, method, body, params) {
       var invSheet = ss.getSheetByName('invoices');
       if (!invSheet) {
         invSheet = ss.insertSheet('invoices');
-        invSheet.appendRow(['id','po_in_id','invoice_number','invoice_date','customer_id','delivery_address','created_by','verification_status','verification_note','verified_by','verified_date','created_date','updated_date']);
+        invSheet.appendRow(['id','po_in_id','invoice_number','invoice_date','customer_id','delivery_address','created_by','verification_status','verification_note','verified_by','verified_date','payment_status','payment_date','payment_proof_url','payment_note','created_date','updated_date']);
         results.push('Created sheet: invoices');
       } else {
         var invHeaders = invSheet.getRange(1, 1, 1, invSheet.getLastColumn()).getValues()[0];
-        ['created_by', 'verification_status', 'verification_note', 'verified_by', 'verified_date'].forEach(function(col) {
+        ['created_by', 'verification_status', 'verification_note', 'verified_by', 'verified_date', 'payment_status', 'payment_date', 'payment_proof_url', 'payment_note'].forEach(function(col) {
           if (invHeaders.indexOf(col) === -1) {
             var lastCol = invSheet.getLastColumn();
             invSheet.getRange(1, lastCol + 1).setValue(col);
