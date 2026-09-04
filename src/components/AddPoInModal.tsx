@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
-import { useNeracaQuotations, useCustomers, usePics, useSavePoIn, useUploadFile } from '@/hooks/useData';
+import { useNeracaQuotations, useSavePoIn, useUploadFile } from '@/hooks/useData';
 
 interface AddPoInModalProps {
   isOpen: boolean;
@@ -13,8 +13,6 @@ interface AddPoInModalProps {
 
 export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotationIds }: AddPoInModalProps) {
   const { data: quotations = [] } = useNeracaQuotations();
-  const { data: customers = [] } = useCustomers();
-  const { data: pics = [] } = usePics();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
 
@@ -22,9 +20,6 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
   const [poInNumber, setPoInNumber] = useState('');
   const [judul, setJudul] = useState('');
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [alamatType, setAlamatType] = useState<'office' | 'warehouse'>('office');
-  const [customAlamat, setCustomAlamat] = useState('');
-  const [picId, setPicId] = useState('');
   const [tanggalBatas, setTanggalBatas] = useState('');
   const [poInFiles, setPoInFiles] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -33,31 +28,9 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
 
   const selectedQt = useMemo(() => quotations.find(q => q.id === selectedQtId), [quotations, selectedQtId]);
   
-  const customer = useMemo(() => {
-    if (!selectedQt) return undefined;
-    return customers.find(c => 
-      (selectedQt.customer_id && c.id === selectedQt.customer_id) || 
-      (selectedQt.customer_name && c.company_name === selectedQt.customer_name)
-    );
-  }, [customers, selectedQt]);
 
-  const customerPics = useMemo(() => {
-    if (!customer) return [];
-    return pics.filter(p => p.customer_id === customer.id);
-  }, [pics, customer]);
 
-  const alamatOptions = useMemo(() => {
-    if (!customer) return [];
-    const opts: { label: string; value: string; key: 'office' | 'warehouse' }[] = [];
-    if (customer.office_address) opts.push({ label: 'Alamat Kantor', value: customer.office_address, key: 'office' });
-    if (customer.warehouse_address) opts.push({ label: 'Alamat Gudang', value: customer.warehouse_address, key: 'warehouse' });
-    return opts;
-  }, [customer]);
 
-  const selectedAlamat = useMemo(() => {
-    const opt = alamatOptions.find(o => o.key === alamatType);
-    return opt ? opt.value : customAlamat;
-  }, [alamatType, alamatOptions, customAlamat]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -71,8 +44,8 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
 
   const handleGenerate = async () => {
     if (!selectedQt) return;
-    if (!poInNumber.trim() || !judul.trim() || !picId || !tanggalBatas) {
-      alert('Harap lengkapi field wajib: No PO Customer, Judul PO, PIC, dan Batas Waktu.');
+    if (!poInNumber.trim() || !judul.trim() || !tanggalBatas) {
+      alert('Harap lengkapi field wajib: No PO Customer, Judul PO, dan Batas Waktu.');
       return;
     }
 
@@ -92,7 +65,6 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
       }
 
       // 2. Save PO In record
-      const selectedPic = pics.find(p => p.id === picId);
       const poInId = `POIN-${Date.now()}`;
       await savePoIn.mutateAsync({
         id: poInId,
@@ -103,9 +75,9 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
         po_in_number: poInNumber,
         judul,
         tanggal,
-        alamat_pengiriman: selectedAlamat || customAlamat,
-        pic_id: picId,
-        pic_name: selectedPic?.name || '',
+        alamat_pengiriman: '',
+        pic_id: '',
+        pic_name: '',
         tanggal_batas: tanggalBatas,
         dokumen: JSON.stringify(uploadedDocs),
         created_date: new Date().toISOString(),
@@ -125,7 +97,6 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
     setSelectedQtId('');
     setPoInNumber('');
     setJudul('');
-    setPicId('');
     setTanggalBatas('');
     setPoInFiles([]);
     onClose();
@@ -204,54 +175,7 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Alamat Pengiriman</label>
-                {alamatOptions.length > 0 ? (
-                  <div className="space-y-2">
-                    {alamatOptions.map(opt => (
-                      <label key={opt.key} className="flex items-start gap-2 cursor-pointer p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                        <input
-                          type="radio"
-                          name="alamat"
-                          value={opt.key}
-                          checked={alamatType === opt.key}
-                          onChange={() => setAlamatType(opt.key)}
-                          className="mt-0.5"
-                        />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">{opt.label}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{opt.value}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <textarea
-                    value={customAlamat}
-                    onChange={e => setCustomAlamat(e.target.value)}
-                    placeholder="Masukkan alamat pengiriman..."
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-400"
-                  />
-                )}
-              </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">PIC Customer <span className="text-red-500">*</span></label>
-                <select
-                  value={picId}
-                  onChange={e => setPicId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-400"
-                >
-                  <option value="">-- Pilih PIC --</option>
-                  {customerPics.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} {p.position ? `(${p.position})` : ''}</option>
-                  ))}
-                </select>
-                {customerPics.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1">⚠ Belum ada PIC untuk customer ini.</p>
-                )}
-              </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Dokumen PO In</label>

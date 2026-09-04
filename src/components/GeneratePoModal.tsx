@@ -4,7 +4,7 @@ import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
 import {
   useNeracaItems, useVendorDiscounts, useGetNextPoNumber,
-  useSavePurchaseOrder, useCustomers, usePics, useSavePoIn, useUploadFile
+  useSavePurchaseOrder, useSavePoIn, useUploadFile
 } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 import type { NeracaQuotation } from '@/types';
@@ -19,8 +19,7 @@ interface GeneratePoModalProps {
 export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoInForm }: GeneratePoModalProps) {
   const { data: items = [], isLoading: loadingItems } = useNeracaItems(quotation?.neraca_id || '');
   const { data: vds = [], isLoading: loadingVds } = useVendorDiscounts(quotation?.neraca_id || '');
-  const { data: customers = [] } = useCustomers();
-  const { data: pics = [] } = usePics();
+
   const getNextPoNumber = useGetNextPoNumber();
   const savePurchaseOrder = useSavePurchaseOrder();
   const savePoIn = useSavePoIn();
@@ -34,35 +33,13 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
   const [poInNumber, setPoInNumber] = useState('');
   const [judul, setJudul] = useState('');
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [alamatType, setAlamatType] = useState<'office' | 'warehouse'>('office');
-  const [customAlamat, setCustomAlamat] = useState('');
-  const [picId, setPicId] = useState('');
   const [tanggalBatas, setTanggalBatas] = useState('');
   const [poInFiles, setPoInFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const customer = useMemo(() =>
-    customers.find(c => c.id === quotation?.customer_id),
-    [customers, quotation?.customer_id]
-  );
 
-  const customerPics = useMemo(() =>
-    pics.filter(p => p.customer_id === quotation?.customer_id),
-    [pics, quotation?.customer_id]
-  );
 
-  const alamatOptions = useMemo(() => {
-    if (!customer) return [];
-    const opts: { label: string; value: string; key: 'office' | 'warehouse' }[] = [];
-    if (customer.office_address) opts.push({ label: 'Alamat Kantor', value: customer.office_address, key: 'office' });
-    if (customer.warehouse_address) opts.push({ label: 'Alamat Gudang', value: customer.warehouse_address, key: 'warehouse' });
-    return opts;
-  }, [customer]);
 
-  const selectedAlamat = useMemo(() => {
-    const opt = alamatOptions.find(o => o.key === alamatType);
-    return opt ? opt.value : customAlamat;
-  }, [alamatType, alamatOptions, customAlamat]);
 
   const uniqueVendors = useMemo(() => {
     if (!quotation) return [];
@@ -87,8 +64,8 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
 
   const handleGenerate = async () => {
     if (!quotation) return;
-    if (!skipPoInForm && (!poInNumber.trim() || !judul.trim() || !picId || !tanggalBatas)) {
-      alert('Harap lengkapi semua field yang wajib diisi (Nomor PO Customer, Judul PO, PIC, dan Batas Waktu Pengerjaan).');
+    if (!skipPoInForm && (!poInNumber.trim() || !judul.trim() || !tanggalBatas)) {
+      alert('Harap lengkapi semua field yang wajib diisi (Nomor PO Customer, Judul PO, dan Batas Waktu Pengerjaan).');
       return;
     }
 
@@ -110,7 +87,6 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
         }
 
         // 2. Save PO In record
-        const selectedPic = pics.find(p => p.id === picId);
         const poInId = `POIN-${Date.now()}`;
         await savePoIn.mutateAsync({
           id: poInId,
@@ -121,9 +97,9 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
           po_in_number: poInNumber,
           judul,
           tanggal,
-          alamat_pengiriman: selectedAlamat || customAlamat,
-          pic_id: picId,
-          pic_name: selectedPic?.name || '',
+          alamat_pengiriman: '',
+          pic_id: '',
+          pic_name: '',
           tanggal_batas: tanggalBatas,
           dokumen: JSON.stringify(uploadedDocs),
           created_date: new Date().toISOString(),
@@ -323,56 +299,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
                   </div>
                 </div>
 
-                {/* Alamat */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Alamat Pengiriman</label>
-                  {alamatOptions.length > 0 ? (
-                    <div className="space-y-2">
-                      {alamatOptions.map(opt => (
-                        <label key={opt.key} className="flex items-start gap-2 cursor-pointer p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                          <input
-                            type="radio"
-                            name="alamat"
-                            value={opt.key}
-                            checked={alamatType === opt.key}
-                            onChange={() => setAlamatType(opt.key)}
-                            className="mt-0.5 flex-shrink-0"
-                          />
-                          <div>
-                            <p className="text-xs font-medium text-gray-700">{opt.label}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{opt.value}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <textarea
-                      value={customAlamat}
-                      onChange={e => setCustomAlamat(e.target.value)}
-                      placeholder="Masukkan alamat pengiriman..."
-                      rows={2}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                    />
-                  )}
-                </div>
 
-                {/* PIC */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">PIC Customer <span className="text-red-500">*</span></label>
-                  <select
-                    value={picId}
-                    onChange={e => setPicId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="">-- Pilih PIC --</option>
-                    {customerPics.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} {p.position ? `(${p.position})` : ''}</option>
-                    ))}
-                  </select>
-                  {customerPics.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">⚠ Belum ada PIC untuk customer ini. Tambahkan di menu Customers.</p>
-                  )}
-                </div>
 
                 {/* Upload Dokumen */}
                 <div>

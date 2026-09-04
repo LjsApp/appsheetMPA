@@ -72,10 +72,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
     );
   }, [customers, selectedQt]);
 
-  const customerPics = useMemo(() => {
-    if (!customer) return [];
-    return pics.filter(p => p.customer_id === customer.id);
-  }, [pics, customer]);
+
 
   const alamatOptions = useMemo(() => {
     if (!customer) return [];
@@ -147,8 +144,8 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
 
   const handleSave = async () => {
     if (!poIn || !selectedQt) return;
-    if (!poInNumber.trim() || !judul.trim() || !picId || !tanggalBatas) {
-      alert('Harap lengkapi field wajib: No PO Customer, Judul PO, PIC, dan Batas Waktu.');
+    if (!poInNumber.trim() || !judul.trim() || !tanggalBatas) {
+      alert('Harap lengkapi field wajib: No PO Customer, Judul PO, dan Batas Waktu.');
       return;
     }
 
@@ -284,55 +281,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
               </div>
 
               {/* Alamat */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Alamat Pengiriman</label>
-                {alamatOptions.length > 0 ? (
-                  <div className="space-y-2">
-                    {alamatOptions.map(opt => (
-                      <label key={opt.key} className="flex items-start gap-2 cursor-pointer p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                        <input
-                          type="radio"
-                          name="edit-alamat"
-                          value={opt.key}
-                          checked={alamatType === opt.key}
-                          onChange={() => setAlamatType(opt.key)}
-                          className="mt-0.5"
-                        />
-                        <div>
-                          <p className="text-xs font-medium text-gray-700">{opt.label}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{opt.value}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <textarea
-                    value={customAlamat}
-                    onChange={e => setCustomAlamat(e.target.value)}
-                    rows={2}
-                    placeholder="Masukkan alamat pengiriman..."
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-400"
-                  />
-                )}
-              </div>
 
-              {/* PIC */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">PIC Customer <span className="text-red-500">*</span></label>
-                <select
-                  value={picId}
-                  onChange={e => setPicId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-400"
-                >
-                  <option value="">-- Pilih PIC --</option>
-                  {customerPics.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} {p.position ? `(${p.position})` : ''}</option>
-                  ))}
-                </select>
-                {customerPics.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1">⚠ Belum ada PIC untuk customer ini.</p>
-                )}
-              </div>
 
               {/* Dokumen */}
               <div>

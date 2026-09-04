@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, Loader2, FileText, Plus, Download, Edit } from 'lucide-react';
+import { Trash2, Loader2, Plus, Download, Edit } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import AddPoInModal from '@/components/AddPoInModal';
@@ -105,7 +105,7 @@ export default function POInList() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Judul PO</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Customer</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tanggal PO</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Alamat Pengiriman</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Batas Pengerjaan</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Dokumen</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
                   {user?.is_super_admin && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Dikerjakan Oleh</th>}
@@ -136,15 +136,14 @@ export default function POInList() {
                         <td className="px-4 py-3 font-medium text-gray-900 max-w-[180px] truncate" title={p.judul}>{p.judul || '—'}</td>
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{p.customer_name || '—'}</td>
                         <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{p.tanggal ? formatDate(p.tanggal) : '—'}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[150px] truncate" title={p.alamat_pengiriman}>{p.alamat_pengiriman || '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{p.tanggal_batas ? formatDate(p.tanggal_batas) : '-'}</td>
                         <td className="px-4 py-3">
                           {docs.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {docs.map((d, i) => (
                                 <a key={i} href={d.url} target="_blank" rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-1.5 py-0.5 rounded">
-                                  <FileText className="w-3 h-3" />
-                                  {d.name.length > 12 ? d.name.substring(0, 12) + '…' : d.name}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors">
+                                  Dok.{i + 1}
                                 </a>
                               ))}
                             </div>
