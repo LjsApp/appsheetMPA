@@ -63,9 +63,9 @@ export default function PurchaseOrders() {
   const openEdit = (po: PurchaseOrder) => {
     setEditPoNumber(po.po_number || '');
     setEditCreatedDate(toDateInput(po.created_date));
-    setEditDueDate(po.due_date || '');
+    setEditDueDate(toDateInput(po.due_date));
     setEditSubject(po.subject || '');
-    setEditRefDate(po.ref_date || '');
+    setEditRefDate(toDateInput(po.ref_date));
     setEditRef(po.ref || '');
     let docs: any[] = [];
     if (po.dokumen) {
