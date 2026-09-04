@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
-import { useNeracaQuotations, useCustomers, usePics, useSavePoIn, useUploadFile, usePurchaseOrders, useInquiries } from '@/hooks/useData';
+import { useNeracaQuotations, useSavePoIn, useUploadFile, usePurchaseOrders, useInquiries } from '@/hooks/useData';
 import type { POIn } from '@/types';
 
 interface EditPoInModalProps {
@@ -33,9 +33,7 @@ function parseDocs(raw: string | undefined | null): { name: string; url: string 
 
 export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQuotationIds }: EditPoInModalProps) {
   const { data: quotations = [] } = useNeracaQuotations();
-  const { data: customers = [] } = useCustomers();
   const { data: inquiries = [] } = useInquiries();
-  const { data: pics = [] } = usePics();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
   const { data: pos = [] } = usePurchaseOrders();
@@ -46,9 +44,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
   const [poInNumber, setPoInNumber] = useState('');
   const [judul, setJudul] = useState('');
   const [tanggal, setTanggal] = useState('');
-  const [alamatType, setAlamatType] = useState<'office' | 'warehouse'>('office');
-  const [customAlamat, setCustomAlamat] = useState('');
-  const [picId, setPicId] = useState('');
+
   const [tanggalBatas, setTanggalBatas] = useState('');
   const [existingDocs, setExistingDocs] = useState<{ name: string; url: string }[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
@@ -64,23 +60,7 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
 
   const selectedQt = useMemo(() => quotations.find(q => q.id === selectedQtId), [quotations, selectedQtId]);
   
-  const customer = useMemo(() => {
-    if (!selectedQt) return undefined;
-    return customers.find(c => 
-      (selectedQt.customer_id && c.id === selectedQt.customer_id) || 
-      (selectedQt.customer_name && c.company_name === selectedQt.customer_name)
-    );
-  }, [customers, selectedQt]);
 
-
-
-  const alamatOptions = useMemo(() => {
-    if (!customer) return [];
-    const opts: { label: string; value: string; key: 'office' | 'warehouse' }[] = [];
-    if (customer.office_address) opts.push({ label: 'Alamat Kantor', value: customer.office_address, key: 'office' });
-    if (customer.warehouse_address) opts.push({ label: 'Alamat Gudang', value: customer.warehouse_address, key: 'warehouse' });
-    return opts;
-  }, [customer]);
 
   // Sync form fields when quotation changes
   useEffect(() => {
@@ -92,41 +72,17 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
       setJudul(poIn.judul || '');
       setTanggal(poIn.tanggal ? String(poIn.tanggal).split('T')[0] : '');
       setTanggalBatas(poIn.tanggal_batas ? String(poIn.tanggal_batas).split('T')[0] : '');
-      setPicId(poIn.pic_id || '');
       setExistingDocs(parseDocs(poIn.dokumen));
-      
-      // Try to determine alamatType based on original data
-      if (customer) {
-        if (poIn.alamat_pengiriman === customer.office_address) {
-          setAlamatType('office');
-        } else if (poIn.alamat_pengiriman === customer.warehouse_address) {
-          setAlamatType('warehouse');
-        } else {
-          setAlamatType('office');
-        }
-      }
-      setCustomAlamat(poIn.alamat_pengiriman || '');
     } else {
       // Reset form for a new quotation
       setPoInNumber('');
       setJudul(selectedQt?.inquiry_id ? (inquiries?.find((i: any) => i.id === selectedQt.inquiry_id)?.request_title || '') : '');
       setTanggal(new Date().toISOString().split('T')[0]);
       setTanggalBatas('');
-      setPicId('');
-      setAlamatType('office');
-      setCustomAlamat('');
       setExistingDocs([]);
     }
     setNewFiles([]);
-  }, [selectedQtId, poIn, isOpen, customer]);
-
-  const selectedAlamat = useMemo(() => {
-    if (alamatOptions.length > 0) {
-      const opt = alamatOptions.find(o => o.key === alamatType);
-      return opt ? opt.value : '';
-    }
-    return customAlamat;
-  }, [alamatType, alamatOptions, customAlamat]);
+  }, [selectedQtId, poIn, isOpen, selectedQt, inquiries]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -163,7 +119,6 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
         if (fileUrl) uploadedDocs.push({ name: file.name, url: fileUrl });
       }
 
-      const selectedPic = pics.find(p => p.id === picId);
       await savePoIn.mutateAsync({
         ...poIn,
         quotation_id: selectedQt.id,
@@ -173,9 +128,6 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
         po_in_number: poInNumber,
         judul,
         tanggal,
-        alamat_pengiriman: selectedAlamat,
-        pic_id: picId,
-        pic_name: selectedPic?.name || '',
         tanggal_batas: tanggalBatas,
         dokumen: JSON.stringify(uploadedDocs),
         updated_date: new Date().toISOString(),

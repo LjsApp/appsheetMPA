@@ -274,7 +274,6 @@ export default function SuratJalanList() {
                       <div className="space-y-0.5">
                         <div><span className="font-medium">Customer:</span> {po.customer_name}</div>
                         <div><span className="font-medium">Judul:</span> {po.judul}</div>
-                        <div><span className="font-medium">Alamat:</span> {po.alamat_pengiriman || '-'}</div>
                       </div>
                     ) : null;
                   })()}

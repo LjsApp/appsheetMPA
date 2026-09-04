@@ -75,9 +75,7 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
         po_in_number: poInNumber,
         judul,
         tanggal,
-        alamat_pengiriman: '',
-        pic_id: '',
-        pic_name: '',
+
         tanggal_batas: tanggalBatas,
         dokumen: JSON.stringify(uploadedDocs),
         created_date: new Date().toISOString(),

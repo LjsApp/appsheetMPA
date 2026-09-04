@@ -225,9 +225,7 @@ export interface POIn {
   po_in_number: string;
   judul: string;
   tanggal: string;
-  alamat_pengiriman: string;
-  pic_id: string;
-  pic_name: string;
+
   tanggal_batas: string;
   dokumen: string; // JSON array string
   created_by?: string;

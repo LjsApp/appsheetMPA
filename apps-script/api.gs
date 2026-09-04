@@ -643,12 +643,23 @@ function routeRequest(action, method, body, params) {
         });
       }
 
-      // 7. Create po_in sheet if not exists
+      // 7. Create po_in sheet if not exists, or migrate (remove old columns)
       var poinSheet = ss.getSheetByName('po_in');
       if (!poinSheet) {
         poinSheet = ss.insertSheet('po_in');
-        poinSheet.appendRow(['id','quotation_id','neraca_id','customer_id','customer_name','po_in_number','judul','tanggal','alamat_pengiriman','pic_id','pic_name','tanggal_batas','dokumen','created_date','updated_date']);
+        poinSheet.appendRow(['id','quotation_id','neraca_id','customer_id','customer_name','po_in_number','judul','tanggal','tanggal_batas','dokumen','created_date','updated_date']);
         results.push('Created sheet: po_in');
+      } else {
+        // Migration: remove deprecated columns
+        var poinHeaders = poinSheet.getRange(1, 1, 1, poinSheet.getLastColumn()).getValues()[0];
+        ['alamat_pengiriman','pic_id','pic_name'].forEach(function(col) {
+          var colIdx = poinHeaders.indexOf(col);
+          if (colIdx !== -1) {
+            poinSheet.deleteColumn(colIdx + 1);
+            poinHeaders = poinSheet.getRange(1, 1, 1, poinSheet.getLastColumn()).getValues()[0];
+            results.push('Removed column ' + col + ' from po_in');
+          }
+        });
       }
 
       // 8. Create invoices sheet if not exists, or migrate columns

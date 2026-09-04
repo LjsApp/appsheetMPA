@@ -181,7 +181,6 @@ export default function SuratJalanDetail() {
                         <span className="text-gray-700 mr-2">:</span>
                         <div>
                           <div className="font-semibold text-gray-900">{po?.customer_name || '-'}</div>
-                          {po?.alamat_pengiriman && <div className="text-gray-600 text-[11pt]">{po.alamat_pengiriman}</div>}
                         </div>
                       </div>
                     </div>

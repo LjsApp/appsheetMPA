@@ -46,8 +46,7 @@ export default function POInList() {
       !s ||
       (p.po_in_number || '').toLowerCase().includes(s) ||
       (p.judul || '').toLowerCase().includes(s) ||
-      (p.customer_name || '').toLowerCase().includes(s) ||
-      (p.pic_name || '').toLowerCase().includes(s)
+      (p.customer_name || '').toLowerCase().includes(s)
     );
   }, [poIns, search]);
 
