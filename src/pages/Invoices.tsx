@@ -499,6 +499,7 @@ export default function Invoices() {
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status Bayar</th>
                   {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase min-w-[200px]">Bukti Transfer</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -550,7 +551,7 @@ export default function Invoices() {
                     {user?.is_super_admin && <td className="px-5 py-4 align-top italic text-gray-500">{users.find(u => u.id === item.created_by)?.name || item.created_by || '-'}</td>}
                     <td className="px-5 py-4 align-top">
                       {item.payment_status === 'Lunas' && (
-                        <div className="mb-3 space-y-1.5">
+                        <div className="space-y-1.5">
                           {item.payment_date && <div className="text-[11px] text-gray-600">Tgl: <span className="font-medium text-gray-900">{formatDate(item.payment_date)}</span></div>}
                           {item.payment_proof_url && (
                             <a href={item.payment_proof_url} target="_blank" rel="noreferrer"
@@ -560,9 +561,25 @@ export default function Invoices() {
                             </a>
                           )}
                           {item.payment_note && <div className="text-[11px] text-gray-500 italic max-w-[200px]">"{item.payment_note}"</div>}
+                          <div className="pt-1">
+                            <button
+                              onClick={() => {
+                                setPaymentDate(item.payment_date || new Date().toISOString().split('T')[0]);
+                                setPaymentNote(item.payment_note || '');
+                                setPaymentModal({ isOpen: true, invoice: item });
+                              }}
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 hover:text-blue-600 transition-colors"
+                              title="Edit Bukti Transfer"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit Bukti TF
+                            </button>
+                          </div>
                         </div>
                       )}
-                      <div className="flex items-center justify-start gap-2 flex-wrap">
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
                         {item.verification_status === 'Terverifikasi' && item.payment_status !== 'Lunas' && (
                           <button
                             onClick={() => setPaymentModal({ isOpen: true, invoice: item })}
