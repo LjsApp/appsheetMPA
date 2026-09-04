@@ -269,10 +269,8 @@ export default function PurchaseOrders() {
                               </span>
                             )}
                           </div>
-                          {po.created_date && <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(po.created_date)}</div>}
-                          {po.subject && <div className="text-[11px] text-gray-500 font-sans mt-0.5 max-w-[160px] truncate">{po.subject}</div>}
                         </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">
+                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                           {po.vendor_name}
                         </td>
                         <td className="px-6 py-4 text-center text-gray-600">
@@ -437,7 +435,7 @@ export default function PurchaseOrders() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Ref (No Permintaan)</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Ref (No Dok Vendor)</label>
                     <input
                       value={editRef}
                       onChange={e => setEditRef(e.target.value)}
