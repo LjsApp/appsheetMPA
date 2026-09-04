@@ -4,7 +4,7 @@ import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal, Badg
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
-import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, useCompany, fetchApi, useSaveNotification, useUsers, useUploadFile } from '@/hooks/useData';
+import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, useCompany, fetchApi, useSaveNotification, useUsers, useUploadFile, useInquiries, useSaveInquiry, useNeracas, useNeracaQuotations } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
@@ -20,6 +20,11 @@ export default function Invoices() {
   const saveNotification = useSaveNotification();
   const uploadFile = useUploadFile();
   const user = useAuthStore(state => state.user);
+
+  const { data: inquiries = [] } = useInquiries();
+  const saveInquiry = useSaveInquiry();
+  const { data: neracas = [] } = useNeracas();
+  const { data: quotations = [] } = useNeracaQuotations();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -96,6 +101,14 @@ export default function Invoices() {
       };
       await saveInvoice.mutateAsync(data);
 
+      const qt = quotations.find(q => q.id === po.quotation_id);
+      const neraca = neracas.find(n => n.id === qt?.neraca_id);
+      const inquiry = inquiries.find(i => i.id === neraca?.inquiry_id);
+      
+      if (inquiry && inquiry.status !== 'Invoice' && inquiry.status !== 'Selesai') {
+        saveInquiry.mutate({ ...inquiry, status: 'Invoice', updated_date: new Date().toISOString() });
+      }
+
       setShowModal(false);
       resetModal();
     } catch {
@@ -129,6 +142,15 @@ export default function Invoices() {
         payment_note: paymentNote,
         updated_date: new Date().toISOString(),
       });
+
+      const po = poIns.find(p => p.id === paymentModal.invoice?.po_in_id);
+      const qt = quotations.find(q => q.id === po?.quotation_id);
+      const neraca = neracas.find(n => n.id === qt?.neraca_id);
+      const inquiry = inquiries.find(i => i.id === neraca?.inquiry_id);
+      if (inquiry && inquiry.status !== 'Selesai') {
+        saveInquiry.mutate({ ...inquiry, status: 'Selesai', updated_date: new Date().toISOString() });
+      }
+
       setPaymentModal({ isOpen: false, invoice: null });
       setPaymentFile(null);
       setPaymentNote('');
