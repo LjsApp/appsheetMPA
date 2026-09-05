@@ -5,7 +5,7 @@ import { PageHeader, Button } from '@/components/ui';
 import type { NeracaQuotation } from '@/types';
 import {
   useNeracaQuotations, useDeleteNeracaQuotation,
-  useInquiries, useSaveInquiry, usePurchaseOrders,
+  useInquiries, useSaveInquiry, usePurchaseOrders, usePoIns, useInvoices,
   useNeracas, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi,
   useNeracaItems, useNeracaDetail, usePics, useUploadFile
 } from '@/hooks/useData';
@@ -89,6 +89,8 @@ export default function Quotations() {
   const { data: inquiries = [] } = useInquiries();
   const { data: quotations = [], isLoading } = useNeracaQuotations();
   const { data: purchaseOrders = [] } = usePurchaseOrders();
+  const { data: allPoIns = [] } = usePoIns();
+  const { data: allInvoices = [] } = useInvoices();
   const { data: pics = [] } = usePics();
 
 
@@ -393,8 +395,12 @@ export default function Quotations() {
                 return Array.from(groups.values()).map(group => {
                   const inquiry = inquiries.find(i => i.id === group[0].inquiry_id);
                   return group.map((q, idx) => {
-                    const activePOs = purchaseOrders.filter(p => p.quotation_id === q.id);
-                    const hasPO = activePOs.length > 0;
+                      const activePOs = purchaseOrders.filter(p => p.quotation_id === q.id);
+                      const hasPO = activePOs.length > 0;
+                      // Check PO In linked to this quotation
+                      const poIn = allPoIns.find(p => p.quotation_id === q.id || p.neraca_id === q.neraca_id);
+                      // Check Invoice linked to the PO In
+                      const inv = poIn ? allInvoices.find(i => i.po_in_id === poIn.id) : undefined;
                     
                     
                     const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
@@ -493,17 +499,46 @@ export default function Quotations() {
                           })()}
                         </td>
                         <td className="px-5 py-4">
-                          {hasPO ? (
-                            <button
-                              onClick={() => navigate('/po')}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
-                            >
-                              <ShoppingCart className="w-3 h-3" />
-                              Sudah PO Out ({activePOs.length})
-                            </button>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-500">Belum PO</span>
-                          )}
+                          {(() => {
+                            if (inv && inv.payment_status === 'Lunas') {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-600 text-white">
+                                  <FileCheck2 className="w-3 h-3" />
+                                  Selesai
+                                </span>
+                              );
+                            }
+                            if (inv) {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">
+                                  <FileCheck2 className="w-3 h-3" />
+                                  Sudah Invoice
+                                </span>
+                              );
+                            }
+                            if (poIn) {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700">
+                                  <FileCheck2 className="w-3 h-3" />
+                                  Sudah PO
+                                </span>
+                              );
+                            }
+                            if (hasPO) {
+                              return (
+                                <button
+                                  onClick={() => navigate('/po')}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                                >
+                                  <ShoppingCart className="w-3 h-3" />
+                                  Sudah PO Out ({activePOs.length})
+                                </button>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-500">Belum PO</span>
+                            );
+                          })()}
                         </td>
                         {user?.is_super_admin && <td className="px-5 py-4 text-xs italic text-gray-500">{q.created_by || '-'}</td>}
                         <td className="px-5 py-4 text-right">

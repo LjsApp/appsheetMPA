@@ -5,7 +5,7 @@ import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import Modal from '@/components/Modal';
 import { useForm } from 'react-hook-form';
 import { FileCheck2, Copy } from 'lucide-react';
-import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useDuplicateNeraca, usePurchaseOrders } from '@/hooks/useData';
+import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useInitNeracaSheets, useNeracaQuotations, useDuplicateNeraca, usePurchaseOrders, usePoIns, useInvoices } from '@/hooks/useData';
 import TableToolbar from '@/components/TableToolbar';
 import type { Neraca } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -31,6 +31,8 @@ export default function Neracas() {
   const initSheets = useInitNeracaSheets();
   const { data: allQuotations = [] } = useNeracaQuotations();
   const { data: allPos = [] } = usePurchaseOrders();
+  const { data: allPoIns = [] } = usePoIns();
+  const { data: allInvoices = [] } = useInvoices();
   const duplicateNeraca = useDuplicateNeraca();
 
   
@@ -257,13 +259,40 @@ export default function Neracas() {
                                           <td className="px-4 py-2.5 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                               {(() => {
-                                                const qt = allQuotations.find(q => q.neraca_id === n.id);
-                                                return qt ? (
-                                                  <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-md font-medium">
-                                                    <FileCheck2 className="w-3.5 h-3.5" /> Sudah Jadi Quotation
-                                                  </span>
-                                                ) : null;
-                                              })()}
+                                                  const qt = allQuotations.find(q => q.neraca_id === n.id);
+                                                  if (!qt) return null;
+                                                  // Check PO In linked to this neraca's quotation
+                                                  const poIn = allPoIns.find(p => p.neraca_id === n.id || p.quotation_id === qt.id);
+                                                  // Check Invoice linked to the PO In
+                                                  const inv = poIn ? allInvoices.find(i => i.po_in_id === poIn.id) : undefined;
+                                                  // Determine status
+                                                  if (inv && inv.payment_status === 'Lunas') {
+                                                    return (
+                                                      <span className="inline-flex items-center gap-1 text-xs text-white bg-emerald-600 border border-emerald-700 px-2 py-1.5 rounded-md font-medium">
+                                                        <FileCheck2 className="w-3.5 h-3.5" /> Selesai
+                                                      </span>
+                                                    );
+                                                  }
+                                                  if (inv) {
+                                                    return (
+                                                      <span className="inline-flex items-center gap-1 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1.5 rounded-md font-medium">
+                                                        <FileCheck2 className="w-3.5 h-3.5" /> Sudah Invoice
+                                                      </span>
+                                                    );
+                                                  }
+                                                  if (poIn) {
+                                                    return (
+                                                      <span className="inline-flex items-center gap-1 text-xs text-violet-700 bg-violet-50 border border-violet-200 px-2 py-1.5 rounded-md font-medium">
+                                                        <FileCheck2 className="w-3.5 h-3.5" /> Sudah PO
+                                                      </span>
+                                                    );
+                                                  }
+                                                  return (
+                                                    <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-md font-medium">
+                                                      <FileCheck2 className="w-3.5 h-3.5" /> Sudah Quotation
+                                                    </span>
+                                                  );
+                                                })()}
                                               <button onClick={() => openEdit(n)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
                                                 <Edit2 className="w-4 h-4" />
                                               </button>
