@@ -187,12 +187,14 @@ export default function Vendors() {
   };
 
   const handleToggleVendorStatus = (vendor: Vendor) => {
-    const newStatus = vendor.status === 'Active' ? 'Inactive' : 'Active';
+    const currentStatus = vendor.status || 'Active';
+    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     saveVendor.mutate({ ...vendor, status: newStatus, updated_date: new Date().toISOString().split('T')[0] });
   };
 
   const handleTogglePicStatus = (pic: PicVendor) => {
-    const newStatus = pic.status === 'Active' ? 'Inactive' : 'Active';
+    const currentStatus = pic.status || 'Active';
+    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     savePic.mutate({ ...pic, status: newStatus } as PicVendor);
   };
 
@@ -211,19 +213,27 @@ export default function Vendors() {
         </div>
       ) : <span className="text-gray-400">-</span>
     )},
-    { key: 'status', label: 'Status', render: (v: unknown, row: any) => (
-      <button
-        onClick={(e) => { e.stopPropagation(); handleToggleVendorStatus(row); }}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-          v === 'Active' ? 'bg-green-500' : 'bg-gray-300'
-        }`}
-        title={v === 'Active' ? 'Aktif – Klik untuk nonaktifkan' : 'Tidak aktif – Klik untuk aktifkan'}
-      >
-        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-          v === 'Active' ? 'translate-x-4' : 'translate-x-0.5'
-        }`} />
-      </button>
-    ) },
+    { key: 'status', label: 'Status', render: (v: unknown, row: any) => {
+      const isActive = v === 'Active' || !v;
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleToggleVendorStatus(row); }}
+            className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${
+              isActive ? 'bg-green-500' : 'bg-gray-300'
+            }`}
+            title={isActive ? 'Aktif – Klik untuk nonaktifkan' : 'Tidak aktif – Klik untuk aktifkan'}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+              isActive ? 'translate-x-4' : 'translate-x-0.5'
+            }`} />
+          </button>
+          <span className={`text-sm ${isActive ? 'text-green-600' : 'text-gray-500'}`}>
+            {isActive ? 'Aktif' : 'Tidak Aktif'}
+          </span>
+        </div>
+      );
+    } },
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center gap-2">
         <button onClick={(e) => { e.stopPropagation(); openEditVendor(row); }}
@@ -250,19 +260,27 @@ export default function Vendors() {
     { key: 'position', label: 'Jabatan' },
     { key: 'phone', label: 'No HP' },
     { key: 'email', label: 'Email' },
-    { key: 'status', label: 'Status', render: (v: unknown, row: any) => (
-      <button
-        onClick={(e) => { e.stopPropagation(); handleTogglePicStatus(row); }}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-          v === 'Active' || v === undefined ? 'bg-green-500' : 'bg-gray-300'
-        }`}
-        title={v === 'Active' || v === undefined ? 'Aktif – Klik untuk nonaktifkan' : 'Tidak aktif – Klik untuk aktifkan'}
-      >
-        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-          v === 'Active' || v === undefined ? 'translate-x-4' : 'translate-x-0.5'
-        }`} />
-      </button>
-    ) },
+    { key: 'status', label: 'Status', render: (v: unknown, row: any) => {
+      const isActive = v === 'Active' || !v;
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleTogglePicStatus(row); }}
+            className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${
+              isActive ? 'bg-green-500' : 'bg-gray-300'
+            }`}
+            title={isActive ? 'Aktif – Klik untuk nonaktifkan' : 'Tidak aktif – Klik untuk aktifkan'}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+              isActive ? 'translate-x-4' : 'translate-x-0.5'
+            }`} />
+          </button>
+          <span className={`text-sm ${isActive ? 'text-green-600' : 'text-gray-500'}`}>
+            {isActive ? 'Aktif' : 'Tidak Aktif'}
+          </span>
+        </div>
+      );
+    } },
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center gap-2">
         <button onClick={(e) => { e.stopPropagation(); openEditPic(row); }}
