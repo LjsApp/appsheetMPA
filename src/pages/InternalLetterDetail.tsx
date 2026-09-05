@@ -584,7 +584,7 @@ export default function InternalLetterDetail() {
                       <div className="text-gray-800">
                         <p>Mengetahui</p>
                         <div style={{ height: "80px" }} />
-                        <p className="font-semibold">Sakti</p>
+                        <p className="font-semibold">{user?.name || '-'}</p>
                       </div>
                     </div>
                   </div>

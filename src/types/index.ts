@@ -191,6 +191,7 @@ export interface SuratJalan {
   no_resi?: string;
   upload_resi?: string;
   resi_data?: string;
+  delivery_address?: string;
   created_by?: string;
   created_date: string;
   updated_date: string;

@@ -4,7 +4,7 @@ import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2 } from 'lucide-react
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
-import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi, useUploadFile } from '@/hooks/useData';
+import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi, useUploadFile, useCustomers } from '@/hooks/useData';
 import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 
@@ -12,6 +12,7 @@ export default function SuratJalanList() {
   const navigate = useNavigate();
   const { data: suratJalanList = [], isLoading: loadingSJ } = useSuratJalan();
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
+  const { data: customers = [] } = useCustomers();
   const saveSJ = useSaveSuratJalan();
   const uploadFile = useUploadFile();
   const deleteSJ = useDeleteSuratJalan();
@@ -28,6 +29,8 @@ export default function SuratJalanList() {
   const [editSjId, setEditSjId] = useState<string | null>(null);
   const [editSjNumber, setEditSjNumber] = useState('');
   const [editCreatedDate, setEditCreatedDate] = useState('');
+  const [editDeliveryAddress, setEditDeliveryAddress] = useState('');
+  const [addressOptions, setAddressOptions] = useState<{label: string, value: string}[]>([]);
   const [editResiList, setEditResiList] = useState<{id: string, no_resi: string, ekspedisi: string, url: string, file: File | null}[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
@@ -199,6 +202,16 @@ export default function SuratJalanList() {
                             setEditSjId(item.id);
                             setEditSjNumber(item.sj_number || '');
                             setEditCreatedDate(item.created_date ? new Date(item.created_date).toISOString().split('T')[0] : '');
+                            
+                            // Find customer addresses
+                            const po = poIns.find(p => p.id === item.po_in_id);
+                            const cust = customers.find(c => c.id === po?.customer_id || c.company_name === po?.customer_name);
+                            const opts: { label: string; value: string }[] = [];
+                            if (cust?.office_address) opts.push({ label: 'Alamat Kantor', value: cust.office_address });
+                            if (cust?.warehouse_address) opts.push({ label: 'Alamat Gudang', value: cust.warehouse_address });
+                            setAddressOptions(opts);
+                            
+                            setEditDeliveryAddress((item.delivery_address as any) || opts[0]?.value || '');
                             setEditResiList(parseResiData(item));
                           }}
                           className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
@@ -326,6 +339,22 @@ export default function SuratJalanList() {
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Alamat Pengiriman</label>
+                  <select
+                    value={editDeliveryAddress}
+                    onChange={e => setEditDeliveryAddress(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  >
+                    {addressOptions.length > 0 ? (
+                      addressOptions.map(opt => (
+                        <option key={opt.label} value={opt.value}>{opt.label}</option>
+                      ))
+                    ) : (
+                      <option value="">- Tidak ada alamat -</option>
+                    )}
+                  </select>
+                </div>
               </div>
 
               {/* Right Column */}
@@ -443,6 +472,7 @@ export default function SuratJalanList() {
                         sj_number: editSjNumber,
                         created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : existingSj.created_date,
                         resi_data: JSON.stringify(finalResiList),
+                        delivery_address: editDeliveryAddress,
                         updated_date: new Date().toISOString()
                       });
                       setEditSjId(null);

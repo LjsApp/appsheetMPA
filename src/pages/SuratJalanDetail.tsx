@@ -181,6 +181,9 @@ export default function SuratJalanDetail() {
                         <span className="text-gray-700 mr-2">:</span>
                         <div>
                           <div className="font-semibold text-gray-900">{po?.customer_name || '-'}</div>
+                          {sj.delivery_address && (
+                            <div className="text-gray-600 text-[11pt] mt-0.5">{sj.delivery_address}</div>
+                          )}
                         </div>
                       </div>
                     </div>
