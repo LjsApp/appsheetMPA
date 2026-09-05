@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
 import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
-import StatusBadge from '@/components/StatusBadge';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -181,6 +180,16 @@ export default function Vendors() {
     setDeleteModal({ isOpen: true, type: 'pic', id, title: 'Hapus PIC', desc: 'Yakin ingin menghapus PIC ini?' });
   };
 
+  const handleToggleVendorStatus = (vendor: Vendor) => {
+    const newStatus = vendor.status === 'Active' ? 'Inactive' : 'Active';
+    saveVendor.mutate({ ...vendor, status: newStatus, updated_date: new Date().toISOString().split('T')[0] });
+  };
+
+  const handleTogglePicStatus = (pic: PicVendor) => {
+    const newStatus = pic.status === 'Active' ? 'Inactive' : 'Active';
+    savePic.mutate({ ...pic, status: newStatus } as PicVendor);
+  };
+
   const vendorColumns = [
     { key: 'code', label: 'Kode', width: 'w-24' },
     { key: 'vendor_name', label: 'Perusahaan' },
@@ -196,7 +205,19 @@ export default function Vendors() {
         </div>
       ) : <span className="text-gray-400">-</span>
     )},
-    { key: 'status', label: 'Status', render: (v: unknown) => <StatusBadge label={String(v || 'Inactive')} /> },
+    { key: 'status', label: 'Status', render: (v: unknown, row: any) => (
+      <button
+        onClick={(e) => { e.stopPropagation(); handleToggleVendorStatus(row); }}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+          v === 'Active' ? 'bg-green-500' : 'bg-gray-300'
+        }`}
+        title={v === 'Active' ? 'Aktif – Klik untuk nonaktifkan' : 'Tidak aktif – Klik untuk aktifkan'}
+      >
+        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+          v === 'Active' ? 'translate-x-4' : 'translate-x-0.5'
+        }`} />
+      </button>
+    ) },
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center gap-2">
         <button onClick={(e) => { e.stopPropagation(); openEditVendor(row); }}
@@ -223,6 +244,19 @@ export default function Vendors() {
     { key: 'position', label: 'Jabatan' },
     { key: 'phone', label: 'No HP' },
     { key: 'email', label: 'Email' },
+    { key: 'status', label: 'Status', render: (v: unknown, row: any) => (
+      <button
+        onClick={(e) => { e.stopPropagation(); handleTogglePicStatus(row); }}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+          v === 'Active' || v === undefined ? 'bg-green-500' : 'bg-gray-300'
+        }`}
+        title={v === 'Active' || v === undefined ? 'Aktif – Klik untuk nonaktifkan' : 'Tidak aktif – Klik untuk aktifkan'}
+      >
+        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+          v === 'Active' || v === undefined ? 'translate-x-4' : 'translate-x-0.5'
+        }`} />
+      </button>
+    ) },
     { key: 'actions', label: '', render: (_: unknown, row: any) => (
       <div className="flex items-center gap-2">
         <button onClick={(e) => { e.stopPropagation(); openEditPic(row); }}

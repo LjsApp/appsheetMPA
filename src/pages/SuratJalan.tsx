@@ -341,19 +341,35 @@ export default function SuratJalanList() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">Alamat Pengiriman</label>
-                  <select
-                    value={editDeliveryAddress}
-                    onChange={e => setEditDeliveryAddress(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                  >
-                    {addressOptions.length > 0 ? (
-                      addressOptions.map(opt => (
-                        <option key={opt.label} value={opt.value}>{opt.label}</option>
-                      ))
-                    ) : (
-                      <option value="">- Tidak ada alamat -</option>
-                    )}
-                  </select>
+                  {addressOptions.length > 0 ? (
+                    <div className="space-y-2">
+                      {addressOptions.map(opt => (
+                        <label
+                          key={opt.label}
+                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            editDeliveryAddress === opt.value
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="sj_address_choice"
+                            value={opt.value}
+                            checked={editDeliveryAddress === opt.value}
+                            onChange={() => setEditDeliveryAddress(opt.value)}
+                            className="mt-0.5 accent-blue-600 shrink-0"
+                          />
+                          <div>
+                            <div className="text-xs font-semibold text-gray-800">{opt.label}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{opt.value}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Tidak ada alamat tersedia untuk customer ini.</p>
+                  )}
                 </div>
               </div>
 

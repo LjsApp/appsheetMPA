@@ -81,7 +81,7 @@ function routeRequest(action, method, body, params) {
 
     // Customers
     case 'getCustomers':
-      return getRecords('customers');
+      return getRecords('customers').map(function(r) { if (!r.status) r.status = 'Active'; return r; });
     case 'saveCustomer':
       if (body.id) {
         try { return updateRecord('customers', 'id', body); }
@@ -93,7 +93,7 @@ function routeRequest(action, method, body, params) {
 
     // PICs
     case 'getPics':
-      return getRecords('pics');
+      return getRecords('pics').map(function(r) { if (!r.status) r.status = 'Active'; return r; });
     case 'savePic':
       if (body.id) {
         try { return updateRecord('pics', 'id', body); }
@@ -105,7 +105,7 @@ function routeRequest(action, method, body, params) {
 
     // Vendors
     case 'getVendors':
-      return getRecords('vendors');
+      return getRecords('vendors').map(function(r) { if (!r.status) r.status = 'Active'; return r; });
     case 'saveVendor':
       if (body.id) {
         try { return updateRecord('vendors', 'id', body); }
@@ -117,7 +117,7 @@ function routeRequest(action, method, body, params) {
 
     // PIC Vendors
     case 'getPicVendors':
-      return getRecords('pic_vendors');
+      return getRecords('pic_vendors').map(function(r) { if (!r.status) r.status = 'Active'; return r; });
     case 'savePicVendor':
       if (body.id) {
         try { return updateRecord('pic_vendors', 'id', body); }

@@ -21,6 +21,7 @@ export interface PIC {
   phone: string;
   email: string;
   position: string;
+  status?: 'Active' | 'Inactive';
 }
 
 export interface Vendor {
@@ -46,6 +47,7 @@ export interface PicVendor {
   phone: string;
   email: string;
   position: string;
+  status?: 'Active' | 'Inactive';
 }
 
 export interface Product {
