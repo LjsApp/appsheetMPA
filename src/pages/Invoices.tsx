@@ -50,6 +50,14 @@ export default function Invoices() {
   const isLoading = loadingInv || loadingPo;
   const [requestingVerificationId, setRequestingVerificationId] = useState<string | null>(null);
 
+  const toInputDate = (d?: string): string => {
+    if (!d) return new Date().toISOString().split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
+  };
+
   // auto-fill address when PO In selected
   const handlePoSelect = async (poId: string) => {
     setSelectedPoId(poId);
@@ -564,7 +572,7 @@ export default function Invoices() {
                           <div className="pt-1">
                             <button
                               onClick={() => {
-                                setPaymentDate(item.payment_date || new Date().toISOString().split('T')[0]);
+                                setPaymentDate(toInputDate(item.payment_date));
                                 setPaymentNote(item.payment_note || '');
                                 setPaymentModal({ isOpen: true, invoice: item });
                               }}
@@ -579,10 +587,14 @@ export default function Invoices() {
                       )}
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         {item.verification_status === 'Terverifikasi' && item.payment_status !== 'Lunas' && (
                           <button
-                            onClick={() => setPaymentModal({ isOpen: true, invoice: item })}
+                            onClick={() => {
+                              setPaymentDate(toInputDate());
+                              setPaymentNote('');
+                              setPaymentModal({ isOpen: true, invoice: item });
+                            }}
                             className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors whitespace-nowrap"
                             title="Tandai Lunas"
                           >
