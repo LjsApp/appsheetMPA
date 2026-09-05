@@ -19,7 +19,7 @@ const getRecords = (sheetName) => {
   const headers = data[0];
   const rows = data.slice(1);
   
-  return rows.map(row => {
+  return rows.map((row, index) => {
     let obj = {};
     headers.forEach((header, i) => {
       let val = row[i];
@@ -28,6 +28,9 @@ const getRecords = (sheetName) => {
       }
       obj[header] = val;
     });
+    if (!obj.id) {
+      obj.id = "AUTO-ROW-" + (index + 2);
+    }
     return obj;
   });
 }
@@ -72,19 +75,26 @@ const updateRecord = (sheetName, idField, record) => {
   
   let headers = data[0];
   const idIndex = headers.indexOf(idField);
-  if (idIndex === -1) throw new Error(`ID field ${idField} not found in headers`);
+  // idIndex might be -1 if the sheet has no headers or is missing the id column, but we might still have a synthetic AUTO-ROW ID.
+  // We'll let it pass for now.
   
   const recordId = record[idField];
   let rowIndex = -1;
   
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][idIndex] === recordId) {
-      rowIndex = i + 1; // 1-based index for Google Sheets API
-      break;
+  if (idField === 'id' && typeof recordId === 'string' && recordId.indexOf('AUTO-ROW-') === 0) {
+    rowIndex = parseInt(recordId.replace('AUTO-ROW-', ''), 10);
+  } else {
+    if (idIndex !== -1) {
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][idIndex] === recordId) {
+          rowIndex = i + 1; // 1-based index for Google Sheets API
+          break;
+        }
+      }
     }
   }
   
-  if (rowIndex === -1) throw new Error(`Record with ${idField}=${recordId} not found`);
+  if (rowIndex === -1 || isNaN(rowIndex)) throw new Error(`Record with ${idField}=${recordId} not found`);
   
   // Check for new columns
   const recordKeys = Object.keys(record);
