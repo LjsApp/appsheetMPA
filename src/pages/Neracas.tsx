@@ -55,7 +55,7 @@ export default function Neracas() {
   const filteredInquiries = useMemo(() => {
     const s = search.toLowerCase();
     return allInquiries
-      .filter(i => i.status === 'Neraca')
+      .filter(i => ['Neraca', 'Quotation', 'PO', 'Invoice', 'Selesai'].includes(i.status || ''))
       .filter(i =>
         !s ||
         (i.request_number || '').toLowerCase().includes(s) ||

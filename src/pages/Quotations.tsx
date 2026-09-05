@@ -322,7 +322,7 @@ export default function Quotations() {
 
   // Filtered inquiries for the modal
   const modalInquiries = useMemo(() => {
-    let result = inquiries.filter(i => i.status === 'Neraca');
+    let result = inquiries.filter(i => ['Neraca', 'Quotation', 'PO', 'Invoice', 'Selesai'].includes(i.status || ''));
     if (modalTab === 'today') result = result.filter(i => isToday(i.created_date));
     else if (modalTab === 'week') result = result.filter(i => isThisWeek(i.created_date));
     if (modalSearch) {
