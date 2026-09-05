@@ -526,7 +526,8 @@ export default function Inquiries() {
         onConfirm={executeConfirm}
         title={confirmModal.title}
         description={confirmModal.desc}
-        isLoading={confirmModal.type === 'delete' ? deleteInquiry.isPending : saveInquiry.isPending}
+        isLoading={deleteInquiry.isPending || saveInquiry.isPending}
+        confirmText={confirmModal.type === 'moveToNeraca' ? 'Simpan' : 'Hapus'}
       />
     </div>
   );
