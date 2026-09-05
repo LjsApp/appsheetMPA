@@ -206,11 +206,20 @@ export default function Neracas() {
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Daftar Neraca</h4>
                                 <div className="flex gap-2">
-                                  {inqNeracas.length > 0 && (
-                                    <Button size="sm" variant="secondary" onClick={() => { setDuplicateModal({ isOpen: true, inquiryId: inq.id }); setDuplicateSourceId(inqNeracas[0].id); }}>
-                                      <Copy className="w-3.5 h-3.5" /> Duplikat
-                                    </Button>
-                                  )}
+                                  {inqNeracas.length > 0 && (() => {
+                                      const hasInvoice = inqNeracas.some(n => {
+                                        const qt = allQuotations.find(q => q.neraca_id === n.id);
+                                        if (!qt) return false;
+                                        const poIn = allPoIns.find(p => p.neraca_id === n.id || p.quotation_id === qt.id);
+                                        return poIn ? !!allInvoices.find(i => i.po_in_id === poIn.id) : false;
+                                      });
+                                      return (
+                                        <Button size="sm" variant="secondary" disabled={hasInvoice} title={hasInvoice ? 'Tidak bisa menduplikat, sudah ada Invoice' : ''}
+                                          onClick={() => { if (!hasInvoice) { setDuplicateModal({ isOpen: true, inquiryId: inq.id }); setDuplicateSourceId(inqNeracas[0].id); } }}>
+                                          <Copy className="w-3.5 h-3.5" /> Duplikat
+                                        </Button>
+                                      );
+                                    })()}
                                   {(() => {
                                     const hasPO = inqNeracas.some(n => allPos.some(po => po.neraca_id === n.id));
                                     return (
@@ -234,8 +243,8 @@ export default function Neracas() {
                                     <thead className="bg-gray-50">
                                       <tr>
                                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Nama Neraca</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Tgl Dibuat</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Tgl Update</th>
+                                        <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">Total Nilai</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
                                         {user?.is_super_admin && <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Dikerjakan Oleh</th>}
                                         <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">Aksi</th>
                                       </tr>
@@ -252,47 +261,37 @@ export default function Neracas() {
                                               <ExternalLink className="w-3.5 h-3.5" />
                                               {n.name || `Neraca ${idx + 1}`}
                                             </button>
+                                            <div className="text-[11px] text-gray-400 mt-0.5">{formatDate(n.created_date)}</div>
                                           </td>
-                                          <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(n.created_date)}</td>
-                                          <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(n.updated_date)}</td>
+                                          <td className="px-4 py-2.5 text-right text-xs font-semibold text-gray-800">
+                                            {(() => {
+                                              const qt = allQuotations.find(q => q.neraca_id === n.id);
+                                              return qt && Number(qt.nilai) > 0
+                                                ? <span className="font-mono">{Number(qt.nilai).toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })}</span>
+                                                : <span className="text-gray-300">-</span>;
+                                            })()}
+                                          </td>
+                                          <td className="px-4 py-2.5">
+                                            {(() => {
+                                                const qt = allQuotations.find(q => q.neraca_id === n.id);
+                                                if (!qt) return null;
+                                                const poIn = allPoIns.find(p => p.neraca_id === n.id || p.quotation_id === qt.id);
+                                                const inv = poIn ? allInvoices.find(i => i.po_in_id === poIn.id) : undefined;
+                                                if (inv && inv.payment_status === 'Lunas') {
+                                                  return <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-teal-100 text-teal-700"><FileCheck2 className="w-3 h-3" /> Selesai</span>;
+                                                }
+                                                if (inv) {
+                                                  return <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-orange-100 text-orange-700"><FileCheck2 className="w-3 h-3" /> Invoice</span>;
+                                                }
+                                                if (poIn) {
+                                                  return <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-purple-100 text-purple-700"><FileCheck2 className="w-3 h-3" /> PO</span>;
+                                                }
+                                                return <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-700"><FileCheck2 className="w-3 h-3" /> Quotation</span>;
+                                              })()}
+                                          </td>
                                           {user?.is_super_admin && <td className="px-4 py-2.5 text-xs italic text-gray-500">{n.created_by || '-'}</td>}
                                           <td className="px-4 py-2.5 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                              {(() => {
-                                                  const qt = allQuotations.find(q => q.neraca_id === n.id);
-                                                  if (!qt) return null;
-                                                  // Check PO In linked to this neraca's quotation
-                                                  const poIn = allPoIns.find(p => p.neraca_id === n.id || p.quotation_id === qt.id);
-                                                  // Check Invoice linked to the PO In
-                                                  const inv = poIn ? allInvoices.find(i => i.po_in_id === poIn.id) : undefined;
-                                                  // Determine status
-                                                  if (inv && inv.payment_status === 'Lunas') {
-                                                    return (
-                                                      <span className="inline-flex items-center gap-1 text-xs text-white bg-emerald-600 border border-emerald-700 px-2 py-1.5 rounded-md font-medium">
-                                                        <FileCheck2 className="w-3.5 h-3.5" /> Selesai
-                                                      </span>
-                                                    );
-                                                  }
-                                                  if (inv) {
-                                                    return (
-                                                      <span className="inline-flex items-center gap-1 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1.5 rounded-md font-medium">
-                                                        <FileCheck2 className="w-3.5 h-3.5" /> Sudah Invoice
-                                                      </span>
-                                                    );
-                                                  }
-                                                  if (poIn) {
-                                                    return (
-                                                      <span className="inline-flex items-center gap-1 text-xs text-violet-700 bg-violet-50 border border-violet-200 px-2 py-1.5 rounded-md font-medium">
-                                                        <FileCheck2 className="w-3.5 h-3.5" /> Sudah PO
-                                                      </span>
-                                                    );
-                                                  }
-                                                  return (
-                                                    <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-md font-medium">
-                                                      <FileCheck2 className="w-3.5 h-3.5" /> Sudah Quotation
-                                                    </span>
-                                                  );
-                                                })()}
                                               <button onClick={() => openEdit(n)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
                                                 <Edit2 className="w-4 h-4" />
                                               </button>

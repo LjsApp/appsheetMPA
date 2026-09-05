@@ -368,7 +368,7 @@ export default function Quotations() {
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">No. Quotation</th>
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Nilai</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dokumen</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status PO</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                 {user?.is_super_admin && <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dikerjakan Oleh</th>}
                 <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase"></th>
               </tr>
@@ -502,7 +502,7 @@ export default function Quotations() {
                           {(() => {
                             if (inv && inv.payment_status === 'Lunas') {
                               return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-600 text-white">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-teal-100 text-teal-700">
                                   <FileCheck2 className="w-3 h-3" />
                                   Selesai
                                 </span>
@@ -510,17 +510,17 @@ export default function Quotations() {
                             }
                             if (inv) {
                               return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700">
                                   <FileCheck2 className="w-3 h-3" />
-                                  Sudah Invoice
+                                  Invoice
                                 </span>
                               );
                             }
                             if (poIn) {
                               return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
                                   <FileCheck2 className="w-3 h-3" />
-                                  Sudah PO
+                                  PO
                                 </span>
                               );
                             }
@@ -528,15 +528,18 @@ export default function Quotations() {
                               return (
                                 <button
                                   onClick={() => navigate('/po')}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
                                 >
                                   <ShoppingCart className="w-3 h-3" />
-                                  Sudah PO Out ({activePOs.length})
+                                  PO Out ({activePOs.length})
                                 </button>
                               );
                             }
                             return (
-                              <span className="inline-flex items-center px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-500">Belum PO</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                                <FileCheck2 className="w-3 h-3" />
+                                Quotation
+                              </span>
                             );
                           })()}
                         </td>
