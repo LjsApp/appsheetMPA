@@ -11,14 +11,66 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { data: poOuts = [] } = usePurchaseOrders();
-  const { data: invoices = [] } = useInvoices();
-  const { data: poIns = [] } = usePoIns();
-  const { data: quotations = [] } = useNeracaQuotations();
-  const { data: dapurIn = [] } = useBelanjaDapurIn();
-  const { data: dapurOut = [] } = useBelanjaDapurOut();
-  const { data: proyekIn = [] } = useBelanjaProyekIn();
-  const { data: proyekOut = [] } = useBelanjaProyekOut();
+  const { data: poOutsRaw = [] } = usePurchaseOrders();
+  const { data: invoicesRaw = [] } = useInvoices();
+  const { data: poInsRaw = [] } = usePoIns();
+  const { data: quotationsRaw = [] } = useNeracaQuotations();
+  const { data: dapurInRaw = [] } = useBelanjaDapurIn();
+  const { data: dapurOutRaw = [] } = useBelanjaDapurOut();
+  const { data: proyekInRaw = [] } = useBelanjaProyekIn();
+  const { data: proyekOutRaw = [] } = useBelanjaProyekOut();
+
+  // Filter state
+  const [dateFilter, setDateFilter] = useState('1 Bulan Terakhir');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const isDateInRange = (dateStr: string | undefined) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return false;
+    
+    const now = new Date();
+    
+    if (dateFilter === 'Semua') return true;
+    
+    if (dateFilter === '1 Bulan Terakhir') {
+      const pastMonth = new Date();
+      pastMonth.setMonth(now.getMonth() - 1);
+      return date >= pastMonth && date <= now;
+    }
+    if (dateFilter === '2 Bulan Terakhir') {
+      const past = new Date();
+      past.setMonth(now.getMonth() - 2);
+      return date >= past && date <= now;
+    }
+    if (dateFilter === '3 Bulan Terakhir') {
+      const past = new Date();
+      past.setMonth(now.getMonth() - 3);
+      return date >= past && date <= now;
+    }
+    if (dateFilter === 'Tahun Ini') {
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      return date >= startOfYear && date <= now;
+    }
+    if (dateFilter === 'Kustom') {
+      if (!startDate && !endDate) return true;
+      const d = date.getTime();
+      const s = startDate ? new Date(startDate).getTime() : -Infinity;
+      const e = endDate ? new Date(endDate).getTime() : Infinity;
+      return d >= s && d <= (e + 86400000 - 1);
+    }
+    return true;
+  };
+
+  const poOuts = useMemo(() => poOutsRaw.filter(x => isDateInRange(x.created_date)), [poOutsRaw, dateFilter, startDate, endDate]);
+  const invoices = useMemo(() => invoicesRaw.filter(x => isDateInRange(x.invoice_date || x.created_date)), [invoicesRaw, dateFilter, startDate, endDate]);
+  const poIns = useMemo(() => poInsRaw.filter(x => isDateInRange(x.tanggal || x.created_date)), [poInsRaw, dateFilter, startDate, endDate]);
+  const quotations = useMemo(() => quotationsRaw.filter(x => isDateInRange(x.created_date)), [quotationsRaw, dateFilter, startDate, endDate]);
+  const dapurIn = useMemo(() => dapurInRaw.filter(x => isDateInRange(x.tanggal || x.created_date)), [dapurInRaw, dateFilter, startDate, endDate]);
+  const dapurOut = useMemo(() => dapurOutRaw.filter(x => isDateInRange(x.tanggal || x.created_date)), [dapurOutRaw, dateFilter, startDate, endDate]);
+  const proyekIn = useMemo(() => proyekInRaw.filter(x => isDateInRange(x.tanggal || x.created_date)), [proyekInRaw, dateFilter, startDate, endDate]);
+  const proyekOut = useMemo(() => proyekOutRaw.filter(x => isDateInRange(x.tanggal || x.created_date)), [proyekOutRaw, dateFilter, startDate, endDate]);
 
   // Modals state
   const [modalContent, setModalContent] = useState<{
@@ -67,7 +119,7 @@ export default function Dashboard() {
   const totalPenjualan = totalLunas + totalPiutang;
 
   // Keuntungan
-  const keuntungan = totalPenjualan - totalPembelian;
+  const keuntungan = totalPenjualan - totalPembelian - totalProyekOut;
 
   // --- PROYEK ---
   // Total Quotation
@@ -107,7 +159,44 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 pb-10 max-w-7xl mx-auto pt-6">
-      <PageHeader title="Dashboard Umum" subtitle="Ringkasan aktivitas keuangan dan proyek perusahaan" />
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <PageHeader title="Dashboard Umum" subtitle="Ringkasan aktivitas keuangan dan proyek perusahaan" />
+        
+        <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-gray-500" />
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 pl-3 pr-8"
+            >
+              <option value="1 Bulan Terakhir">1 Bulan Terakhir</option>
+              <option value="2 Bulan Terakhir">2 Bulan Terakhir</option>
+              <option value="3 Bulan Terakhir">3 Bulan Terakhir</option>
+              <option value="Tahun Ini">Tahun Ini</option>
+              <option value="Semua">Semua Waktu</option>
+              <option value="Kustom">Kustom</option>
+            </select>
+          </div>
+          {dateFilter === 'Kustom' && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3"
+              />
+              <span className="text-gray-400 text-sm">s/d</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3"
+              />
+            </div>
+          )}
+        </div>
+      </div>
       
       {/* SECTION KEUANGAN */}
       <section>
