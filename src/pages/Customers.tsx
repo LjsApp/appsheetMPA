@@ -18,11 +18,13 @@ export default function Customers() {
   // Customer state
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const [selectedNpwpFile, setSelectedNpwpFile] = useState<File | null>(null);
   
   // PIC state
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const [editingPicId, setEditingPicId] = useState<string | null>(null);
+  const [isEditingPic, setIsEditingPic] = useState(false);
 
   const { data: customers = [], isLoading: isLoadingCustomers, isError: isErrorCustomers } = useCustomers();
   const saveCustomer = useSaveCustomer();
@@ -59,6 +61,7 @@ export default function Customers() {
     customerForm.reset({ npwp: '' });
     setSelectedNpwpFile(null);
     setEditingCustomerId(null);
+    setIsEditingCustomer(false);
     setIsCustomerModalOpen(true);
   };
 
@@ -66,6 +69,7 @@ export default function Customers() {
     customerForm.reset(customer);
     setSelectedNpwpFile(null);
     setEditingCustomerId(customer.id);
+    setIsEditingCustomer(true);
     setIsCustomerModalOpen(true);
   };
 
@@ -151,12 +155,14 @@ export default function Customers() {
   const openCreatePic = () => {
     picForm.reset({});
     setEditingPicId(null);
+    setIsEditingPic(false);
     setIsPicModalOpen(true);
   };
 
   const openEditPic = (pic: PIC) => {
     picForm.reset(pic);
     setEditingPicId(pic.id);
+    setIsEditingPic(true);
     setIsPicModalOpen(true);
   };
 
@@ -349,7 +355,7 @@ export default function Customers() {
       </div>
 
       {/* Customer Modal Form */}
-      <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title={editingCustomerId ? 'Edit Customer' : 'Tambah Customer'} size="lg">
+      <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title={isEditingCustomer ? 'Edit Customer' : 'Tambah Customer'} size="lg">
         <form onSubmit={customerForm.handleSubmit(onCustomerSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Kode Customer" required error={customerForm.formState.errors.code?.message}>
@@ -375,7 +381,7 @@ export default function Customers() {
                   }}
                   className={`w-full px-3 py-1.5 rounded-lg border text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 ${customerForm.formState.errors.npwp ? 'border-red-300' : 'border-gray-200'}`}
                 />
-                {!selectedNpwpFile && editingCustomerId && customerForm.getValues('npwp') && (
+                {!selectedNpwpFile && isEditingCustomer && customerForm.getValues('npwp') && (
                   <p className="text-xs text-gray-500">
                     File saat ini: <a href={customerForm.getValues('npwp')} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat Dokumen</a>
                   </p>
@@ -402,14 +408,14 @@ export default function Customers() {
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsCustomerModalOpen(false)} disabled={saveCustomer.isPending || uploadFile.isPending}>Batal</Button>
             <Button type="submit" loading={saveCustomer.isPending || uploadFile.isPending}>
-              {editingCustomerId ? 'Simpan Perubahan' : 'Tambah Customer'}
+              {isEditingCustomer ? 'Simpan Perubahan' : 'Tambah Customer'}
             </Button>
           </div>
         </form>
       </Modal>
 
       {/* PIC Modal Form */}
-      <Modal isOpen={isPicModalOpen} onClose={() => setIsPicModalOpen(false)} title={editingPicId ? 'Edit PIC' : 'Tambah PIC'} size="lg">
+      <Modal isOpen={isPicModalOpen} onClose={() => setIsPicModalOpen(false)} title={isEditingPic ? 'Edit PIC' : 'Tambah PIC'} size="lg">
         <form onSubmit={picForm.handleSubmit(onPicSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Nama PIC" required error={picForm.formState.errors.name?.message}>
@@ -441,7 +447,7 @@ export default function Customers() {
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsPicModalOpen(false)} disabled={savePic.isPending}>Batal</Button>
             <Button type="submit" loading={savePic.isPending}>
-              {editingPicId ? 'Simpan Perubahan' : 'Tambah PIC'}
+              {isEditingPic ? 'Simpan Perubahan' : 'Tambah PIC'}
             </Button>
           </div>
         </form>

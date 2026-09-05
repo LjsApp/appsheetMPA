@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Loader2, Save, Edit2, Eye, Settings, Lock, AlertTriangle } from 'lucide-react';
 import { Button, FormField } from '@/components/ui';
+import SearchableSelect from '@/components/SearchableSelect';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import type { NeracaDetail as NeracaDetailType, NeracaItem } from '@/types';
@@ -131,6 +132,11 @@ export default function NeracaDetail() {
   const { data: vendorDiscounts = [] } = useVendorDiscounts(neracaId!);
   const [vendorDiscountModalId, setVendorDiscountModalId] = useState<string | null>(null);
   const [vdForm, setVdForm] = useState<{pct: number | '', cash: number | '', dpPct: number | '', dpCash: number | '', ppnPct: number | ''}>({ pct: '', cash: '', dpPct: '', dpCash: '', ppnPct: '' });
+
+
+  const activeVendors = useMemo(() => {
+    return vendors.filter(v => v.status === 'Active' || !v.status);
+  }, [vendors]);
   const [vdFormType, setVdFormType] = useState<'pct' | 'cash'>('pct');
   const [dpFormType, setDpFormType] = useState<'pct' | 'cash'>('pct');
   const saveVd = useSaveVendorDiscount();
@@ -569,11 +575,20 @@ export default function NeracaDetail() {
         <form onSubmit={handleSubmit(onSubmitItem)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Pilih Vendor" required error={errors.vendor_id?.message}>
-              <select {...register('vendor_id', { required: 'Wajib dipilih' })}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
-                <option value="">-- Pilih Vendor --</option>
-                {vendors.map(v => <option key={v.id} value={v.id}>{v.vendor_name}</option>)}
-              </select>
+              <Controller
+                control={control}
+                name="vendor_id"
+                rules={{ required: 'Wajib dipilih' }}
+                render={({ field }) => (
+                  <SearchableSelect
+                    options={activeVendors.map(v => ({ value: v.id, label: v.vendor_name }))}
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    placeholder="-- Pilih Vendor --"
+                    error={!!errors.vendor_id}
+                  />
+                )}
+              />
             </FormField>
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Kategori VK" required>

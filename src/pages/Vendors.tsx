@@ -18,11 +18,13 @@ export default function Vendors() {
   // Vendor state
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+  const [isEditingVendor, setIsEditingVendor] = useState(false);
   const [selectedNpwpFile, setSelectedNpwpFile] = useState<File | null>(null);
   
   // PIC state
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const [editingPicId, setEditingPicId] = useState<string | null>(null);
+  const [isEditingPic, setIsEditingPic] = useState(false);
 
   const { data: vendors = [], isLoading: isLoadingVendors, isError: isErrorVendors } = useVendors();
   const saveVendor = useSaveVendor();
@@ -55,6 +57,7 @@ export default function Vendors() {
     vendorForm.reset({ npwp: '' });
     setSelectedNpwpFile(null);
     setEditingVendorId(null);
+    setIsEditingVendor(false);
     setIsVendorModalOpen(true);
   };
 
@@ -62,6 +65,7 @@ export default function Vendors() {
     vendorForm.reset(vendor);
     setSelectedNpwpFile(null);
     setEditingVendorId(vendor.id);
+    setIsEditingVendor(true);
     setIsVendorModalOpen(true);
   };
 
@@ -147,12 +151,14 @@ export default function Vendors() {
   const openCreatePic = () => {
     picForm.reset({});
     setEditingPicId(null);
+    setIsEditingPic(false);
     setIsPicModalOpen(true);
   };
 
   const openEditPic = (pic: PicVendor) => {
     picForm.reset(pic);
     setEditingPicId(pic.id);
+    setIsEditingPic(true);
     setIsPicModalOpen(true);
   };
 
@@ -349,7 +355,7 @@ export default function Vendors() {
       <Modal
         isOpen={isVendorModalOpen}
         onClose={() => setIsVendorModalOpen(false)}
-        title={editingVendorId ? 'Edit Vendor' : 'Tambah Vendor'}
+        title={isEditingVendor ? 'Edit Vendor' : 'Tambah Vendor'}
       >
         <form onSubmit={vendorForm.handleSubmit(onVendorSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -431,7 +437,7 @@ export default function Vendors() {
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsVendorModalOpen(false)} disabled={saveVendor.isPending || uploadFile.isPending}>Batal</Button>
             <Button type="submit" loading={saveVendor.isPending || uploadFile.isPending}>
-              {editingVendorId ? 'Simpan Perubahan' : 'Tambah Vendor'}
+              {isEditingVendor ? 'Simpan Perubahan' : 'Tambah Vendor'}
             </Button>
           </div>
         </form>
@@ -441,7 +447,7 @@ export default function Vendors() {
       <Modal
         isOpen={isPicModalOpen}
         onClose={() => setIsPicModalOpen(false)}
-        title={editingPicId ? 'Edit PIC' : 'Tambah PIC'}
+        title={isEditingPic ? 'Edit PIC' : 'Tambah PIC'}
       >
         <form onSubmit={picForm.handleSubmit(onPicSubmit)} className="space-y-4">
           <FormField label="Nama PIC" required error={picForm.formState.errors.name?.message}>
@@ -472,7 +478,7 @@ export default function Vendors() {
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsPicModalOpen(false)} disabled={savePic.isPending}>Batal</Button>
             <Button type="submit" loading={savePic.isPending}>
-              {editingPicId ? 'Simpan Perubahan' : 'Tambah PIC'}
+              {isEditingPic ? 'Simpan Perubahan' : 'Tambah PIC'}
             </Button>
           </div>
         </form>

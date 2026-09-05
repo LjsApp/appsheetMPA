@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Loader2, FileText, Upload, X, Bell, AlertTriangle } from 'lucide-react';
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
+import SearchableSelect from '@/components/SearchableSelect';
 import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
@@ -75,8 +76,9 @@ export default function Inquiries() {
     return inq.status;
   }, []);
 
-  // Filter PICs by selected customer
-  const filteredPics = pics.filter(p => p.customer_id === watchCustomerId);
+  // Filter PICs by selected customer and active status
+  const activeCustomers = customers.filter(c => c.status === 'Active' || !c.status);
+  const filteredPics = pics.filter(p => p.customer_id === watchCustomerId && (p.status === 'Active' || !p.status));
 
   // Auto-detect overdue inquiries and build notifications
   const notifications = useMemo(() => {
@@ -403,23 +405,25 @@ export default function Inquiries() {
           {/* Customer & PIC */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Customer" required error={errors.customer_id?.message}>
-              <select
-                {...register('customer_id', { required: 'Wajib diisi' })}
-                onChange={e => { setValue('customer_id', e.target.value); setValue('pic_id', ''); }}
-                className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 bg-white ${errors.customer_id ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-100 focus:border-blue-400'}`}
-              >
-                <option value="">- Pilih Customer -</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.company_name} ({c.code})</option>)}
-              </select>
+              <SearchableSelect
+                options={activeCustomers.map(c => ({ value: c.id, label: `${c.company_name} (${c.code})` }))}
+                value={watchCustomerId}
+                onChange={(val) => {
+                  setValue('customer_id', val, { shouldValidate: true });
+                  setValue('pic_id', '');
+                }}
+                placeholder="- Pilih Customer -"
+                error={!!errors.customer_id}
+              />
             </FormField>
             <FormField label="PIC" required error={errors.pic_id?.message}>
-              <select
-                {...register('pic_id', { required: 'Wajib diisi' })}
-                className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 bg-white ${errors.pic_id ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-100 focus:border-blue-400'}`}
-              >
-                <option value="">- Pilih PIC -</option>
-                {filteredPics.map(p => <option key={p.id} value={p.id}>{p.name} — {p.position}</option>)}
-              </select>
+              <SearchableSelect
+                options={filteredPics.map(p => ({ value: p.id, label: `${p.name} - ${p.position}` }))}
+                value={watch('pic_id')}
+                onChange={(val) => setValue('pic_id', val, { shouldValidate: true })}
+                placeholder="- Pilih PIC -"
+                error={!!errors.pic_id}
+              />
             </FormField>
           </div>
 
