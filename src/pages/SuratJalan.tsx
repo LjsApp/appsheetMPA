@@ -4,7 +4,7 @@ import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2 } from 'lucide-react
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
-import { useSuratJalan, usePoIns, useSaveSuratJalan, useDeleteSuratJalan, fetchApi, useUploadFile, useCustomers } from '@/hooks/useData';
+import { useSuratJalan, useSaveSuratJalan, usePoIns, useDeleteSuratJalan, fetchApi, useUploadFile, useCustomers } from '@/hooks/useData';
 import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 
@@ -467,13 +467,18 @@ export default function SuratJalanList() {
                       for (const resi of editResiList) {
                         let finalUrl = resi.url;
                         if (resi.file) {
+                          const ext = resi.file.name.includes('.') ? resi.file.name.split('.').pop() : '';
+                          const sjNum = existingSj.sj_number || '';
+                          const cCode = customers.find(c => c.id === existingSj.customer_id)?.code || '';
+                          const finalFilename = `PT MPA_${sjNum}_${cCode}${editResiList.length > 1 ? '_' + (editResiList.indexOf(resi) + 1) : ''}${ext ? '.' + ext : ''}`;
+                          
                           const base64 = await new Promise<string>((resolve) => {
                             const reader = new FileReader();
                             reader.onload = () => resolve((reader.result as string).split(',')[1]);
                             reader.readAsDataURL(resi.file!);
                           });
                           const res = await uploadFile.mutateAsync({ 
-                            filename: resi.file.name, 
+                            filename: finalFilename, 
                             mimeType: resi.file.type, 
                             base64,
                             module: 'Surat Jalan',

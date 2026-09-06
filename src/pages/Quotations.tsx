@@ -703,15 +703,21 @@ export default function Quotations() {
                           try {
                             const newDocs: { name: string; url: string }[] = [];
                             const files = Array.from(e.target.files);
+                            let fileIdx = 1;
                             for (const file of files) {
+                              const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+                              const qNum = editModal.quotation?.quotation_number || '';
+                              const cCode = customers.find(c => c.id === editModal.quotation?.customer_id)?.code || '';
+                              const finalFilename = `PT MPA_${qNum}_${cCode}${files.length > 1 ? '_' + fileIdx : ''}${ext ? '.' + ext : ''}`;
                               const base64 = await new Promise<string>((resolve, reject) => {
                                 const reader = new FileReader();
                                 reader.readAsDataURL(file);
                                 reader.onload = () => resolve((reader.result as string).split(',')[1]);
                                 reader.onerror = reject;
                               });
-                              const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
-                              newDocs.push({ name: file.name, url });
+                              const url = await uploadFile.mutateAsync({ filename: finalFilename, mimeType: file.type, base64 });
+                              newDocs.push({ name: finalFilename, url });
+                              fileIdx++;
                             }
                             setEditQtDocs(prev => [...prev, ...newDocs]);
                           } catch (error: any) {

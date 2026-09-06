@@ -167,8 +167,14 @@ export default function Inquiries() {
     const customerName = selectedCustomer?.company_name || data.customer_id;
 
     // Upload new files
+    let fileIdx = currentDocs.length + 1;
     for (const file of selectedFiles) {
       try {
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+        const dateObj = new Date();
+        const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()}`;
+        const finalFilename = `${data.request_number}_dok${fileIdx}_${dateStr}${ext ? '.' + ext : ''}`;
+
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.readAsDataURL(file);
@@ -176,24 +182,22 @@ export default function Inquiries() {
           reader.onerror = reject;
         });
         const url = await uploadFile.mutateAsync({ 
-          filename: file.name, 
+          filename: finalFilename, 
           mimeType: file.type, 
           base64,
           module: 'Permintaan',
           entityName: customerName,
           docReference: docRef
         });
-        currentDocs.push({ name: file.name, url });
+        currentDocs.push({ name: finalFilename, url });
+        fileIdx++;
       } catch {
         alert(`Gagal mengupload ${file.name}`);
       }
     }
 
-    // Rename all documents contiguously (Lampiran 1, Lampiran 2, dst)
-    currentDocs = currentDocs.map((doc, idx) => ({
-      ...doc,
-      name: `Lampiran ${idx + 1}`
-    }));
+    // Retain the formatted filename as the display name
+    // no need to rename to Lampiran 1, Lampiran 2
 
     setIsUploading(false);
 

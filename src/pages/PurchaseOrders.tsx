@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Plus, Pencil, X, Upload, FileText, SendHorizonal } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useSaveNotification } from '@/hooks/useData';
+import { usePurchaseOrders, usePoIns, useSavePurchaseOrder, useUploadFile, useSaveNotification, useVendors } from '@/hooks/useData';
 import type { PurchaseOrder, NeracaQuotation } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import AddPoOutModal from '@/components/AddPoOutModal';
@@ -16,6 +16,7 @@ export default function PurchaseOrders() {
   const navigate = useNavigate();
   const { data: purchaseOrders = [], isLoading: loadingPOs, refetch: refetchPOs } = usePurchaseOrders();
   const { data: poIns = [], isLoading: loadingPoIns } = usePoIns();
+  const { data: vendors = [] } = useVendors();
   
   
   const savePO = useSavePurchaseOrder();
@@ -97,14 +98,20 @@ export default function PurchaseOrders() {
     try {
       let finalDocs = [...existingDocs];
       if (newFiles.length > 0) {
+        let fileIdx = 1;
         for (const file of newFiles) {
+          const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+          const poNum = editModal.po.po_number || '';
+          const vCode = vendors.find(v => v.id === editModal.po?.vendor_id)?.code || '';
+          const finalFilename = `PT MPA_${poNum}_${vCode}${newFiles.length > 1 ? '_' + fileIdx : ''}${ext ? '.' + ext : ''}`;
+          
           const base64 = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
             reader.readAsDataURL(file);
           });
           const res = await uploadFile.mutateAsync({ 
-            filename: file.name, 
+            filename: finalFilename, 
             mimeType: file.type, 
             base64,
             module: 'PO Out',
@@ -112,7 +119,8 @@ export default function PurchaseOrders() {
             docReference: editModal.po.po_number || editModal.po.id
           });
           const fileUrl = typeof res === 'string' ? res : (res as any)?.url;
-          if (fileUrl) finalDocs.push({ name: file.name, url: fileUrl });
+          if (fileUrl) finalDocs.push({ name: finalFilename, url: fileUrl });
+          fileIdx++;
         }
       }
 
