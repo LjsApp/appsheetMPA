@@ -57,6 +57,18 @@ function routeRequest(action, method, body, params) {
           createdSheets.push(sheetName);
         }
       });
+      
+      // Migrate PIC sheets to remove email column
+      ['pics', 'pic_vendors'].forEach(function(sheetName) {
+        var sheet = ss.getSheetByName(sheetName);
+        if (sheet && sheet.getLastColumn() > 0) {
+          var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          var emailIdx = headers.indexOf('email');
+          if (emailIdx !== -1) {
+            sheet.deleteColumn(emailIdx + 1);
+          }
+        }
+      });
 
       // 2. Initialize Drive Folders
       var root = DriveApp.getRootFolder();
