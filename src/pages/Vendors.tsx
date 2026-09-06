@@ -207,6 +207,7 @@ export default function Vendors() {
     { key: 'vendor_name', label: 'Perusahaan' },
     { key: 'npwp', label: 'NPWP', render: (v: unknown) => v ? <a href={String(v)} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat Dokumen</a> : '-' },
     { key: 'address', label: 'Alamat' },
+    { key: 'email', label: 'Email' },
     { key: 'products', label: 'Produk', render: (v: unknown) => <div className="max-w-xs truncate" title={String(v || '')}>{String(v || '-')}</div> },
     { key: 'bank_name', label: 'Info Rekening', render: (_: unknown, row: any) => (
       row.bank_name || row.bank_account_name || row.bank_account_number ? (
@@ -418,10 +419,18 @@ export default function Vendors() {
               placeholder="Alamat lengkap perusahaan"
             />
           </FormField>
+
+          <FormField label="Email">
+            <Input
+              {...vendorForm.register('email')}
+              type="email"
+              placeholder="email@perusahaan.com"
+            />
+          </FormField>
           
-          <FormField label="Produk" required error={vendorForm.formState.errors.products?.message}>
+          <FormField label="Produk" error={vendorForm.formState.errors.products?.message}>
             <textarea
-              {...vendorForm.register('products', { required: 'Wajib diisi' })}
+              {...vendorForm.register('products')}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm ${vendorForm.formState.errors.products ? 'border-red-300' : 'border-gray-200'}`}
               rows={3}
               placeholder="Deskripsikan produk yang disediakan..."
