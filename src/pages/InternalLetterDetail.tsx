@@ -140,7 +140,14 @@ export default function InternalLetterDetail() {
         reader.onload = () => resolve((reader.result as string).split(',')[1]);
         reader.readAsDataURL(file);
       });
-      const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+      const url = await uploadFile.mutateAsync({ 
+        filename: file.name, 
+        mimeType: file.type, 
+        base64,
+        module: 'Internal Letter',
+        entityName: letter?.customer_name || letter?.vendor_name || letter?.id || '',
+        docReference: letter?.internal_letter_number || letter?.id || ''
+      });
       setUploadedBuktiUrl(typeof url === 'string' ? url : (url as any)?.url);
     } catch {
       alert('Gagal mengupload bukti transfer');

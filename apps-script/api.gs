@@ -40,6 +40,53 @@ function routeRequest(action, method, body, params) {
       return safeUser;
     }
 
+    case 'initDatabaseAndDrive': {
+      // 1. Initialize Sheets
+      var sheetsToCreate = [
+        'users', 'roles', 'customers', 'pics', 'vendors', 'pic_vendors', 'products', 
+        'inquiries', 'sourcing_requests', 'vendor_quotations', 'neracas', 'quotations', 
+        'po_in', 'po_out', 'surat_jalan', 'invoices', 'internal_letters', 'notifications', 
+        'belanja_dapur_in', 'belanja_dapur_out', 'belanja_proyek_in', 'belanja_proyek_out', 
+        'company', 'vendor_discounts'
+      ];
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var createdSheets = [];
+      sheetsToCreate.forEach(function(sheetName) {
+        if (!ss.getSheetByName(sheetName)) {
+          ss.insertSheet(sheetName);
+          createdSheets.push(sheetName);
+        }
+      });
+
+      // 2. Initialize Drive Folders
+      var root = DriveApp.getRootFolder();
+      var masterFolderName = 'AppscriptMPA_Storage';
+      var masterFolder;
+      var masterFolders = root.getFoldersByName(masterFolderName);
+      if (masterFolders.hasNext()) {
+        masterFolder = masterFolders.next();
+      } else {
+        masterFolder = root.createFolder(masterFolderName);
+      }
+      
+      var moduleFolders = ['Permintaan', 'Quotation', 'PO In', 'PO Out', 'Surat Jalan', 'Invoice', 'Internal Letter'];
+      var createdFolders = [];
+      moduleFolders.forEach(function(folderName) {
+        var subFolders = masterFolder.getFoldersByName(folderName);
+        if (!subFolders.hasNext()) {
+          masterFolder.createFolder(folderName);
+          createdFolders.push(folderName);
+        }
+      });
+      
+      return { 
+        success: true, 
+        message: 'Berhasil inisialisasi Database dan Drive.', 
+        createdSheets: createdSheets,
+        createdFolders: createdFolders
+      };
+    }
+
     // Auth & Users
     case 'login': {
       var users = getRecords('users');
@@ -806,8 +853,34 @@ function routeRequest(action, method, body, params) {
     // Upload File
     case 'uploadFile': {
       var dataBytes = Utilities.base64Decode(body.base64);
-      var blob = Utilities.newBlob(dataBytes, body.mimeType, body.filename);
-      var file = DriveApp.createFile(blob);
+      
+      var targetFolder = DriveApp.getRootFolder();
+      var finalFilename = body.filename;
+
+      if (body.module && body.entityName) {
+        var masterFolders = DriveApp.getRootFolder().getFoldersByName('AppscriptMPA_Storage');
+        if (masterFolders.hasNext()) {
+          var masterFolder = masterFolders.next();
+          var moduleFolders = masterFolder.getFoldersByName(body.module);
+          if (moduleFolders.hasNext()) {
+            var moduleFolder = moduleFolders.next();
+            var entityFolders = moduleFolder.getFoldersByName(body.entityName);
+            if (entityFolders.hasNext()) {
+              targetFolder = entityFolders.next();
+            } else {
+              targetFolder = moduleFolder.createFolder(body.entityName);
+            }
+          }
+        }
+        
+        // Format filename: [docReference]_[originalName]
+        if (body.docReference) {
+          finalFilename = '[' + body.docReference + ']_' + body.filename;
+        }
+      }
+
+      var blob = Utilities.newBlob(dataBytes, body.mimeType, finalFilename);
+      var file = targetFolder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       var fileId = file.getId();
       // Return direct preview URL (works without login)

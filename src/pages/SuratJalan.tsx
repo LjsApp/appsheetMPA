@@ -472,7 +472,14 @@ export default function SuratJalanList() {
                             reader.onload = () => resolve((reader.result as string).split(',')[1]);
                             reader.readAsDataURL(resi.file!);
                           });
-                          const res = await uploadFile.mutateAsync({ filename: resi.file.name, mimeType: resi.file.type, base64 });
+                          const res = await uploadFile.mutateAsync({ 
+                            filename: resi.file.name, 
+                            mimeType: resi.file.type, 
+                            base64,
+                            module: 'Surat Jalan',
+                            entityName: existingSj.customer_name || existingSj.customer_id || '',
+                            docReference: existingSj.sj_number || existingSj.id
+                          });
                           finalUrl = typeof res === 'string' ? res : res?.url || '';
                         }
                         finalResiList.push({

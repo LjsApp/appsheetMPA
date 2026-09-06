@@ -161,6 +161,11 @@ export default function Inquiries() {
     setIsUploading(true);
     let currentDocs = [...uploadedDocs];
 
+    const selectedCustomer = customers.find(c => c.id === data.customer_id);
+    const selectedPic = pics.find(p => p.id === data.pic_id);
+    const docRef = editingId || `INQ-${Date.now()}`;
+    const customerName = selectedCustomer?.company_name || data.customer_id;
+
     // Upload new files
     for (const file of selectedFiles) {
       try {
@@ -170,7 +175,14 @@ export default function Inquiries() {
           reader.onload = () => resolve((reader.result as string).split(',')[1]);
           reader.onerror = reject;
         });
-        const url = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+        const url = await uploadFile.mutateAsync({ 
+          filename: file.name, 
+          mimeType: file.type, 
+          base64,
+          module: 'Permintaan',
+          entityName: customerName,
+          docReference: docRef
+        });
         currentDocs.push({ name: file.name, url });
       } catch {
         alert(`Gagal mengupload ${file.name}`);
@@ -185,12 +197,9 @@ export default function Inquiries() {
 
     setIsUploading(false);
 
-    const selectedCustomer = customers.find(c => c.id === data.customer_id);
-    const selectedPic = pics.find(p => p.id === data.pic_id);
-
     let payload: Inquiry = {
       ...data,
-      customer_name: selectedCustomer?.company_name || data.customer_id,
+      customer_name: customerName,
       pic_name: selectedPic?.name || data.pic_id,
       documents: JSON.stringify(currentDocs),
       status: resolveStatus(data, !!editingId),
@@ -199,7 +208,7 @@ export default function Inquiries() {
     if (!editingId) {
       payload = {
         ...payload,
-        id: `INQ-${Date.now()}`,
+        id: docRef,
         created_by: user?.name || '',
         created_date: new Date().toISOString().split('T')[0],
         updated_date: new Date().toISOString().split('T')[0],

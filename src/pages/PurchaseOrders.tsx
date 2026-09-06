@@ -103,7 +103,14 @@ export default function PurchaseOrders() {
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
             reader.readAsDataURL(file);
           });
-          const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+          const res = await uploadFile.mutateAsync({ 
+            filename: file.name, 
+            mimeType: file.type, 
+            base64,
+            module: 'PO Out',
+            entityName: editModal.po.vendor_name || editModal.po.vendor_id || '',
+            docReference: editModal.po.po_number || editModal.po.id
+          });
           const fileUrl = typeof res === 'string' ? res : (res as any)?.url;
           if (fileUrl) finalDocs.push({ name: file.name, url: fileUrl });
         }

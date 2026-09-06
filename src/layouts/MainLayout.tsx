@@ -19,12 +19,13 @@ import {
   Shield,
   UserCircle,
   ShoppingBag,
-  CookingPot
+  CookingPot,
+  DatabaseZap
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuthStore } from '@/store/authStore';
-import { useRoles } from '@/hooks/useData';
+import { useRoles, fetchApi } from '@/hooks/useData';
 import NotificationBell from '@/components/NotificationBell';
 
 export function cn(...inputs: ClassValue[]) {
@@ -84,6 +85,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { data: roles = [] } = useRoles();
+  const [initLoading, setInitLoading] = useState(false);
 
   // Compute allowed paths for current user
   const allowedPaths = useMemo(() => {
@@ -95,7 +97,8 @@ export default function MainLayout() {
   }, [user, roles]);
 
   const canAccess = (path: string) => {
-    if (allowedPaths === null) return true; // super admin
+    if (!user) return false;
+    if (user.is_super_admin) return true; // super admin
     if (allowedPaths.includes(path)) return true;
     return false;
   };
@@ -381,6 +384,28 @@ export default function MainLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
+            {isSuperAdmin && (
+              <button
+                onClick={async () => {
+                  if (confirm('Apakah Anda yakin ingin inisialisasi Database dan Drive? Ini akan membuat struktur folder Master di Google Drive Anda dan tabel yang kurang.')) {
+                    setInitLoading(true);
+                    try {
+                      const res = await fetchApi('initDatabaseAndDrive', 'POST', {});
+                      alert(res.message);
+                    } catch (e: any) {
+                      alert('Gagal inisialisasi: ' + e.message);
+                    } finally {
+                      setInitLoading(false);
+                    }
+                  }
+                }}
+                disabled={initLoading}
+                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-sm font-medium transition-colors"
+              >
+                <DatabaseZap className="w-4 h-4" />
+                {initLoading ? 'Inisialisasi...' : 'Init DB & Drive'}
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm ml-2">

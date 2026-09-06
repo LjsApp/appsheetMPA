@@ -74,6 +74,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
     try {
       if (!skipPoInForm) {
         // 1. Upload PO In documents
+        const poInId = `POIN-${Date.now()}`;
         const uploadedDocs: { name: string; url: string }[] = [];
         for (const file of poInFiles) {
           const base64 = await new Promise<string>((resolve) => {
@@ -81,13 +82,19 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
             reader.readAsDataURL(file);
           });
-          const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+          const res = await uploadFile.mutateAsync({ 
+            filename: file.name, 
+            mimeType: file.type, 
+            base64,
+            module: 'PO In',
+            entityName: quotation.customer_name || quotation.customer_id || '',
+            docReference: poInId
+          });
           const fileUrl = typeof res === 'string' ? res : res?.url;
           if (fileUrl) uploadedDocs.push({ name: file.name, url: fileUrl });
         }
 
         // 2. Save PO In record
-        const poInId = `POIN-${Date.now()}`;
         await savePoIn.mutateAsync({
           id: poInId,
           quotation_id: quotation.id,

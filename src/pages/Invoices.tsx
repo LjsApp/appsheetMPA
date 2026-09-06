@@ -138,7 +138,14 @@ export default function Invoices() {
           reader.onload = () => resolve((reader.result as string).split(',')[1]);
           reader.readAsDataURL(paymentFile);
         });
-        const res = await uploadFile.mutateAsync({ filename: paymentFile.name, mimeType: paymentFile.type, base64 });
+        const res = await uploadFile.mutateAsync({ 
+          filename: paymentFile.name, 
+          mimeType: paymentFile.type, 
+          base64,
+          module: 'Invoice',
+          entityName: paymentModal.invoice.customer_name || paymentModal.invoice.customer_id || '',
+          docReference: paymentModal.invoice.invoice_number || paymentModal.invoice.id
+        });
         fileUrl = typeof res === 'string' ? res : (res as any)?.url || '';
       }
 
