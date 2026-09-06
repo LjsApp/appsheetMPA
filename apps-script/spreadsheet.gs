@@ -11,7 +11,21 @@ const getSheet = (sheetName) => {
   return sheet;
 }
 
+const clearCache = (sheetName) => {
+  try {
+    CacheService.getScriptCache().remove('sheet_data_' + sheetName);
+  } catch (e) {}
+}
+
 const getRecords = (sheetName) => {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'sheet_data_' + sheetName;
+  const cached = cache.get(cacheKey);
+  
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
+  }
+
   const sheet = getSheet(sheetName);
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return [];
@@ -33,113 +47,147 @@ const getRecords = (sheetName) => {
     }
     return obj;
   });
+  
+  try {
+    const jsonString = JSON.stringify(result);
+    // Cache limits to 100KB.
+    if (jsonString.length < 90000) {
+      cache.put(cacheKey, jsonString, 300); // 5 minutes
+    }
+  } catch (e) {}
+  
+  return result;
 }
 
 const addRecord = (sheetName, record) => {
-  const sheet = getSheet(sheetName);
-  let lastCol = sheet.getLastColumn();
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (e) { throw new Error('Sistem sedang sibuk. Silakan coba lagi.'); }
   
-  // Auto-generate headers if sheet is completely empty
-  if (lastCol === 0) {
-    const newHeaders = Object.keys(record);
-    if (newHeaders.length === 0) return record;
-    sheet.appendRow(newHeaders);
-    lastCol = newHeaders.length;
+  try {
+    const sheet = getSheet(sheetName);
+    let lastCol = sheet.getLastColumn();
+    
+    // Auto-generate headers if sheet is completely empty
+    if (lastCol === 0) {
+      const newHeaders = Object.keys(record);
+      if (newHeaders.length === 0) return record;
+      sheet.appendRow(newHeaders);
+      lastCol = newHeaders.length;
+    }
+    
+    let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    
+    // Check for new columns
+    const recordKeys = Object.keys(record);
+    const newCols = recordKeys.filter(k => headers.indexOf(k) === -1);
+    if (newCols.length > 0) {
+      sheet.getRange(1, lastCol + 1, 1, newCols.length).setValues([newCols]);
+      headers = headers.concat(newCols);
+      lastCol = headers.length;
+    }
+    
+    const newRow = headers.map(header => {
+      let val = record[header] !== undefined ? record[header] : "";
+      if ((header === 'dt_kc' || header === 'dt_vk') && val) val = "'" + val;
+      return val;
+    });
+    sheet.appendRow(newRow);
+    clearCache(sheetName);
+    return record;
+  } finally {
+    lock.releaseLock();
   }
-  
-  let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  
-  // Check for new columns
-  const recordKeys = Object.keys(record);
-  const newCols = recordKeys.filter(k => headers.indexOf(k) === -1);
-  if (newCols.length > 0) {
-    sheet.getRange(1, lastCol + 1, 1, newCols.length).setValues([newCols]);
-    headers = headers.concat(newCols);
-    lastCol = headers.length;
-  }
-  
-  const newRow = headers.map(header => {
-    let val = record[header] !== undefined ? record[header] : "";
-    if ((header === 'dt_kc' || header === 'dt_vk') && val) val = "'" + val;
-    return val;
-  });
-  sheet.appendRow(newRow);
-  return record;
 }
 
 const updateRecord = (sheetName, idField, record) => {
-  const sheet = getSheet(sheetName);
-  let lastCol = sheet.getLastColumn();
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) throw new Error("No data found to update");
-  
-  let headers = data[0];
-  const idIndex = headers.indexOf(idField);
-  // idIndex might be -1 if the sheet has no headers or is missing the id column, but we might still have a synthetic AUTO-ROW ID.
-  // We'll let it pass for now.
-  
-  const recordId = record[idField];
-  let rowIndex = -1;
-  
-  if (idField === 'id' && typeof recordId === 'string' && recordId.indexOf('AUTO-ROW-') === 0) {
-    rowIndex = parseInt(recordId.replace('AUTO-ROW-', ''), 10);
-  } else {
-    if (idIndex !== -1) {
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][idIndex] === recordId) {
-          rowIndex = i + 1; // 1-based index for Google Sheets API
-          break;
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (e) { throw new Error('Sistem sedang sibuk. Silakan coba lagi.'); }
+
+  try {
+    const sheet = getSheet(sheetName);
+    let lastCol = sheet.getLastColumn();
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) throw new Error("No data found to update");
+    
+    let headers = data[0];
+    const idIndex = headers.indexOf(idField);
+    // idIndex might be -1 if the sheet has no headers or is missing the id column, but we might still have a synthetic AUTO-ROW ID.
+    // We'll let it pass for now.
+    
+    const recordId = record[idField];
+    let rowIndex = -1;
+    
+    if (idField === 'id' && typeof recordId === 'string' && recordId.indexOf('AUTO-ROW-') === 0) {
+      rowIndex = parseInt(recordId.replace('AUTO-ROW-', ''), 10);
+    } else {
+      if (idIndex !== -1) {
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][idIndex] === recordId) {
+            rowIndex = i + 1; // 1-based index for Google Sheets API
+            break;
+          }
         }
       }
     }
+    
+    if (rowIndex === -1 || isNaN(rowIndex)) throw new Error(`Record with ${idField}=${recordId} not found`);
+    
+    // Check for new columns
+    const recordKeys = Object.keys(record);
+    const newCols = recordKeys.filter(k => headers.indexOf(k) === -1);
+    if (newCols.length > 0) {
+      sheet.getRange(1, lastCol + 1, 1, newCols.length).setValues([newCols]);
+      headers = headers.concat(newCols);
+      lastCol = headers.length;
+    }
+    
+    // Refresh existing row in case new columns were added (though it will just be undefined/empty)
+    // We need to fetch the row again from the sheet because data array doesn't have the new cols
+    const existingRow = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+    
+    const updatedRow = headers.map((header, i) => {
+      let val = record.hasOwnProperty(header) ? record[header] : existingRow[i];
+      if ((header === 'dt_kc' || header === 'dt_vk') && val && String(val).indexOf("'") !== 0) val = "'" + val;
+      return val;
+    });
+    
+    sheet.getRange(rowIndex, 1, 1, headers.length).setValues([updatedRow]);
+    clearCache(sheetName);
+    return record;
+  } finally {
+    lock.releaseLock();
   }
-  
-  if (rowIndex === -1 || isNaN(rowIndex)) throw new Error(`Record with ${idField}=${recordId} not found`);
-  
-  // Check for new columns
-  const recordKeys = Object.keys(record);
-  const newCols = recordKeys.filter(k => headers.indexOf(k) === -1);
-  if (newCols.length > 0) {
-    sheet.getRange(1, lastCol + 1, 1, newCols.length).setValues([newCols]);
-    headers = headers.concat(newCols);
-    lastCol = headers.length;
-  }
-  
-  // Refresh existing row in case new columns were added (though it will just be undefined/empty)
-  // We need to fetch the row again from the sheet because data array doesn't have the new cols
-  const existingRow = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
-  
-  const updatedRow = headers.map((header, i) => {
-    let val = record.hasOwnProperty(header) ? record[header] : existingRow[i];
-    if ((header === 'dt_kc' || header === 'dt_vk') && val && String(val).indexOf("'") !== 0) val = "'" + val;
-    return val;
-  });
-  
-  sheet.getRange(rowIndex, 1, 1, headers.length).setValues([updatedRow]);
-  return record;
 }
 
 const deleteRecord = (sheetName, idField, idValue) => {
-  const sheet = getSheet(sheetName);
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return false;
-  
-  const headers = data[0];
-  const idIndex = headers.indexOf(idField);
-  if (idIndex === -1) throw new Error(`ID field ${idField} not found in headers`);
-  
-  let rowIndex = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][idIndex] === idValue) {
-      rowIndex = i + 1;
-      break;
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (e) { throw new Error('Sistem sedang sibuk. Silakan coba lagi.'); }
+
+  try {
+    const sheet = getSheet(sheetName);
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return false;
+    
+    const headers = data[0];
+    const idIndex = headers.indexOf(idField);
+    if (idIndex === -1) throw new Error(`ID field ${idField} not found in headers`);
+    
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idIndex] === idValue) {
+        rowIndex = i + 1;
+        break;
+      }
     }
+    
+    if (rowIndex !== -1) {
+      sheet.deleteRow(rowIndex);
+      clearCache(sheetName);
+      return true;
+    }
+    
+    return false;
+  } finally {
+    lock.releaseLock();
   }
-  
-  if (rowIndex !== -1) {
-    sheet.deleteRow(rowIndex);
-    return true;
-  }
-  
-  return false;
 }

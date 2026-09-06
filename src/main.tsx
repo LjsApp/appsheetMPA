@@ -9,6 +9,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      gcTime: 1000 * 60 * 5, // 5 minutes (cacheTime in older versions, gcTime in v5)
+      retry: 1, // only retry once to avoid spamming the sheet API
     },
   },
 })
