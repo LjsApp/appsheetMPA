@@ -25,6 +25,7 @@ export default function Customers() {
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const [editingPicId, setEditingPicId] = useState<string | null>(null);
   const [isEditingPic, setIsEditingPic] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
 
   const { data: customers = [], isLoading: isLoadingCustomers, isError: isErrorCustomers } = useCustomers();
   const saveCustomer = useSaveCustomer();
@@ -154,6 +155,7 @@ export default function Customers() {
   // --- PIC Actions ---
   const openCreatePic = () => {
     picForm.reset({});
+    setCustomerSearch('');
     setEditingPicId(null);
     setIsEditingPic(false);
     setIsPicModalOpen(true);
@@ -161,6 +163,9 @@ export default function Customers() {
 
   const openEditPic = (pic: PIC) => {
     picForm.reset(pic);
+    // Pre-fill the searchable dropdown with the existing customer name
+    const existingCustomer = customers.find(c => c.id === pic.customer_id);
+    setCustomerSearch(existingCustomer?.company_name || pic.customer_name || '');
     setEditingPicId(pic.id);
     setIsEditingPic(true);
     setIsPicModalOpen(true);
@@ -258,7 +263,6 @@ export default function Customers() {
     }},
     { key: 'position', label: 'Jabatan' },
     { key: 'phone', label: 'No HP' },
-    { key: 'email', label: 'Email' },
     { key: 'status', label: 'Status', render: (v: unknown, row: any) => {
       const isActive = v === 'Active' || !v;
       return (
@@ -440,27 +444,52 @@ export default function Customers() {
               <Input {...picForm.register('name', { required: 'Wajib diisi' })} placeholder="Nama lengkap PIC" error={!!picForm.formState.errors.name} />
             </FormField>
             <FormField label="Customer / Perusahaan" required error={picForm.formState.errors.customer_id?.message}>
-              <select 
-                {...picForm.register('customer_id', { required: 'Wajib diisi' })} 
-                className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 bg-white ${picForm.formState.errors.customer_id ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-100'}`}
-              >
-                <option value="">- Pilih Customer -</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.company_name} ({c.code})</option>
-                ))}
-              </select>
+              {/* Searchable dropdown */}
+              <div className="relative">
+                <Input
+                  value={customerSearch}
+                  onChange={e => setCustomerSearch(e.target.value)}
+                  placeholder="Cari nama customer..."
+                />
+                {customerSearch && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {customers
+                      .filter(c => 
+                        c.company_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                        c.code?.toLowerCase().includes(customerSearch.toLowerCase())
+                      )
+                      .map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            picForm.setValue('customer_id', c.id, { shouldValidate: true });
+                            setCustomerSearch(c.company_name);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          {c.company_name} {c.code ? `(${c.code})` : ''}
+                        </button>
+                      ))
+                    }
+                    {customers.filter(c =>
+                      c.company_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                      c.code?.toLowerCase().includes(customerSearch.toLowerCase())
+                    ).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-400">Tidak ada hasil</div>
+                    )}
+                  </div>
+                )}
+                {/* Hidden input for form value */}
+                <input type="hidden" {...picForm.register('customer_id', { required: 'Wajib diisi' })} />
+              </div>
             </FormField>
             <FormField label="Jabatan">
               <Input {...picForm.register('position')} placeholder="Contoh: Procurement Manager" />
             </FormField>
-            <FormField label="No HP" required error={picForm.formState.errors.phone?.message}>
-              <Input {...picForm.register('phone', { required: 'Wajib diisi' })} placeholder="08xxxxxxxxxx" error={!!picForm.formState.errors.phone} />
+            <FormField label="No HP" error={picForm.formState.errors.phone?.message}>
+              <Input {...picForm.register('phone')} placeholder="08xxxxxxxxxx" error={!!picForm.formState.errors.phone} />
             </FormField>
-            <div className="col-span-2">
-              <FormField label="Email" required error={picForm.formState.errors.email?.message}>
-                <Input {...picForm.register('email', { required: 'Wajib diisi' })} placeholder="email@perusahaan.com" type="email" error={!!picForm.formState.errors.email} />
-              </FormField>
-            </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsPicModalOpen(false)} disabled={savePic.isPending}>Batal</Button>

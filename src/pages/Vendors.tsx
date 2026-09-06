@@ -25,6 +25,7 @@ export default function Vendors() {
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const [editingPicId, setEditingPicId] = useState<string | null>(null);
   const [isEditingPic, setIsEditingPic] = useState(false);
+  const [vendorSearch, setVendorSearch] = useState('');
 
   const { data: vendors = [], isLoading: isLoadingVendors, isError: isErrorVendors } = useVendors();
   const saveVendor = useSaveVendor();
@@ -150,6 +151,7 @@ export default function Vendors() {
   // --- PIC Actions ---
   const openCreatePic = () => {
     picForm.reset({});
+    setVendorSearch('');
     setEditingPicId(null);
     setIsEditingPic(false);
     setIsPicModalOpen(true);
@@ -157,6 +159,8 @@ export default function Vendors() {
 
   const openEditPic = (pic: PicVendor) => {
     picForm.reset(pic);
+    const existingVendor = vendors.find(v => v.id === pic.vendor_id);
+    setVendorSearch(existingVendor?.vendor_name || pic.vendor_name || '');
     setEditingPicId(pic.id);
     setIsEditingPic(true);
     setIsPicModalOpen(true);
@@ -259,7 +263,6 @@ export default function Vendors() {
     }},
     { key: 'position', label: 'Jabatan' },
     { key: 'phone', label: 'No HP' },
-    { key: 'email', label: 'Email' },
     { key: 'status', label: 'Status', render: (v: unknown, row: any) => {
       const isActive = v === 'Active' || !v;
       return (
@@ -407,9 +410,9 @@ export default function Vendors() {
             </div>
           </FormField>
 
-          <FormField label="Alamat" required error={vendorForm.formState.errors.address?.message}>
+          <FormField label="Alamat" error={vendorForm.formState.errors.address?.message}>
             <textarea
-              {...vendorForm.register('address', { required: 'Wajib diisi' })}
+              {...vendorForm.register('address')}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm ${vendorForm.formState.errors.address ? 'border-red-300' : 'border-gray-200'}`}
               rows={2}
               placeholder="Alamat lengkap perusahaan"
@@ -461,7 +464,6 @@ export default function Vendors() {
         </form>
       </Modal>
 
-      {/* Modal Form PIC Vendor */}
       <Modal
         isOpen={isPicModalOpen}
         onClose={() => setIsPicModalOpen(false)}
@@ -472,27 +474,51 @@ export default function Vendors() {
             <Input {...picForm.register('name', { required: 'Wajib diisi' })} placeholder="Nama Lengkap" error={!!picForm.formState.errors.name} />
           </FormField>
           <FormField label="Perusahaan" required error={picForm.formState.errors.vendor_id?.message}>
-            <select 
-              {...picForm.register('vendor_id', { required: 'Wajib diisi' })} 
-              className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 bg-white ${picForm.formState.errors.vendor_id ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-100'}`}
-            >
-              <option value="">- Pilih Vendor -</option>
-              {vendors.map(v => (
-                <option key={v.id} value={v.id}>{v.vendor_name} ({v.code})</option>
-              ))}
-            </select>
+            {/* Searchable dropdown */}
+            <div className="relative">
+              <Input
+                value={vendorSearch}
+                onChange={e => setVendorSearch(e.target.value)}
+                placeholder="Cari nama vendor..."
+              />
+              {vendorSearch && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {vendors
+                    .filter(v =>
+                      v.vendor_name?.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+                      v.code?.toLowerCase().includes(vendorSearch.toLowerCase())
+                    )
+                    .map(v => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => {
+                          picForm.setValue('vendor_id', v.id, { shouldValidate: true });
+                          setVendorSearch(v.vendor_name);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        {v.vendor_name} {v.code ? `(${v.code})` : ''}
+                      </button>
+                    ))
+                  }
+                  {vendors.filter(v =>
+                    v.vendor_name?.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+                    v.code?.toLowerCase().includes(vendorSearch.toLowerCase())
+                  ).length === 0 && (
+                    <div className="px-3 py-2 text-sm text-gray-400">Tidak ada hasil</div>
+                  )}
+                </div>
+              )}
+              <input type="hidden" {...picForm.register('vendor_id', { required: 'Wajib diisi' })} />
+            </div>
           </FormField>
-          <FormField label="Jabatan" required error={picForm.formState.errors.position?.message}>
-            <Input {...picForm.register('position', { required: 'Wajib diisi' })} placeholder="Sales, Manager, dll" error={!!picForm.formState.errors.position} />
+          <FormField label="Jabatan" error={picForm.formState.errors.position?.message}>
+            <Input {...picForm.register('position')} placeholder="Sales, Manager, dll" error={!!picForm.formState.errors.position} />
           </FormField>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="No HP" required error={picForm.formState.errors.phone?.message}>
-              <Input {...picForm.register('phone', { required: 'Wajib diisi' })} placeholder="08xxx" error={!!picForm.formState.errors.phone} />
-            </FormField>
-            <FormField label="Email" required error={picForm.formState.errors.email?.message}>
-              <Input {...picForm.register('email', { required: 'Wajib diisi' })} type="email" placeholder="email@domain.com" error={!!picForm.formState.errors.email} />
-            </FormField>
-          </div>
+          <FormField label="No HP" error={picForm.formState.errors.phone?.message}>
+            <Input {...picForm.register('phone')} placeholder="08xxx" error={!!picForm.formState.errors.phone} />
+          </FormField>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" type="button" onClick={() => setIsPicModalOpen(false)} disabled={savePic.isPending}>Batal</Button>
             <Button type="submit" loading={savePic.isPending}>
