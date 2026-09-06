@@ -386,8 +386,8 @@ export default function Customers() {
             <FormField label="Nama Customer" required error={customerForm.formState.errors.company_name?.message}>
               <Input {...customerForm.register('company_name', { required: 'Wajib diisi' })} placeholder="PT ..." error={!!customerForm.formState.errors.company_name} />
             </FormField>
-            <FormField label="Email" required error={customerForm.formState.errors.email?.message}>
-              <Input {...customerForm.register('email', { required: 'Wajib diisi' })} placeholder="email@perusahaan.co.id" type="email" error={!!customerForm.formState.errors.email} />
+            <FormField label="Email" error={customerForm.formState.errors.email?.message}>
+              <Input {...customerForm.register('email')} placeholder="email@perusahaan.co.id" type="email" error={!!customerForm.formState.errors.email} />
             </FormField>
             <FormField label="NPWP" error={customerForm.formState.errors.npwp?.message}>
               <div className="space-y-2">
@@ -411,17 +411,17 @@ export default function Customers() {
               </div>
             </FormField>
           </div>
-          <FormField label="Alamat Kantor" required error={customerForm.formState.errors.office_address?.message}>
+          <FormField label="Alamat Kantor" error={customerForm.formState.errors.office_address?.message}>
             <textarea
-              {...customerForm.register('office_address', { required: 'Wajib diisi' })}
+              {...customerForm.register('office_address')}
               rows={2}
               placeholder="Alamat lengkap kantor..."
               className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 resize-none ${customerForm.formState.errors.office_address ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-100'}`}
             />
           </FormField>
-          <FormField label="Alamat Gudang" required error={customerForm.formState.errors.warehouse_address?.message}>
+          <FormField label="Alamat Gudang" error={customerForm.formState.errors.warehouse_address?.message}>
             <textarea
-              {...customerForm.register('warehouse_address', { required: 'Wajib diisi' })}
+              {...customerForm.register('warehouse_address')}
               rows={2}
               placeholder="Alamat lengkap gudang pengiriman..."
               className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 resize-none ${customerForm.formState.errors.warehouse_address ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-100'}`}
