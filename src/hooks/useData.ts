@@ -439,7 +439,14 @@ export function useDeletePic() {
 
 export function useUploadFile() {
   return useMutation({
-    mutationFn: (data: { filename: string, mimeType: string, base64: string }) => 
+    mutationFn: (data: { 
+      filename: string; 
+      mimeType: string; 
+      base64: string;
+      module?: string;
+      entityName?: string;
+      docReference?: string;
+    }) => 
       fetchApi('uploadFile', 'POST', data),
   });
 }
