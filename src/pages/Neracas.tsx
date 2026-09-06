@@ -43,15 +43,6 @@ export default function Neracas() {
   const [duplicateModal, setDuplicateModal] = useState<{ isOpen: boolean; inquiryId: string | null }>({ isOpen: false, inquiryId: null });
   const [duplicateSourceId, setDuplicateSourceId] = useState<string>('');
 
-  const handleInit = async () => {
-    try {
-      const res = await initSheets.mutateAsync();
-      alert(res || 'Success');
-    } catch(e: any) {
-      alert(e.message);
-    }
-  };
-
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Neraca>();
 
   const filteredInquiries = useMemo(() => {
@@ -138,7 +129,6 @@ export default function Neracas() {
     <div className="space-y-5">
       <div className="flex justify-between items-center">
         <PageHeader title="Management Neraca" subtitle="Evaluasi dan perbandingan penawaran" />
-        <Button variant="secondary" onClick={handleInit} loading={initSheets.isPending}>Init Database</Button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
