@@ -5,6 +5,7 @@ import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
+import SearchableSelect from '@/components/SearchableSelect';
 import type { Customer, PIC } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useCustomers, useSaveCustomer, useDeleteCustomer, usePics, useSavePic, useDeletePic, useUploadFile } from '@/hooks/useData';
@@ -25,7 +26,6 @@ export default function Customers() {
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const [editingPicId, setEditingPicId] = useState<string | null>(null);
   const [isEditingPic, setIsEditingPic] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState('');
 
   const { data: customers = [], isLoading: isLoadingCustomers, isError: isErrorCustomers } = useCustomers();
   const saveCustomer = useSaveCustomer();
@@ -155,7 +155,6 @@ export default function Customers() {
   // --- PIC Actions ---
   const openCreatePic = () => {
     picForm.reset({});
-    setCustomerSearch('');
     setEditingPicId(null);
     setIsEditingPic(false);
     setIsPicModalOpen(true);
@@ -163,9 +162,6 @@ export default function Customers() {
 
   const openEditPic = (pic: PIC) => {
     picForm.reset(pic);
-    // Pre-fill the searchable dropdown with the existing customer name
-    const existingCustomer = customers.find(c => c.id === pic.customer_id);
-    setCustomerSearch(existingCustomer?.company_name || pic.customer_name || '');
     setEditingPicId(pic.id);
     setIsEditingPic(true);
     setIsPicModalOpen(true);
@@ -444,45 +440,15 @@ export default function Customers() {
               <Input {...picForm.register('name', { required: 'Wajib diisi' })} placeholder="Nama lengkap PIC" error={!!picForm.formState.errors.name} />
             </FormField>
             <FormField label="Customer / Perusahaan" required error={picForm.formState.errors.customer_id?.message}>
-              {/* Searchable dropdown */}
-              <div className="relative">
-                <Input
-                  value={customerSearch}
-                  onChange={e => setCustomerSearch(e.target.value)}
-                  placeholder="Cari nama customer..."
-                />
-                {customerSearch && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {customers
-                      .filter(c => 
-                        c.company_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-                        c.code?.toLowerCase().includes(customerSearch.toLowerCase())
-                      )
-                      .map(c => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            picForm.setValue('customer_id', c.id, { shouldValidate: true });
-                            setCustomerSearch(c.company_name);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700"
-                        >
-                          {c.company_name} {c.code ? `(${c.code})` : ''}
-                        </button>
-                      ))
-                    }
-                    {customers.filter(c =>
-                      c.company_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-                      c.code?.toLowerCase().includes(customerSearch.toLowerCase())
-                    ).length === 0 && (
-                      <div className="px-3 py-2 text-sm text-gray-400">Tidak ada hasil</div>
-                    )}
-                  </div>
-                )}
-                {/* Hidden input for form value */}
-                <input type="hidden" {...picForm.register('customer_id', { required: 'Wajib diisi' })} />
-              </div>
+              <SearchableSelect
+                options={customers.map(c => ({ value: c.id, label: `${c.company_name} ${c.code ? `(${c.code})` : ''}` }))}
+                value={picForm.watch('customer_id') || ''}
+                onChange={(val) => {
+                  picForm.setValue('customer_id', val, { shouldValidate: true });
+                }}
+                placeholder="Pilih Customer..."
+                error={!!picForm.formState.errors.customer_id}
+              />
             </FormField>
             <FormField label="Jabatan">
               <Input {...picForm.register('position')} placeholder="Contoh: Procurement Manager" />

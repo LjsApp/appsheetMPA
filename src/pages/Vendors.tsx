@@ -5,6 +5,7 @@ import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
+import SearchableSelect from '@/components/SearchableSelect';
 import type { Vendor, PicVendor } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useVendors, useSaveVendor, useDeleteVendor, usePicVendors, useSavePicVendor, useDeletePicVendor, useUploadFile } from '@/hooks/useData';
@@ -25,7 +26,6 @@ export default function Vendors() {
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const [editingPicId, setEditingPicId] = useState<string | null>(null);
   const [isEditingPic, setIsEditingPic] = useState(false);
-  const [vendorSearch, setVendorSearch] = useState('');
 
   const { data: vendors = [], isLoading: isLoadingVendors, isError: isErrorVendors } = useVendors();
   const saveVendor = useSaveVendor();
@@ -151,7 +151,6 @@ export default function Vendors() {
   // --- PIC Actions ---
   const openCreatePic = () => {
     picForm.reset({});
-    setVendorSearch('');
     setEditingPicId(null);
     setIsEditingPic(false);
     setIsPicModalOpen(true);
@@ -159,8 +158,6 @@ export default function Vendors() {
 
   const openEditPic = (pic: PicVendor) => {
     picForm.reset(pic);
-    const existingVendor = vendors.find(v => v.id === pic.vendor_id);
-    setVendorSearch(existingVendor?.vendor_name || pic.vendor_name || '');
     setEditingPicId(pic.id);
     setIsEditingPic(true);
     setIsPicModalOpen(true);
@@ -483,44 +480,15 @@ export default function Vendors() {
             <Input {...picForm.register('name', { required: 'Wajib diisi' })} placeholder="Nama Lengkap" error={!!picForm.formState.errors.name} />
           </FormField>
           <FormField label="Perusahaan" required error={picForm.formState.errors.vendor_id?.message}>
-            {/* Searchable dropdown */}
-            <div className="relative">
-              <Input
-                value={vendorSearch}
-                onChange={e => setVendorSearch(e.target.value)}
-                placeholder="Cari nama vendor..."
-              />
-              {vendorSearch && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {vendors
-                    .filter(v =>
-                      v.vendor_name?.toLowerCase().includes(vendorSearch.toLowerCase()) ||
-                      v.code?.toLowerCase().includes(vendorSearch.toLowerCase())
-                    )
-                    .map(v => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => {
-                          picForm.setValue('vendor_id', v.id, { shouldValidate: true });
-                          setVendorSearch(v.vendor_name);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700"
-                      >
-                        {v.vendor_name} {v.code ? `(${v.code})` : ''}
-                      </button>
-                    ))
-                  }
-                  {vendors.filter(v =>
-                    v.vendor_name?.toLowerCase().includes(vendorSearch.toLowerCase()) ||
-                    v.code?.toLowerCase().includes(vendorSearch.toLowerCase())
-                  ).length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-400">Tidak ada hasil</div>
-                  )}
-                </div>
-              )}
-              <input type="hidden" {...picForm.register('vendor_id', { required: 'Wajib diisi' })} />
-            </div>
+            <SearchableSelect
+              options={vendors.map(v => ({ value: v.id, label: `${v.vendor_name} ${v.code ? `(${v.code})` : ''}` }))}
+              value={picForm.watch('vendor_id') || ''}
+              onChange={(val) => {
+                picForm.setValue('vendor_id', val, { shouldValidate: true });
+              }}
+              placeholder="Pilih Vendor..."
+              error={!!picForm.formState.errors.vendor_id}
+            />
           </FormField>
           <FormField label="Jabatan" error={picForm.formState.errors.position?.message}>
             <Input {...picForm.register('position')} placeholder="Sales, Manager, dll" error={!!picForm.formState.errors.position} />
