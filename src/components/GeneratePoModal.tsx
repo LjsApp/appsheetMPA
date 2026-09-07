@@ -4,8 +4,9 @@ import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
 import {
   useNeracaItems, useVendorDiscounts, useGetNextPoNumber,
-  useSavePurchaseOrder, useSavePoIn, useUploadFile
+  useSavePurchaseOrder, useSavePoIn, useUploadFile, useVendors
 } from '@/hooks/useData';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 import { useAuthStore } from '@/store/authStore';
 import type { NeracaQuotation } from '@/types';
 
@@ -24,6 +25,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
   const savePurchaseOrder = useSavePurchaseOrder();
   const savePoIn = useSavePoIn();
   const uploadFile = useUploadFile();
+  const { data: vendors = [] } = useVendors();
 
   const user = useAuthStore(state => state.user);
 
@@ -197,7 +199,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
           });
         } else {
           // Buat 1 PO Full
-          await savePurchaseOrder.mutateAsync({
+          const poData = {
             id: basePoId,
             po_number: poNumber,
             neraca_id: quotation.neraca_id,
@@ -213,7 +215,22 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
             created_by: user?.name,
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
-          });
+          };
+          await savePurchaseOrder.mutateAsync(poData);
+          // Generate PDF in background
+          const vCode = vendors.find(v2 => v2.id === vendor.id)?.code || '';
+          const pdfFilename = `PT MPA_${poNumber}_${vCode}.pdf`;
+          generateAndUploadPdf({
+            type: 'po_out',
+            id: basePoId,
+            filename: pdfFilename,
+            uploadFileMutateAsync: uploadFile.mutateAsync,
+            module: 'PO Out',
+            entityName: vendor.name || '',
+            docReference: basePoId,
+          }).then(pdfUrl => {
+            savePurchaseOrder.mutate({ ...poData, dokumen: JSON.stringify([{ name: pdfFilename, url: pdfUrl }]) });
+          }).catch(e => console.warn('PDF generation failed:', e));
         }
       }
 

@@ -7,6 +7,7 @@ import TableToolbar from '@/components/TableToolbar';
 import { useSuratJalan, useSaveSuratJalan, usePoIns, useDeleteSuratJalan, fetchApi, useUploadFile, useCustomers } from '@/hooks/useData';
 import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 
 export default function SuratJalanList() {
   const navigate = useNavigate();
@@ -108,7 +109,21 @@ export default function SuratJalanList() {
       await saveSJ.mutateAsync(data);
       setShowModal(false);
       setSelectedPoId('');
-      // navigate(`/surat-jalan/${saved?.id || data.id}`);
+
+      // Generate PDF in background (non-blocking)
+      const cCode = customers.find(c => c.id === poIn.customer_id)?.code || '';
+      const pdfFilename = `PT MPA_${sjNumber}_${cCode}.pdf`;
+      generateAndUploadPdf({
+        type: 'surat_jalan',
+        id: data.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: uploadFile.mutateAsync,
+        module: 'Surat Jalan',
+        entityName: poIn.customer_name || '',
+        docReference: data.id,
+      }).then(pdfUrl => {
+        saveSJ.mutate({ ...data, dokumen: pdfUrl });
+      }).catch(e => console.warn('PDF generation failed:', e));
     } catch {
       alert('Gagal membuat Surat Jalan');
     } finally {
@@ -503,6 +518,22 @@ export default function SuratJalanList() {
                         delivery_address: editDeliveryAddress,
                         updated_date: new Date().toISOString()
                       });
+
+                      // Generate updated PDF in background (replaces existing file by name)
+                      const cCode = customers.find(c => c.id === existingSj.customer_id)?.code || '';
+                      const pdfFilename = `PT MPA_${editSjNumber}_${cCode}.pdf`;
+                      generateAndUploadPdf({
+                        type: 'surat_jalan',
+                        id: existingSj.id,
+                        filename: pdfFilename,
+                        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+                        module: 'Surat Jalan',
+                        entityName: existingSj.customer_name || '',
+                        docReference: existingSj.id,
+                      }).then(pdfUrl => {
+                        saveSJ.mutate({ ...existingSj, sj_number: editSjNumber, dokumen: pdfUrl });
+                      }).catch(e => console.warn('PDF generation failed:', e));
+
                       setEditSjId(null);
                     } catch (e) {
                       alert('Gagal menyimpan Surat Jalan');

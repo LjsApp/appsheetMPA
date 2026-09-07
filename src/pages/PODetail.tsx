@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -65,6 +65,15 @@ export default function PODetail() {
       setIsRequestingVerif(false);
     }
   };
+
+  useEffect(() => {
+    if (!isLoadingPo && !isLoadingCompany && !isLoadingItems && !isLoadingVds && po) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pdf-print-ready', { detail: { id: poId, type: 'po_out' } }));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingPo, isLoadingCompany, isLoadingItems, isLoadingVds, po, poId]);
 
   if (isLoadingPo || isLoadingCompany || isLoadingItems || isLoadingVds) {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;

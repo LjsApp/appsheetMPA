@@ -10,6 +10,7 @@ import AddPoOutModal from '@/components/AddPoOutModal';
 import GeneratePoModal from '@/components/GeneratePoModal';
 import TableToolbar from '@/components/TableToolbar';
 import { useAuthStore } from '@/store/authStore';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 
 export default function PurchaseOrders() {
   const user = useAuthStore(state => state.user);
@@ -135,6 +136,22 @@ export default function PurchaseOrders() {
         dokumen: JSON.stringify(finalDocs),
         updated_date: new Date().toISOString(),
       });
+
+      // Generate updated PDF in background (replaces existing file by name)
+      const vCode = vendors.find(v => v.id === editModal.po?.vendor_id)?.code || '';
+      const pdfFilename = `PT MPA_${editPoNumber}_${vCode}.pdf`;
+      const poData = { ...editModal.po, po_number: editPoNumber };
+      generateAndUploadPdf({
+        type: 'po_out',
+        id: editModal.po.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'PO Out',
+        entityName: editModal.po.vendor_name || '',
+        docReference: editModal.po.id,
+      }).then(pdfUrl => {
+        savePO.mutate({ ...poData, dokumen: JSON.stringify([...finalDocs, { name: pdfFilename, url: pdfUrl }]) });
+      }).catch(e => console.warn('PDF generation failed:', e));
 
       setEditModal({ isOpen: false, po: null });
       setNewFiles([]);

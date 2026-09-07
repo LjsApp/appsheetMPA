@@ -7,8 +7,9 @@ import {
   useNeracaQuotations, useDeleteNeracaQuotation,
   useInquiries, useSaveInquiry, usePurchaseOrders, usePoIns, useInvoices,
   useNeracas, useSaveNeracaQuotation, useGetNextQuotationNumber, fetchApi,
-  useNeracaItems, useNeracaDetail, usePics, useUploadFile
+  useNeracaItems, useNeracaDetail, usePics, useUploadFile, useCustomers
 } from '@/hooks/useData';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
@@ -97,6 +98,7 @@ export default function Quotations() {
   const deleteQuotation = useDeleteNeracaQuotation();
   const { data: neracas = [] } = useNeracas();
   const { data: allQuotations } = useNeracaQuotations();
+  const { data: customers = [] } = useCustomers();
   const saveQuotation = useSaveNeracaQuotation();
   const getNextQtNumber = useGetNextQuotationNumber();
 
@@ -182,6 +184,21 @@ export default function Quotations() {
         };
         await saveQuotation.mutateAsync(payload);
         counter++;
+
+        // Generate PDF in background (non-blocking)
+        const cCode = customers.find(c => c.id === payload.customer_id)?.code || '';
+        const pdfFilename = `PT MPA_${qtNum}_${cCode}.pdf`;
+        generateAndUploadPdf({
+          type: 'quotation',
+          id: payload.id,
+          filename: pdfFilename,
+          uploadFileMutateAsync: uploadFile.mutateAsync,
+          module: 'Quotation',
+          entityName: inquiry.customer_name || '',
+          docReference: payload.id,
+        }).then(pdfUrl => {
+          saveQuotation.mutate({ ...payload, dokumen: pdfUrl });
+        }).catch(e => console.warn('PDF generation failed (non-critical):', e));
       }
       setShowAddModal(false);
       setSelectedNeracaIds(new Set());
@@ -260,6 +277,22 @@ export default function Quotations() {
           updated_date: new Date().toISOString().split('T')[0],
         });
       }
+
+      // Generate updated PDF in background (replaces existing file by name)
+      const cCode = customers.find(c => c.id === editModal.quotation?.customer_id)?.code || '';
+      const pdfFilename = `PT MPA_${editQtNumber}_${cCode}.pdf`;
+      const qtData = editModal.quotation;
+      generateAndUploadPdf({
+        type: 'quotation',
+        id: qtData.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Quotation',
+        entityName: qtData.customer_name || '',
+        docReference: qtData.id,
+      }).then(pdfUrl => {
+        saveQuotation.mutate({ ...qtData, quotation_number: editQtNumber, dokumen: pdfUrl });
+      }).catch(e => console.warn('PDF generation failed (non-critical):', e));
       
       setEditModal({ isOpen: false, quotation: null });
     } catch (e: any) {

@@ -446,8 +446,17 @@ export function useUploadFile() {
       module?: string;
       entityName?: string;
       docReference?: string;
+      replaceByName?: boolean;
+      replaceFileId?: string;
     }) => 
       fetchApi('uploadFile', 'POST', data),
+  });
+}
+
+export function useDeleteFilesFromDrive() {
+  return useMutation({
+    mutationFn: (urls: string[]) =>
+      fetchApi('deleteFilesFromDrive', 'POST', { urls }),
   });
 }
 

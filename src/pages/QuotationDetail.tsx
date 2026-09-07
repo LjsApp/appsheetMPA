@@ -135,6 +135,15 @@ export default function QuotationDetail() {
     }
   }, [company?.name, quotation?.quotation_number]);
 
+  useEffect(() => {
+    if (!isLoadingQt && !isLoadingItems && !isLoadingCompany && quotation) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pdf-print-ready', { detail: { id: quotationId, type: 'quotation' } }));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingQt, isLoadingItems, isLoadingCompany, quotation, quotationId]);
+
   if (isLoadingQt || isLoadingItems || isLoadingCompany) {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }

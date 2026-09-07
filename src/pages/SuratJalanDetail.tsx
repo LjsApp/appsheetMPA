@@ -55,6 +55,15 @@ export default function SuratJalanDetail() {
 
   const isLoading = loadingSJ || loadingPo || loadingCompany || loadingItems;
 
+  useEffect(() => {
+    if (!isLoading && sj) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pdf-print-ready', { detail: { id, type: 'surat_jalan' } }));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, sj, id]);
+
   if (isLoading) {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }

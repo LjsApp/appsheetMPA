@@ -197,6 +197,7 @@ export interface SuratJalan {
   delivery_address?: string;
   customer_id?: string;
   customer_name?: string;
+  dokumen?: string;          // URL PDF auto-generated
   created_by?: string;
   created_date: string;
   updated_date: string;

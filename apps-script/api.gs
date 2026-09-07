@@ -207,8 +207,29 @@ function routeRequest(action, method, body, params) {
         catch (e) { return addRecord('inquiries', body); }
       }
       return addRecord('inquiries', body);
-    case 'deleteInquiry':
+    case 'deleteInquiry': {
+      // Trash linked Drive files before deleting the record
+      try {
+        var inquiryRecords = getRecords('inquiries');
+        var inqToDelete = inquiryRecords.find(function(r) { return r.id === body.id; });
+        if (inqToDelete && inqToDelete.documents) {
+          var docs;
+          try { docs = JSON.parse(inqToDelete.documents); } catch(e) { docs = []; }
+          if (Array.isArray(docs)) {
+            docs.forEach(function(doc) {
+              var url = doc.url || doc;
+              if (url) {
+                var match = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                  try { DriveApp.getFileById(match[1]).setTrashed(true); } catch(e) {}
+                }
+              }
+            });
+          }
+        }
+      } catch(e) {}
       return deleteRecord('inquiries', 'id', body.id);
+    }
 
     // Invoices
     case 'getInvoices':
@@ -884,10 +905,17 @@ function routeRequest(action, method, body, params) {
             }
           }
         }
-        
-        // Format filename: [docReference]_[originalName]
-        if (body.docReference) {
-          finalFilename = '[' + body.docReference + ']_' + body.filename;
+      }
+
+      // If replaceFileId is provided, trash the old file first
+      if (body.replaceFileId) {
+        try { DriveApp.getFileById(body.replaceFileId).setTrashed(true); } catch(e) {}
+      }
+      // If replaceByName is true, find and trash any file with same name in target folder
+      if (body.replaceByName) {
+        var existingFiles = targetFolder.getFilesByName(body.filename);
+        while (existingFiles.hasNext()) {
+          try { existingFiles.next().setTrashed(true); } catch(e) {}
         }
       }
 
@@ -897,6 +925,19 @@ function routeRequest(action, method, body, params) {
       var fileId = file.getId();
       // Return direct preview URL (works without login)
       return 'https://drive.google.com/file/d/' + fileId + '/preview';
+    }
+
+    // Delete files from Drive by URLs
+    case 'deleteFilesFromDrive': {
+      var urls = body.urls || [];
+      var deleted = 0;
+      urls.forEach(function(url) {
+        var match = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          try { DriveApp.getFileById(match[1]).setTrashed(true); deleted++; } catch(e) {}
+        }
+      });
+      return { deleted: deleted };
     }
 
     // Internal Letters
