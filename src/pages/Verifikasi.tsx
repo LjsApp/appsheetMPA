@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui';
 import { Loader2, Check, X, FileText, ShoppingCart, Receipt, Mail, Upload, Banknote } from 'lucide-react';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { PurchaseOrder, Invoice, InternalLetter } from '@/types';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 
 export default function Verifikasi() {
   const { user } = useAuthStore();
@@ -193,15 +194,32 @@ export default function Verifikasi() {
         if (creator) targetUserId = creator.id;
       }
 
-      await saveIL.mutateAsync({
+      const updatedLetter = {
         ...letter,
-        verification_status: 'Terverifikasi',
+        verification_status: 'Terverifikasi' as const,
         verification_note: ilVerifNote,
         verified_by: user?.name || 'Pimpinan',
         verified_date: new Date().toISOString(),
         bukti_tf_url: buktiUrl,
         updated_date: new Date().toISOString()
-      });
+      };
+      await saveIL.mutateAsync(updatedLetter);
+
+      // Generate updated PDF in background (includes new bukti transfer page)
+      const typeSuffix = letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : '';
+      const safeNum = String(letter.internal_letter_number + typeSuffix).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${(letter.vendor_name || '').replace(/\s+/g, '_')}.pdf`;
+      generateAndUploadPdf({
+        type: 'internal_letter',
+        id: letter.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Internal Letter',
+        entityName: letter.vendor_name || '',
+        docReference: letter.id,
+      }).then(url => {
+        saveIL.mutate({ ...updatedLetter, dokumen: url });
+      }).catch(e => console.warn('PDF generation failed:', e));
       try {
         await saveNotification.mutateAsync({
           id: Date.now().toString(),

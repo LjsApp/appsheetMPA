@@ -5,6 +5,7 @@ import { PageHeader, Button } from "@/components/ui";
 import { useInternalLetters, useSaveInternalLetter, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems, useUploadFile, useSaveNotification, useNotifications, useUsers } from "@/hooks/useData";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from "@/lib/utils";
+import { generateAndUploadPdf } from "@/lib/pdfGenerator";
 
 export default function InternalLetterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -160,15 +161,32 @@ export default function InternalLetterDetail() {
     if (!letter || !uploadedBuktiUrl) return;
     setIsProcessingVerif(true);
     try {
-      await saveIL.mutateAsync({
+      const updatedLetter = {
         ...letter,
-        verification_status: 'Terverifikasi',
+        verification_status: 'Terverifikasi' as const,
         verification_note: verifNote,
         verified_by: user?.name || 'Pimpinan',
         verified_date: new Date().toISOString(),
         bukti_tf_url: uploadedBuktiUrl,
         updated_date: new Date().toISOString()
-      });
+      };
+      await saveIL.mutateAsync(updatedLetter);
+
+      // Generate updated PDF in background
+      const typeSuffix = letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : '';
+      const safeNum = String(letter.internal_letter_number + typeSuffix).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${(letter.vendor_name || '').replace(/\s+/g, '_')}.pdf`;
+      generateAndUploadPdf({
+        type: 'internal_letter',
+        id: letter.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Internal Letter',
+        entityName: letter.vendor_name || '',
+        docReference: letter.id,
+      }).then(url => {
+        saveIL.mutate({ ...updatedLetter, dokumen: url });
+      }).catch(e => console.warn('PDF generation failed:', e));
       try {
         let targetUserId = 'staff';
         const reqNotifs = notifications.filter(n => n.ref_id === letter.id && n.type === 'verification_request');
@@ -284,6 +302,8 @@ export default function InternalLetterDetail() {
           thead { display: table-header-group; }
           tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
+          .page-break { page-break-before: always; break-before: page; }
+          .page-break-avoid { page-break-inside: avoid; break-inside: avoid; }
           .print-wm-tl { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
           .print-wm-br { position:fixed !important; opacity:0.35 !important; z-index:-1 !important; }
           .print-page-footer { display:flex !important; position:fixed !important; bottom:0; left:0; right:0; background:white !important; z-index:100 !important; padding:10px 40px; justify-content:space-between; align-items:center; }
@@ -325,7 +345,6 @@ export default function InternalLetterDetail() {
                 <div>
                   <span className="text-sm font-semibold text-emerald-700">Terverifikasi</span>
                   {letter.verified_by && <p className="text-xs text-gray-500">oleh {letter.verified_by} · {letter.verified_date ? formatDate(letter.verified_date) : ''}</p>}
-                  {letter.bukti_tf_url && <a href={letter.bukti_tf_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">Lihat Bukti Transfer</a>}
                 </div></>
               ) : letter.verification_status === 'Ditolak' ? (
                 <><XCircle className="w-5 h-5 text-red-500" />
@@ -373,6 +392,50 @@ export default function InternalLetterDetail() {
             )}
           </div>
         </div>
+
+        {/* Card Bukti Transfer dari Pimpinan (untuk user pembuat / yang mengajukan) */}
+        {letter.bukti_tf_url && (
+          <div className="max-w-[860px] mx-auto mb-5 bg-white border border-emerald-200 rounded-xl p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 flex-shrink-0">
+                  <Banknote className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Bukti Transfer Pembayaran dari Pimpinan</h3>
+                  <p className="text-xs text-gray-500">
+                    Diverifikasi & ditransfer oleh <span className="font-semibold text-emerald-700">{letter.verified_by || 'Pimpinan'}</span> · {letter.verified_date ? formatDate(letter.verified_date) : '-'}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={letter.bukti_tf_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-lg border border-emerald-200 transition-colors self-start sm:self-auto"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Buka di Tab Baru
+              </a>
+            </div>
+
+            {letter.verification_note && (
+              <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-xs text-gray-700">
+                <span className="font-semibold text-emerald-900">Catatan Pimpinan: </span>
+                {letter.verification_note}
+              </div>
+            )}
+
+            <div className="flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded-xl p-4 overflow-hidden">
+              <img
+                src={getDriveImageUrl(letter.bukti_tf_url)}
+                alt="Bukti Transfer"
+                referrerPolicy="no-referrer"
+                className="max-h-[460px] max-w-full rounded-lg object-contain shadow-sm border border-gray-200"
+              />
+              <p className="text-[11px] text-gray-400 mt-2">Klik tombol "Buka di Tab Baru" di atas untuk melihat ukuran penuh</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Document */}
@@ -628,6 +691,80 @@ export default function InternalLetterDetail() {
             </tr>
           </tfoot>
         </table>
+
+        {/* PAGE 2 — LAMPIRAN BUKTI TRANSFER PEMBAYARAN */}
+        {letter.bukti_tf_url && (
+          <div className="page-break bg-white pt-8 relative z-0" style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
+            <table className="w-full" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <td style={{ padding: 0 }}>
+                    <div className="px-10 pt-4 pb-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          {company?.logo_url ? (
+                            <div className="w-20 h-20 overflow-hidden flex items-center justify-center">
+                              <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
+                            </div>
+                          ) : (
+                            <div className="w-20 h-20 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
+                          )}
+                          <div>
+                            <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>
+                            {company?.address && <p className="text-gray-600 mt-0.5 text-[10pt]">{company.address}</p>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-block bg-blue-800 text-white font-bold tracking-widest text-[8pt] uppercase px-3 py-1.5 rounded">
+                            LAMPIRAN BUKTI TRANSFER
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ padding: 0 }}>
+                    <div className="px-10 py-4">
+                      <div className="text-center mb-5">
+                        <p className="font-bold text-[13pt] underline text-gray-900 uppercase">LAMPIRAN BUKTI TRANSFER PEMBAYARAN</p>
+                        <p className="italic text-gray-600 text-[10.5pt] mt-0.5">Internal Letter: {letter.internal_letter_number}</p>
+                      </div>
+
+                      {/* Info Transfer Box */}
+                      <div className="mb-5 bg-gray-50 border border-gray-200 rounded-lg p-4 text-[11pt] grid grid-cols-[140px_10px_1fr] gap-y-1.5 text-gray-800">
+                        <div className="font-medium">Vendor</div><div>:</div><div className="font-semibold text-gray-900">{vendor?.vendor_name || letter.vendor_name}</div>
+                        <div className="font-medium">Total Nilai</div><div>:</div><div className="font-bold text-blue-900">Rp {formatCurrency(letter.total_nilai)}</div>
+                        <div className="font-medium">Tanggal Transfer</div><div>:</div><div>{letter.verified_date ? formatDate(letter.verified_date) : '-'}</div>
+                        <div className="font-medium">Diverifikasi Oleh</div><div>:</div><div>{letter.verified_by || 'Pimpinan'}</div>
+                        {letter.verification_note && (
+                          <><div className="font-medium">Catatan Pimpinan</div><div>:</div><div>{letter.verification_note}</div></>
+                        )}
+                      </div>
+
+                      {/* Bukti Image */}
+                      <div className="flex flex-col items-center justify-center border border-gray-300 rounded-lg p-3 bg-white">
+                        <img
+                          src={getDriveImageUrl(letter.bukti_tf_url)}
+                          alt="Bukti Transfer"
+                          referrerPolicy="no-referrer"
+                          className="max-h-[580px] max-w-full object-contain rounded"
+                        />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td><div style={{ height: "90px" }}></div></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Reject Modal */}

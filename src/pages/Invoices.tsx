@@ -169,16 +169,33 @@ export default function Invoices() {
         fileUrl = typeof res === 'string' ? res : (res as any)?.url || '';
       }
 
-      await saveInvoice.mutateAsync({
+      const updatedInvoice = {
         ...paymentModal.invoice,
         payment_status: 'Lunas',
         payment_date: paymentDate,
         payment_proof_url: fileUrl || paymentModal.invoice.payment_proof_url,
         payment_note: paymentNote,
         updated_date: new Date().toISOString(),
-      });
+      };
+      await saveInvoice.mutateAsync(updatedInvoice);
 
+      // Generate updated PDF in background including the payment proof page
       const po = poIns.find(p => p.id === paymentModal.invoice?.po_in_id);
+      const cCode = customers.find(c => c.id === paymentModal.invoice?.customer_id)?.code || '';
+      const safeNum = String(paymentModal.invoice?.invoice_number).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
+      generateAndUploadPdf({
+        type: 'invoice',
+        id: paymentModal.invoice.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Invoice',
+        entityName: po?.customer_name || '',
+        docReference: paymentModal.invoice.id,
+      }).then(pdfUrl => {
+        saveInvoice.mutate({ ...updatedInvoice, dokumen: pdfUrl });
+      }).catch(e => console.warn('Invoice PDF generation failed after payment:', e));
+
       const qt = quotations.find(q => q.id === po?.quotation_id);
       const neraca = neracas.find(n => n.id === qt?.neraca_id);
       const inquiry = inquiries.find(i => i.id === neraca?.inquiry_id);

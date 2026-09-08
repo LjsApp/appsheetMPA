@@ -91,7 +91,7 @@ function buildHtmlPage(element: HTMLElement): string {
     #po-doc > table > thead,
     #surat-jalan-doc > table > thead,
     #sj-doc > table > thead,
-    #il-doc > table > thead,
+    #il-doc table > thead,
     #invoice-doc table > thead { display: table-header-group !important; }
 
     /* Outer table tfoot (spacer) must stay at bottom of every page */
@@ -99,7 +99,7 @@ function buildHtmlPage(element: HTMLElement): string {
     #po-doc > table > tfoot,
     #surat-jalan-doc > table > tfoot,
     #sj-doc > table > tfoot,
-    #il-doc > table > tfoot,
+    #il-doc table > tfoot,
     #invoice-doc table > tfoot { display: table-footer-group !important; }
 
     /* Page footer fixed at bottom — appears on EVERY page */
@@ -118,6 +118,8 @@ function buildHtmlPage(element: HTMLElement): string {
 
     /* Prevent table rows from splitting across pages */
     tr { page-break-inside: avoid; }
+    .page-break { page-break-before: always !important; break-before: page !important; }
+    .page-break-avoid { page-break-inside: avoid !important; break-inside: avoid !important; }
 
     /* Inlined app CSS (includes Tailwind + all component styles) */
     ${inline}
