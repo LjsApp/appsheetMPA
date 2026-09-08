@@ -35,6 +35,7 @@ export default function SuratJalanList() {
   const [editDeliveryAddress, setEditDeliveryAddress] = useState('');
   const [addressOptions, setAddressOptions] = useState<{label: string, value: string}[]>([]);
   const [editResiList, setEditResiList] = useState<{id: string, no_resi: string, ekspedisi: string, url: string, file: File | null}[]>([]);
+  const [editEkspedisi, setEditEkspedisi] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
 
@@ -42,16 +43,22 @@ export default function SuratJalanList() {
     setGeneratingPdfId(item.id);
     try {
       const poIn = poIns.find(p => p.id === item.po_in_id);
-      const cCode = customers.find(c => c.id === poIn?.customer_id)?.code || '';
+      const cust = customers.find(c => c.id === poIn?.customer_id || c.id === item.customer_id || c.company_name === poIn?.customer_name);
+      const cCode = cust?.code || '';
       const safeNum = String(item.sj_number || item.id).replace(/\//g, '_');
-      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
+      const pdfFilename = `PT MPA_${safeNum}${cCode ? `_${cCode}` : ''}.pdf`;
+      const entityName = item.customer_name || poIn?.customer_name || cust?.company_name || '';
       const url = await generateAndUploadPdf({
         type: 'surat_jalan',
         id: item.id,
         filename: pdfFilename,
-        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({
+          ...vars,
+          replaceByName: true,
+          replaceUrl: item.dokumen || undefined,
+        }),
         module: 'Surat Jalan',
-        entityName: item.customer_name || poIn?.customer_name || '',
+        entityName: entityName,
         docReference: item.id,
       });
       await saveSJ.mutateAsync({ ...item, dokumen: url });
@@ -131,9 +138,16 @@ export default function SuratJalanList() {
     setIsCreating(true);
     try {
       const sjNumber = await fetchApi('getNextSuratJalanNumber');
+      const cust = customers.find(c => c.id === poIn.customer_id || c.company_name === poIn.customer_name);
+      const cCode = cust?.code || '';
+      const safeNum = String(sjNumber).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}${cCode ? `_${cCode}` : ''}.pdf`;
+
       const data = {
         id: `SJ-${Date.now()}`,
         po_in_id: poIn.id,
+        customer_id: poIn.customer_id,
+        customer_name: poIn.customer_name,
         sj_number: sjNumber,
         ekspedisi: '',
         created_by: user?.name || '',
@@ -146,18 +160,17 @@ export default function SuratJalanList() {
       toast.success('Surat Jalan berhasil dibuat');
 
       // Generate PDF in background (non-blocking)
-      const cCode = customers.find(c => c.id === poIn.customer_id)?.code || '';
-      const pdfFilename = `PT MPA_${sjNumber}_${cCode}.pdf`;
       generateAndUploadPdf({
         type: 'surat_jalan',
         id: data.id,
         filename: pdfFilename,
-        uploadFileMutateAsync: uploadFile.mutateAsync,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
         module: 'Surat Jalan',
-        entityName: poIn.customer_name || '',
+        entityName: poIn.customer_name || cust?.company_name || '',
         docReference: data.id,
       }).then(pdfUrl => {
         saveSJ.mutate({ ...data, dokumen: pdfUrl });
+        toast.success('PDF Surat Jalan berhasil disimpan di Google Drive');
       }).catch(e => console.warn('PDF generation failed:', e));
     } catch {
       toast.error('Gagal membuat Surat Jalan');
@@ -249,9 +262,16 @@ export default function SuratJalanList() {
                       )}
                     </td>
                     <td className="px-5 py-4 text-xs">
+                      {item.ekspedisi && (
+                        <div className="mb-1.5 flex items-center gap-1">
+                          <span className="text-gray-500">Ekspedisi:</span>
+                          <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">{item.ekspedisi}</span>
+                        </div>
+                      )}
                       {(() => {
                         const resis = parseResiData(item);
-                        if (resis.length === 0) return <span className="text-gray-400 italic">Belum ada info pengiriman</span>;
+                        if (resis.length === 0 && !item.ekspedisi) return <span className="text-gray-400 italic">Belum ada info pengiriman</span>;
+                        if (resis.length === 0) return null;
                         return (
                           <div className="space-y-2">
                             {resis.map((r: any, idx: number) => (
@@ -278,6 +298,7 @@ export default function SuratJalanList() {
                           onClick={() => {
                             setEditSjId(item.id);
                             setEditSjNumber(item.sj_number || '');
+                            setEditEkspedisi(item.ekspedisi || '');
                             setEditCreatedDate(item.created_date ? new Date(item.created_date).toISOString().split('T')[0] : '');
                             
                             // Find customer addresses
@@ -412,6 +433,16 @@ export default function SuratJalanList() {
                     value={editCreatedDate}
                     onChange={e => setEditCreatedDate(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Ekspedisi</label>
+                  <input
+                    type="text"
+                    value={editEkspedisi}
+                    onChange={e => setEditEkspedisi(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                    placeholder="Contoh: JNE, J&T, Ekspedisi Sendiri..."
                   />
                 </div>
                 <div>
@@ -570,33 +601,48 @@ export default function SuratJalanList() {
                         });
                       }
                       
-                      await saveSJ.mutateAsync({
+                      const poIn = poIns.find(p => p.id === existingSj.po_in_id);
+                      const cust = customers.find(c => c.id === poIn?.customer_id || c.id === existingSj.customer_id || c.company_name === poIn?.customer_name);
+                      const cCode = cust?.code || '';
+                      const safeNum = String(editSjNumber).replace(/\//g, '_');
+                      const pdfFilename = `PT MPA_${safeNum}${cCode ? `_${cCode}` : ''}.pdf`;
+                      const entityName = existingSj.customer_name || poIn?.customer_name || cust?.company_name || '';
+
+                      const updatedSj = {
                         ...existingSj,
+                        customer_id: existingSj.customer_id || poIn?.customer_id || cust?.id || '',
+                        customer_name: entityName,
                         sj_number: editSjNumber,
+                        ekspedisi: editEkspedisi,
                         created_date: editCreatedDate ? new Date(editCreatedDate).toISOString() : existingSj.created_date,
                         resi_data: JSON.stringify(finalResiList),
                         delivery_address: editDeliveryAddress,
                         updated_date: new Date().toISOString()
-                      });
+                      };
+                      await saveSJ.mutateAsync(updatedSj);
 
-                      // Generate updated PDF in background (replaces existing file by name)
-                      const cCode = customers.find(c => c.id === existingSj.customer_id)?.code || '';
-                      const pdfFilename = `PT MPA_${editSjNumber}_${cCode}.pdf`;
+                      // Generate updated PDF in background (replaces existing file by name or replaceUrl)
                       generateAndUploadPdf({
                         type: 'surat_jalan',
                         id: existingSj.id,
                         filename: pdfFilename,
-                        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+                        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({
+                          ...vars,
+                          replaceByName: true,
+                          replaceUrl: existingSj.dokumen || undefined,
+                        }),
                         module: 'Surat Jalan',
-                        entityName: existingSj.customer_name || '',
+                        entityName: entityName,
                         docReference: existingSj.id,
                       }).then(pdfUrl => {
-                        saveSJ.mutate({ ...existingSj, sj_number: editSjNumber, dokumen: pdfUrl });
+                        saveSJ.mutate({ ...updatedSj, dokumen: pdfUrl });
+                        toast.success('PDF Surat Jalan berhasil diperbarui di Google Drive');
                       }).catch(e => console.warn('PDF generation failed:', e));
 
                       setEditSjId(null);
+                      toast.success('Surat Jalan berhasil diperbarui');
                     } catch (e) {
-                      alert('Gagal menyimpan Surat Jalan');
+                      toast.error('Gagal menyimpan Surat Jalan');
                     } finally {
                       setIsSavingEdit(false);
                     }

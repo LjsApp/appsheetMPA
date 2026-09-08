@@ -920,6 +920,14 @@ function routeRequest(action, method, body, params) {
         }
       }
 
+      // If replaceUrl or oldUrl is provided, trash the old file first
+      var oldUrl = body.replaceUrl || body.oldUrl;
+      if (oldUrl) {
+        var match = String(oldUrl).match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          try { DriveApp.getFileById(match[1]).setTrashed(true); } catch(e) {}
+        }
+      }
       // If replaceFileId is provided, trash the old file first
       if (body.replaceFileId) {
         try { DriveApp.getFileById(body.replaceFileId).setTrashed(true); } catch(e) {}

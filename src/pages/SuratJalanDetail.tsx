@@ -40,22 +40,26 @@ export default function SuratJalanDetail() {
 
   const { data: items = [], isLoading: loadingItems } = useNeracaItems(po?.neraca_id || '');
 
-  const [ekspedisi, setEkspedisi] = useState('');
-
   const handleUploadDrive = async () => {
     if (!sj) return;
     setIsUploadingDrive(true);
     try {
-      const cCode = customers.find(c => c.id === po?.customer_id)?.code || '';
+      const cust = customers.find(c => c.id === po?.customer_id || c.id === sj.customer_id || c.company_name === po?.customer_name);
+      const cCode = cust?.code || '';
       const safeNum = String(sj.sj_number || sj.id).replace(/\//g, '_');
-      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
+      const pdfFilename = `PT MPA_${safeNum}${cCode ? `_${cCode}` : ''}.pdf`;
+      const entityName = po?.customer_name || sj.customer_name || cust?.company_name || '';
       const url = await generateAndUploadPdf({
         type: 'surat_jalan',
         id: sj.id,
         filename: pdfFilename,
-        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({
+          ...vars,
+          replaceByName: true,
+          replaceUrl: sj.dokumen || undefined,
+        }),
         module: 'Surat Jalan',
-        entityName: po?.customer_name || '',
+        entityName: entityName,
         docReference: sj.id,
       });
       await saveSJ.mutateAsync({ ...sj, dokumen: url });
@@ -68,22 +72,12 @@ export default function SuratJalanDetail() {
   };
 
   useEffect(() => {
-    if (sj) setEkspedisi(sj.ekspedisi || '');
-  }, [sj]);
-
-  useEffect(() => {
     if (sj && company) {
       const cName = company.name || 'SourceQuo';
       document.title = `${cName}_${String(sj.sj_number).replace(/\//g, '_')}`;
       return () => { document.title = 'SAPP'; };
     }
   }, [company?.name, sj?.sj_number]);
-
-  const handleEkspedisiBlur = () => {
-    if (sj && ekspedisi !== (sj.ekspedisi || '')) {
-      saveSJ.mutate({ ...sj, ekspedisi });
-    }
-  };
 
   const isLoading = loadingSJ || loadingPo || loadingCompany || loadingItems;
 
@@ -254,15 +248,7 @@ export default function SuratJalanDetail() {
                   {/* Greeting / Ekspedisi */}
                   <div className="mb-4">
                     <span className="text-gray-900">Kami kirimkan barang-barang tersebut dibawah ini dengan menggunakan ekspedisi </span>
-                    <input
-                      type="text"
-                      value={ekspedisi}
-                      onChange={e => setEkspedisi(e.target.value)}
-                      onBlur={handleEkspedisiBlur}
-                      placeholder="pilih ekspedisi (mis. JNT, JNE)..."
-                      className="border-b border-gray-300 font-semibold focus:border-blue-500 focus:outline-none px-1 w-64 inline-block text-gray-900 placeholder:font-normal placeholder:text-gray-400 no-print"
-                    />
-                    <span className="font-semibold hidden print:inline-block">{ekspedisi || '_________________'}</span>
+                    <span className="font-semibold text-gray-900">{sj.ekspedisi || '_________________'}</span>
                     <span className="text-gray-900"> :</span>
                   </div>
 
