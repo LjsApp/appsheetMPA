@@ -16,6 +16,7 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import { useAuthStore } from '@/store/authStore';
 import TableToolbar from '@/components/TableToolbar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { toast } from '@/store/toastStore';
 
 // Helper component to render a single neraca row in the modal
 function NeracaSelectionRow({ 
@@ -204,8 +205,9 @@ export default function Quotations() {
       setSelectedNeracaIds(new Set());
       setModalSearch('');
       setModalTab('all');
+      toast.success('Quotation berhasil dibuat');
     } catch (e: any) {
-      alert('Gagal membuat quotation: ' + e.message);
+      toast.error('Gagal membuat quotation: ' + e.message);
     } finally {
       setIsCreatingQt(false);
     }
@@ -295,8 +297,9 @@ export default function Quotations() {
       }).catch(e => console.warn('PDF generation failed (non-critical):', e));
       
       setEditModal({ isOpen: false, quotation: null });
+      toast.success('Quotation berhasil diperbarui');
     } catch (e: any) {
-      alert('Gagal menyimpan: ' + e.message);
+      toast.error('Gagal menyimpan: ' + e.message);
     } finally {
       setIsSavingEdit(false);
     }
@@ -331,12 +334,17 @@ export default function Quotations() {
 
   const executeDelete = async () => {
     if (!deleteModal.quotation) return;
-    const q = deleteModal.quotation;
-    const dupes = quotations.filter(x => x.neraca_id === q.neraca_id);
-    for (const dupe of dupes) {
-      await deleteQuotation.mutateAsync(dupe.id);
+    try {
+      const q = deleteModal.quotation;
+      const dupes = quotations.filter(x => x.neraca_id === q.neraca_id);
+      for (const dupe of dupes) {
+        await deleteQuotation.mutateAsync(dupe.id);
+      }
+      setDeleteModal({ isOpen: false, id: null, title: '', quotation: null });
+      toast.success('Quotation berhasil dihapus');
+    } catch {
+      toast.error('Gagal menghapus quotation');
     }
-    setDeleteModal({ isOpen: false, id: null, title: '', quotation: null });
   };
 
   const filteredQuotations = useMemo(() => {
@@ -470,7 +478,7 @@ export default function Quotations() {
                       if (isFollowUpDisabled) return;
                       const pic = pics.find(p => p.id === inquiry?.pic_id);
                       if (!pic || !pic.phone) {
-                        alert('Nomor HP PIC tidak ditemukan!');
+                        toast.warning('Nomor HP PIC tidak ditemukan!');
                         return;
                       }
                       
@@ -754,7 +762,7 @@ export default function Quotations() {
                             }
                             setEditQtDocs(prev => [...prev, ...newDocs]);
                           } catch (error: any) {
-                            alert('Gagal mengupload file: ' + error.message);
+                            toast.error('Gagal mengupload file: ' + error.message);
                           } finally {
                             setIsUploading(false);
                             if (e.target) e.target.value = '';

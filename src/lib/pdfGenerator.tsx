@@ -116,12 +116,31 @@ export async function generateAndUploadPdf({
   docReference
 }: GeneratePdfOptions): Promise<string> {
   return new Promise((resolve, reject) => {
-    // 1. Create a hidden container
+    // 1. Create a hidden container sized exactly to A4 width at 96dpi (794px)
+    // This ensures the layout matches what the browser print preview renders.
+    const A4_WIDTH_PX = 794;
     const container = document.createElement('div');
     container.style.position = 'absolute';
-    container.style.top = '-9999px';
-    container.style.left = '-9999px';
-    container.style.width = '1200px'; // Wide enough to render without mobile layout
+    container.style.top = '-99999px';
+    container.style.left = '-99999px';
+    container.style.width = `${A4_WIDTH_PX}px`;
+    container.style.minHeight = '1123px'; // A4 height at 96dpi
+    container.style.background = '#ffffff';
+    container.style.colorScheme = 'light';
+
+    // Inject a print-simulation style so print: Tailwind utilities activate
+    const printSimStyle = document.createElement('style');
+    printSimStyle.textContent = `
+      /* Force print-like rendering in the hidden container */
+      #pdf-print-scope * { box-sizing: border-box; }
+      #pdf-print-scope .print\\:hidden { display: none !important; }
+      #pdf-print-scope .print\\:block { display: block !important; }
+      #pdf-print-scope .print\\:flex { display: flex !important; }
+      /* Ensure backgrounds are rendered (like bg-graphics in print) */
+      #pdf-print-scope * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    `;
+    container.appendChild(printSimStyle);
+    container.id = 'pdf-print-scope';
     document.body.appendChild(container);
 
     const root = createRoot(container);
@@ -148,13 +167,21 @@ export async function generateAndUploadPdf({
           // Walk the DOM and replace any oklch computed values with safe fallbacks.
           sanitizeOklchColors(element as HTMLElement);
 
-          // Options for html2pdf
+          // Options for html2pdf — sized to match A4 exactly
           const opt = {
             margin: 0,
             filename: filename,
             image: { type: 'jpeg' as const, quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
+            html2canvas: {
+              scale: 2,           // 2x for high DPI
+              useCORS: true,
+              logging: false,
+              allowTaint: true,
+              backgroundColor: '#ffffff',
+              windowWidth: A4_WIDTH_PX,  // Match container width so no viewport scaling
+              width: A4_WIDTH_PX,
+            },
+            jsPDF: { unit: 'px', format: [A4_WIDTH_PX, 1123], orientation: 'portrait' as const, hotfixes: ['px_scaling'] }
           };
 
           // Generate PDF as base64 string
