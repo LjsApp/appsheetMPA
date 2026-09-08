@@ -8,7 +8,7 @@ import {
 } from '@/hooks/useData';
 import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 import { useAuthStore } from '@/store/authStore';
-import type { NeracaQuotation } from '@/types';
+import type { NeracaQuotation, PurchaseOrder } from '@/types';
 
 interface GeneratePoModalProps {
   quotation: NeracaQuotation | null;
@@ -199,7 +199,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
           });
         } else {
           // Buat 1 PO Full
-          const poData = {
+          const poData: Partial<PurchaseOrder> = {
             id: basePoId,
             po_number: poNumber,
             neraca_id: quotation.neraca_id,
