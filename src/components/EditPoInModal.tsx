@@ -108,15 +108,32 @@ export default function EditPoInModal({ isOpen, onClose, onSuccess, poIn, usedQu
     setIsSaving(true);
     try {
       const uploadedDocs = [...existingDocs];
+      let fileIdx = uploadedDocs.length + 1;
+      const custName = selectedQt?.customer_name || poIn.customer_name || '';
       for (const file of newFiles) {
-        const base64 = await new Promise<string>((resolve) => {
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+        const dateObj = new Date();
+        const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()}`;
+        const safePoNum = String(poInNumber).replace(/[\/\\?%*:|"<>]/g, '_');
+        const finalFilename = `${safePoNum}_dok${fileIdx}_${dateStr}${ext ? '.' + ext : ''}`;
+
+        const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
           reader.readAsDataURL(file);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
         });
-        const res = await uploadFile.mutateAsync({ filename: file.name, mimeType: file.type, base64 });
+        const res = await uploadFile.mutateAsync({ 
+          filename: finalFilename, 
+          mimeType: file.type, 
+          base64,
+          module: 'PO In',
+          entityName: custName,
+          docReference: poIn.id
+        });
         const fileUrl = typeof res === 'string' ? res : res?.url;
-        if (fileUrl) uploadedDocs.push({ name: file.name, url: fileUrl });
+        if (fileUrl) uploadedDocs.push({ name: finalFilename, url: fileUrl });
+        fileIdx++;
       }
 
       await savePoIn.mutateAsync({

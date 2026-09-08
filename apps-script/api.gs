@@ -90,6 +90,39 @@ function routeRequest(action, method, body, params) {
           createdFolders.push(folderName);
         }
       });
+
+      // Auto-organize PO In files from root to PO In folder if any exist
+      try {
+        var poInFolders = masterFolder.getFoldersByName('PO In');
+        var poInFolder = poInFolders.hasNext() ? poInFolders.next() : masterFolder.createFolder('PO In');
+        var poIns = getRecords('po_in');
+        poIns.forEach(function(po) {
+          if (!po.dokumen) return;
+          try {
+            var docs = JSON.parse(po.dokumen);
+            if (Array.isArray(docs)) {
+              var targetCustFolder = poInFolder;
+              if (po.customer_name && String(po.customer_name).trim()) {
+                var cFolders = poInFolder.getFoldersByName(String(po.customer_name).trim());
+                targetCustFolder = cFolders.hasNext() ? cFolders.next() : poInFolder.createFolder(String(po.customer_name).trim());
+              }
+              docs.forEach(function(d) {
+                if (!d.url) return;
+                var match = String(d.url).match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                  try {
+                    var file = DriveApp.getFileById(match[1]);
+                    if (file) {
+                      targetCustFolder.addFile(file);
+                      try { root.removeFile(file); } catch(err) {}
+                    }
+                  } catch(e) {}
+                }
+              });
+            }
+          } catch(e) {}
+        });
+      } catch(e) {}
       
       return { 
         success: true, 
@@ -97,6 +130,46 @@ function routeRequest(action, method, body, params) {
         createdSheets: createdSheets,
         createdFolders: createdFolders
       };
+    }
+
+    case 'syncPoInDriveFiles': {
+      var root = DriveApp.getRootFolder();
+      var masterFolders = root.getFoldersByName('AppscriptMPA_Storage');
+      var masterFolder = masterFolders.hasNext() ? masterFolders.next() : root.createFolder('AppscriptMPA_Storage');
+      
+      var poInFolders = masterFolder.getFoldersByName('PO In');
+      var poInFolder = poInFolders.hasNext() ? poInFolders.next() : masterFolder.createFolder('PO In');
+
+      var poIns = getRecords('po_in');
+      var movedCount = 0;
+      poIns.forEach(function(po) {
+        if (!po.dokumen) return;
+        try {
+          var docs = JSON.parse(po.dokumen);
+          if (Array.isArray(docs)) {
+            var targetCustomerFolder = poInFolder;
+            if (po.customer_name && String(po.customer_name).trim()) {
+              var cFolders = poInFolder.getFoldersByName(String(po.customer_name).trim());
+              targetCustomerFolder = cFolders.hasNext() ? cFolders.next() : poInFolder.createFolder(String(po.customer_name).trim());
+            }
+            docs.forEach(function(d) {
+              if (!d.url) return;
+              var match = String(d.url).match(/\/d\/([a-zA-Z0-9_-]+)/);
+              if (match && match[1]) {
+                try {
+                  var file = DriveApp.getFileById(match[1]);
+                  if (file) {
+                    targetCustomerFolder.addFile(file);
+                    try { root.removeFile(file); } catch(err) {}
+                    movedCount++;
+                  }
+                } catch(e) {}
+              }
+            });
+          }
+        } catch(e) {}
+      });
+      return { success: true, message: 'Berhasil merapikan ' + movedCount + ' file PO In ke folder Google Drive.' };
     }
 
     // Auth & Users

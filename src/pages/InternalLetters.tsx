@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Printer, Plus, Pencil, SendHorizonal, X } from "lucide-react";
+import { Loader2, Printer, Plus, Pencil, SendHorizonal, X, FileText } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
 import { useInternalLetters, useSaveInternalLetter, useDeleteInternalLetter, usePoIns, useVendors, useCompany, useSaveNotification, useUploadFile } from "@/hooks/useData";
 import { generateAndUploadPdf } from "@/lib/pdfGenerator";
 import { useAuthStore } from "@/store/authStore";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getDriveImageUrl } from "@/lib/utils";
 import AddInternalLetterModal from "@/components/AddInternalLetterModal";
 import TableToolbar from "@/components/TableToolbar";
 import type { InternalLetter } from "@/types";
@@ -50,6 +50,8 @@ export default function InternalLetters() {
   const [editPerihal, setEditPerihal] = useState("");
   const [editFranco, setEditFranco] = useState("");
   const [editType, setEditType] = useState("Full");
+  const [editBuktiUrl, setEditBuktiUrl] = useState<string | null>(null);
+  const [editBuktiFile, setEditBuktiFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [mintaVerifId, setMintaVerifId] = useState<string | null>(null);
 
@@ -91,6 +93,8 @@ export default function InternalLetters() {
     setEditPerihal(letter.perihal || "");
     setEditFranco(letter.franco || "");
     setEditType(letter.type || "Full");
+    setEditBuktiUrl(letter.bukti_tf_url || null);
+    setEditBuktiFile(null);
     setEditModal({ isOpen: true, letter });
   };
 
@@ -98,13 +102,32 @@ export default function InternalLetters() {
     if (!editModal.letter) return;
     setIsSaving(true);
     try {
+      let finalBuktiUrl = editBuktiUrl;
+      if (editBuktiFile) {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(editBuktiFile);
+        });
+        const res = await uploadFile.mutateAsync({
+          filename: editBuktiFile.name,
+          mimeType: editBuktiFile.type,
+          base64,
+          module: 'Internal Letter',
+          entityName: editModal.letter.vendor_name || '',
+          docReference: editModal.letter.internal_letter_number || editModal.letter.id
+        });
+        finalBuktiUrl = typeof res === 'string' ? res : (res as any)?.url || '';
+      }
+
       const updatedLetter = {
         ...editModal.letter,
         internal_letter_number: editNumber,
         tanggal: editTanggal,
         perihal: editPerihal,
         franco: editFranco,
-        type: editType,
+        type: editType as any,
+        bukti_tf_url: finalBuktiUrl || undefined,
         updated_date: new Date().toISOString(),
       };
       await saveIL.mutateAsync(updatedLetter);
@@ -126,6 +149,7 @@ export default function InternalLetters() {
       }).catch(e => console.warn('PDF generation failed:', e));
 
       setEditModal({ isOpen: false, letter: null });
+      setEditBuktiFile(null);
       refetch();
       toast.success('Internal Letter berhasil diperbarui');
     } catch { toast.error("Gagal menyimpan"); }
@@ -424,6 +448,80 @@ export default function InternalLetters() {
                         </label>
                       )}
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Bukti Transfer */}
+              <div className="mt-5 pt-4 border-t border-gray-100">
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  Bukti Transfer Pembayaran {editBuktiUrl ? '(Ganti File)' : '(opsional)'}
+                </label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  {editBuktiUrl ? (
+                    <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-700">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-emerald-950">Bukti Transfer Saat Ini</p>
+                              <a
+                                href={editBuktiUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[11px] text-emerald-700 font-medium hover:underline inline-flex items-center gap-1"
+                              >
+                                Lihat File ↗
+                              </a>
+                            </div>
+                          </div>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full shrink-0">
+                            Terupload
+                          </span>
+                        </div>
+
+                        <div className="bg-white border border-emerald-100 rounded-lg p-2 flex items-center justify-center overflow-hidden max-h-36">
+                          <img
+                            src={getDriveImageUrl(editBuktiUrl)}
+                            alt="Bukti Transfer Sebelumnya"
+                            referrerPolicy="no-referrer"
+                            className="max-h-32 max-w-full object-contain rounded"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10.5px] text-gray-500 mt-2">
+                        Pilih file di samping jika ingin mengganti bukti transfer ini.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center flex flex-col items-center justify-center text-gray-400 min-h-[110px]">
+                      <FileText className="w-7 h-7 mb-1 text-gray-300" />
+                      <span className="text-xs">Belum ada bukti transfer terupload</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      onChange={e => setEditBuktiFile(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      accept="image/*,.pdf"
+                    />
+                    {editBuktiFile && (
+                      <p className="text-xs text-blue-600 font-medium truncate">
+                        File baru dipilih: {editBuktiFile.name}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-gray-400">
+                      Format file: Gambar (JPG, PNG) atau dokumen PDF. Bukti transfer akan otomatis tercetak pada lampiran dokumen PDF.
+                    </p>
                   </div>
                 </div>
               </div>

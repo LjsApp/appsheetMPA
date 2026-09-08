@@ -57,22 +57,32 @@ export default function AddPoInModal({ isOpen, onClose, onSuccess, usedQuotation
       // 1. Upload PO In documents
       const poInId = `POIN-${Date.now()}`;
       const uploadedDocs: { name: string; url: string }[] = [];
+      let fileIdx = 1;
+      const custName = selectedQt.customer_name || selectedQt.customer_id || '';
       for (const file of poInFiles) {
-        const base64 = await new Promise<string>((resolve) => {
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+        const dateObj = new Date();
+        const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()}`;
+        const safePoNum = String(poInNumber).replace(/[\/\\?%*:|"<>]/g, '_');
+        const finalFilename = `${safePoNum}_dok${fileIdx}_${dateStr}${ext ? '.' + ext : ''}`;
+
+        const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
           reader.readAsDataURL(file);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
         });
         const res = await uploadFile.mutateAsync({ 
-          filename: file.name, 
+          filename: finalFilename, 
           mimeType: file.type, 
           base64,
           module: 'PO In',
-          entityName: selectedQt.customer_name || selectedQt.customer_id || '',
+          entityName: custName,
           docReference: poInId
         });
         const fileUrl = typeof res === 'string' ? res : res?.url;
-        if (fileUrl) uploadedDocs.push({ name: file.name, url: fileUrl });
+        if (fileUrl) uploadedDocs.push({ name: finalFilename, url: fileUrl });
+        fileIdx++;
       }
 
       // 2. Save PO In record
