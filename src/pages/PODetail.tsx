@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -334,12 +334,12 @@ export default function PODetail() {
                     <table className="w-full" style={{borderCollapse:"collapse",border:"1px solid #000"}}>
                       <thead style={{background:"#1e3a5f",color:"#fff"}}>
                         <tr>
-                          <th style={{padding:"8px 12px",textAlign:"center",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'5%'}}>No.</th>
-                          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'42%'}}>Spesifikasi</th>
-                          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'14%'}}>Delivery</th>
-                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'6%'}}>Qty</th>
-                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'16%'}}>Unit Price</th>
-                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'17%'}}>Total Price</th>
+                          <th style={{padding:"8px 12px",textAlign:"center",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f",width:'5%'}}>No.</th>
+                          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f",width:'42%'}}>Spesifikasi</th>
+                          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f",width:'14%'}}>Delivery</th>
+                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f",width:'6%'}}>Qty</th>
+                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f",width:'16%'}}>Unit Price</th>
+                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f",width:'17%'}}>Total Price</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black">

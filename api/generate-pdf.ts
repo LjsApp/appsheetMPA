@@ -32,9 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const page = await browser.newPage();
 
-    // Set content and wait for all network requests (fonts, images) to complete
+    // Set content and wait for page load to complete
     await page.setContent(html, {
-      waitUntil: 'networkidle0',
+      waitUntil: 'load',
       timeout: 20000,
     });
 
