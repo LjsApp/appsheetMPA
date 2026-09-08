@@ -298,7 +298,7 @@ export default function InternalLetterDetail() {
           }
           .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
           .no-print { display: none !important; }
-          #il-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
+          .print-doc-card, #il-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
           thead { display: table-header-group; }
           tfoot { display: table-footer-group; }
           tr { page-break-inside: avoid; }
@@ -439,9 +439,12 @@ export default function InternalLetterDetail() {
       </div>
 
       {/* Document */}
-      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="il-doc">
+      <div className="space-y-8" id="il-doc">
 
-        {/* Watermark & footer */}
+        {/* CARD 1 — SURAT INTERNAL LETTER */}
+        <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0">
+
+          {/* Watermark & footer */}
         <img className="print-wm-tl" src="/watermark.png" alt="" />
         <img className="print-wm-br" src="/watermark.png" alt="" />
         <div className="print-page-footer">
@@ -691,23 +694,53 @@ export default function InternalLetterDetail() {
             </tr>
           </tfoot>
         </table>
+        </div>
 
-        {/* PAGE 2 — LAMPIRAN BUKTI TRANSFER PEMBAYARAN */}
+        {/* CARD 2 — LAMPIRAN BUKTI TRANSFER PEMBAYARAN */}
         {letter.bukti_tf_url && (
-          <div className="page-break bg-white pt-8 relative z-0" style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
+          <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden page-break z-0">
+            {/* Watermark & footer */}
+            <img className="print-wm-tl" src="/watermark.png" alt="" />
+            <img className="print-wm-br" src="/watermark.png" alt="" />
+            <div className="print-page-footer">
+              <img src="/watermark2.png" alt="Logo" style={{ height: "28px", opacity: 0.85 }} />
+              <div className="text-right text-[7.5pt] text-gray-700 leading-tight flex flex-col gap-0.5">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>HO: Citra Grand City - Tropical Valley - SB06/11 - Palembang - Sumatera Selatan</span>
+                  <MapPin className="w-3 h-3 text-red-500" />
+                </div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>RO: Jl. Bratang Gede I No. 8 - Surabaya - Jawa Timur</span>
+                  <MapPin className="w-3 h-3 text-red-500" />
+                </div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>+62-823-3587-8789, +62-857-3292-9919</span>
+                  <Phone className="w-3 h-3 text-green-600" />
+                </div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>morganpowerindo@gmail.com</span>
+                  <Mail className="w-3 h-3 text-blue-500" />
+                </div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>morgan_powerindo</span>
+                  <AtSign className="w-3 h-3 text-pink-600" />
+                </div>
+              </div>
+            </div>
+
             <table className="w-full" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <td style={{ padding: 0 }}>
-                    <div className="px-10 pt-4 pb-4">
+                    <div className="px-10 pt-8 pb-4">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
                           {company?.logo_url ? (
-                            <div className="w-20 h-20 overflow-hidden flex items-center justify-center">
+                            <div className="w-24 h-24 overflow-hidden flex items-center justify-center">
                               <img src={getDriveImageUrl(company.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
                             </div>
                           ) : (
-                            <div className="w-20 h-20 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
+                            <div className="w-24 h-24 border border-gray-200 rounded flex items-center justify-center text-gray-300 text-xs font-medium">Logo</div>
                           )}
                           <div>
                             <h1 className="text-blue-900 font-bold tracking-wide leading-tight text-[12pt]">{companyName}</h1>

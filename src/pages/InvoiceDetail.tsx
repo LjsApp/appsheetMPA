@@ -1,12 +1,10 @@
-import { useMemo, useEffect, useState, useRef } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink, Banknote, Upload, X } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink, Banknote } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification, useUploadFile, useInquiries, useSaveInquiry, useNeracas, useNeracaQuotations } from '@/hooks/useData';
+import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
-import { generateAndUploadPdf } from '@/lib/pdfGenerator';
-import { toast } from '@/store/toastStore';
 import type { NeracaDetail, NeracaItem } from '@/types';
 
 // ─── calculation helpers (same as QuotationDetail) ───────────────────────────
@@ -126,19 +124,8 @@ export default function InvoiceDetail() {
   const { data: customers = [] } = useCustomers();
   const saveInvoice = useSaveInvoice();
   const saveNotification = useSaveNotification();
-  const uploadFile = useUploadFile();
-  const { data: inquiries = [] } = useInquiries();
-  const saveInquiry = useSaveInquiry();
-  const { data: neracas = [] } = useNeracas();
-  const { data: quotations = [] } = useNeracaQuotations();
 
   const [isRequestingVerif, setIsRequestingVerif] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentFile, setPaymentFile] = useState<File | null>(null);
-  const [paymentNote, setPaymentNote] = useState('');
-  const [isSavingPayment, setIsSavingPayment] = useState(false);
-  const paymentInputRef = useRef<HTMLInputElement>(null);
 
   const invoice = invoices.find(inv => inv.id === id);
   const po = poIns.find(p => p.id === invoice?.po_in_id);
@@ -213,73 +200,6 @@ export default function InvoiceDetail() {
       alert('Gagal mengubah status verifikasi');
     } finally {
       setIsRequestingVerif(false);
-    }
-  };
-
-  const handlePaymentSubmit = async () => {
-    if (!invoice) return;
-    setIsSavingPayment(true);
-    try {
-      let fileUrl = '';
-      if (paymentFile) {
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
-          reader.readAsDataURL(paymentFile);
-        });
-        const res = await uploadFile.mutateAsync({
-          filename: paymentFile.name,
-          mimeType: paymentFile.type,
-          base64,
-          module: 'Invoice',
-          entityName: po?.customer_name || invoice.customer_id || '',
-          docReference: invoice.invoice_number || invoice.id,
-        });
-        fileUrl = typeof res === 'string' ? res : (res as any)?.url || '';
-      }
-
-      const updatedInvoice = {
-        ...invoice,
-        payment_status: 'Lunas' as const,
-        payment_date: paymentDate,
-        payment_proof_url: fileUrl || invoice.payment_proof_url,
-        payment_note: paymentNote,
-        updated_date: new Date().toISOString(),
-      };
-      await saveInvoice.mutateAsync(updatedInvoice);
-
-      // Generate updated PDF in background including the payment proof page
-      const cCode = customers.find(c => c.id === invoice.customer_id)?.code || '';
-      const safeNum = String(invoice.invoice_number).replace(/\//g, '_');
-      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
-      generateAndUploadPdf({
-        type: 'invoice',
-        id: invoice.id,
-        filename: pdfFilename,
-        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
-        module: 'Invoice',
-        entityName: po?.customer_name || '',
-        docReference: invoice.id,
-      }).then(pdfUrl => {
-        saveInvoice.mutate({ ...updatedInvoice, dokumen: pdfUrl });
-      }).catch(e => console.warn('Invoice PDF generation failed after payment:', e));
-
-      const qt = quotations.find(q => q.id === po?.quotation_id);
-      const neraca = neracas.find(n => n.id === qt?.neraca_id);
-      const inquiry = inquiries.find(i => i.id === neraca?.inquiry_id);
-      if (inquiry && inquiry.status !== 'Selesai') {
-        saveInquiry.mutate({ ...inquiry, status: 'Selesai', updated_date: new Date().toISOString() });
-      }
-
-      setShowPaymentModal(false);
-      setPaymentFile(null);
-      setPaymentNote('');
-      toast.success('Bukti pembayaran berhasil disimpan');
-      refetch();
-    } catch {
-      toast.error('Gagal menyimpan bukti pembayaran');
-    } finally {
-      setIsSavingPayment(false);
     }
   };
 
@@ -438,18 +358,6 @@ export default function InvoiceDetail() {
                     <span className="text-sm font-semibold text-amber-700">Belum Dibayar</span>
                   </>
                 )}
-                <button
-                  onClick={() => {
-                    setPaymentDate(invoice.payment_date || new Date().toISOString().split('T')[0]);
-                    setPaymentNote(invoice.payment_note || '');
-                    setPaymentFile(null);
-                    setShowPaymentModal(true);
-                  }}
-                  className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors"
-                >
-                  <Upload className="w-3 h-3" />
-                  {invoice.payment_status === 'Lunas' ? 'Edit Bukti' : 'Catat Bayar'}
-                </button>
               </div>
             </div>
 
@@ -495,17 +403,6 @@ export default function InvoiceDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto">
-                <button
-                  onClick={() => {
-                    setPaymentDate(invoice.payment_date || new Date().toISOString().split('T')[0]);
-                    setPaymentNote(invoice.payment_note || '');
-                    setPaymentFile(null);
-                    setShowPaymentModal(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg border border-blue-200 transition-colors"
-                >
-                  <Upload className="w-3.5 h-3.5" /> Ganti Bukti
-                </button>
                 <a
                   href={invoice.payment_proof_url}
                   target="_blank"
@@ -1021,110 +918,6 @@ export default function InvoiceDetail() {
           </div>
         )}
       </div>
-
-      {/* Payment / Proof Upload Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-emerald-600" /> Catat / Upload Bukti Pembayaran
-              </h3>
-              <button onClick={() => setShowPaymentModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Pembayaran</label>
-                <input
-                  type="date"
-                  value={paymentDate}
-                  onChange={e => setPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Bukti Pembayaran</label>
-                <input
-                  type="file"
-                  ref={paymentInputRef}
-                  className="hidden"
-                  accept="image/*,.pdf"
-                  onChange={e => {
-                    if (e.target.files?.[0]) {
-                      setPaymentFile(e.target.files[0]);
-                    }
-                  }}
-                />
-                {!paymentFile && !invoice.payment_proof_url ? (
-                  <button
-                    type="button"
-                    onClick={() => paymentInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 w-full py-6 border-2 border-dashed border-gray-300 rounded-xl hover:bg-gray-50 hover:border-emerald-400 transition-colors"
-                  >
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm text-gray-500">Klik untuk upload bukti bayar</span>
-                  </button>
-                ) : (
-                  <div className="flex items-center justify-between p-3 border border-emerald-200 bg-emerald-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-emerald-500" />
-                      <div className="text-sm">
-                        <p className="font-medium text-emerald-800">{paymentFile?.name || 'Bukti Pembayaran Tersedia'}</p>
-                        {invoice.payment_proof_url && !paymentFile && (
-                          <a href={invoice.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline text-xs">Lihat Bukti Saat Ini</a>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        paymentInputRef.current?.click();
-                      }}
-                      className="text-xs text-blue-600 hover:underline ml-2"
-                    >
-                      Ganti
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan Pembayaran</label>
-                <textarea
-                  value={paymentNote}
-                  onChange={e => setPaymentNote(e.target.value)}
-                  placeholder="Catatan / keterangan pembayaran..."
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-4 bg-gray-50 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setShowPaymentModal(false)}
-                disabled={isSavingPayment}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handlePaymentSubmit}
-                disabled={isSavingPayment}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {isSavingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Simpan & Tandai Lunas
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
