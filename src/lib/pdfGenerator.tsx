@@ -59,28 +59,64 @@ function collectPageCss(): { inline: string; links: string[] } {
  */
 function buildHtmlPage(element: HTMLElement): string {
   const { inline, links } = collectPageCss();
+  const origin = window.location.origin; // e.g. https://app.vercel.app
 
   const linkTags = links
     .map(href => `<link rel="stylesheet" href="${href}">`)
     .join('\n');
+
+  // Fix relative /src paths → absolute so Puppeteer (on a different host) can fetch images/fonts
+  let elementHtml = element.outerHTML
+    .replace(/\bsrc="\/([^"]+)"/g, `src="${origin}/$1"`)
+    .replace(/\bhref="\/([^"]+)"/g, `href="${origin}/$1"`);
 
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="${origin}/">
   ${linkTags}
   <style>
-    /* Page setup for Puppeteer */
+    /* Page setup for Puppeteer PDF */
     @page { size: A4; margin: 0; }
     html, body { margin: 0; padding: 0; background: white; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    /* ─── CRITICAL: force repeating header/footer on every PDF page ─── */
+    /* Outer table thead (kop surat) must repeat on every page */
+    #quotation-doc > table > thead,
+    #po-doc > table > thead,
+    #surat-jalan-doc > table > thead { display: table-header-group !important; }
+
+    /* Outer table tfoot (spacer) must stay at bottom of every page */
+    #quotation-doc > table > tfoot,
+    #po-doc > table > tfoot,
+    #surat-jalan-doc > table > tfoot { display: table-footer-group !important; }
+
+    /* Page footer fixed at bottom — appears on EVERY page */
+    .print-page-footer {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      display: flex !important;
+      background: white !important;
+      z-index: 100 !important;
+      padding: 10px 40px !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+    }
+
+    /* Prevent table rows from splitting across pages */
+    tr { page-break-inside: avoid; }
+
     /* Inlined app CSS (includes Tailwind + all component styles) */
     ${inline}
   </style>
 </head>
-<body>
-  ${element.outerHTML}
+<body style="margin:0;padding:0;">
+  ${elementHtml}
 </body>
 </html>`;
 }

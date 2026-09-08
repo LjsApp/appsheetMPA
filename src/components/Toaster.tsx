@@ -3,24 +3,24 @@ import { X, CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
 import { useToastStore, type Toast } from '@/store/toastStore';
 
 const ICONS = {
-  success: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />,
-  error: <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />,
-  warning: <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />,
-  info: <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />,
+  success: <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" style={{color:'#10b981'}} />,
+  error: <XCircle className="w-5 h-5 shrink-0 mt-0.5" style={{color:'#ef4444'}} />,
+  warning: <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{color:'#f59e0b'}} />,
+  info: <Info className="w-5 h-5 shrink-0 mt-0.5" style={{color:'#3b82f6'}} />,
 };
 
-const STYLES = {
-  success: 'bg-white border-l-4 border-emerald-500 shadow-lg',
-  error: 'bg-white border-l-4 border-red-500 shadow-lg',
-  warning: 'bg-white border-l-4 border-amber-500 shadow-lg',
-  info: 'bg-white border-l-4 border-blue-500 shadow-lg',
+const BORDER_COLOR = {
+  success: '#10b981',
+  error:   '#ef4444',
+  warning: '#f59e0b',
+  info:    '#3b82f6',
 };
 
-const TEXT_STYLES = {
-  success: 'text-emerald-800',
-  error: 'text-red-800',
-  warning: 'text-amber-800',
-  info: 'text-blue-800',
+const TEXT_COLOR = {
+  success: '#065f46',
+  error:   '#7f1d1d',
+  warning: '#78350f',
+  info:    '#1e3a8a',
 };
 
 function ToastItem({ toast }: { toast: Toast }) {
@@ -28,7 +28,7 @@ function ToastItem({ toast }: { toast: Toast }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Animate in
+    // Animate in after 10ms
     const t = setTimeout(() => setVisible(true), 10);
     return () => clearTimeout(t);
   }, []);
@@ -40,17 +40,49 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-lg max-w-sm w-full transition-all duration-300 ${STYLES[toast.type]} ${
-        visible ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'
-      }`}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        maxWidth: '360px',
+        width: '100%',
+        background: '#ffffff',
+        borderLeft: `4px solid ${BORDER_COLOR[toast.type]}`,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+        transition: 'all 0.3s ease',
+        // Animate in/out using inline style (avoids Tailwind class purging)
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateX(0)' : 'translateX(32px)',
+      }}
     >
       {ICONS[toast.type]}
-      <p className={`text-sm font-medium flex-1 leading-snug ${TEXT_STYLES[toast.type]}`}>
+      <p
+        style={{
+          fontSize: '14px',
+          fontWeight: 500,
+          flex: 1,
+          lineHeight: 1.4,
+          color: TEXT_COLOR[toast.type],
+          margin: 0,
+        }}
+      >
         {toast.message}
       </p>
       <button
         onClick={handleClose}
-        className="p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+        style={{
+          padding: '2px',
+          borderRadius: '4px',
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer',
+          color: '#9ca3af',
+          display: 'flex',
+          alignItems: 'center',
+          flexShrink: 0,
+        }}
       >
         <X className="w-4 h-4" />
       </button>
@@ -62,10 +94,21 @@ export default function Toaster() {
   const toasts = useToastStore((s) => s.toasts);
 
   return (
-    <div className="fixed bottom-5 right-5 z-[99999] flex flex-col gap-2 pointer-events-none">
-      {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
-          <ToastItem toast={toast} />
+    <div
+      style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 99999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        pointerEvents: 'none',
+      }}
+    >
+      {toasts.map((t) => (
+        <div key={t.id} style={{ pointerEvents: 'auto' }}>
+          <ToastItem toast={t} />
         </div>
       ))}
     </div>
