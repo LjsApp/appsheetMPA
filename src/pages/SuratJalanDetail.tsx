@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, Cloud, ExternalLink } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import {
   useSuratJalan,
@@ -8,8 +8,12 @@ import {
   usePoIns,
   useNeracaItems,
   useCompany,
+  useCustomers,
+  useUploadFile,
 } from '@/hooks/useData';
 import { getDriveImageUrl, formatDate } from '@/lib/utils';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
+import { toast } from '@/store/toastStore';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -27,6 +31,9 @@ export default function SuratJalanDetail() {
 
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const { data: company, isLoading: loadingCompany } = useCompany();
+  const { data: customers = [] } = useCustomers();
+  const uploadFile = useUploadFile();
+  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
 
   const sj = suratJalanList.find(s => s.id === id);
   const po = poIns.find(p => p.id === sj?.po_in_id);
@@ -34,6 +41,31 @@ export default function SuratJalanDetail() {
   const { data: items = [], isLoading: loadingItems } = useNeracaItems(po?.neraca_id || '');
 
   const [ekspedisi, setEkspedisi] = useState('');
+
+  const handleUploadDrive = async () => {
+    if (!sj) return;
+    setIsUploadingDrive(true);
+    try {
+      const cCode = customers.find(c => c.id === po?.customer_id)?.code || '';
+      const safeNum = String(sj.sj_number || sj.id).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
+      const url = await generateAndUploadPdf({
+        type: 'surat_jalan',
+        id: sj.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Surat Jalan',
+        entityName: po?.customer_name || '',
+        docReference: sj.id,
+      });
+      await saveSJ.mutateAsync({ ...sj, dokumen: url });
+      toast.success('Surat Jalan berhasil diupload ke Google Drive!');
+    } catch (e: any) {
+      toast.error('Gagal upload ke Drive: ' + (e.message || 'Error'));
+    } finally {
+      setIsUploadingDrive(false);
+    }
+  };
 
   useEffect(() => {
     if (sj) setEkspedisi(sj.ekspedisi || '');
@@ -108,6 +140,20 @@ export default function SuratJalanDetail() {
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigate(-1)}><RotateCcw className="w-4 h-4" /> Kembali</Button>
+              {sj.dokumen && (
+                <a
+                  href={sj.dokumen}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka di Drive
+                </a>
+              )}
+              <Button variant="secondary" onClick={handleUploadDrive} disabled={isUploadingDrive}>
+                {isUploadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                {sj.dokumen ? 'Perbarui di Drive' : 'Upload ke Drive'}
+              </Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }

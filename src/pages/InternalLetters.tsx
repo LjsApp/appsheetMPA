@@ -1,8 +1,9 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Printer, Plus, Pencil, SendHorizonal, X } from "lucide-react";
+import { Loader2, Printer, Plus, Pencil, SendHorizonal, X, FileText, Upload } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
-import { useInternalLetters, useSaveInternalLetter, useDeleteInternalLetter, usePoIns, useVendors, useCompany, useSaveNotification } from "@/hooks/useData";
+import { useInternalLetters, useSaveInternalLetter, useDeleteInternalLetter, usePoIns, useVendors, useCompany, useSaveNotification, useUploadFile } from "@/hooks/useData";
+import { generateAndUploadPdf } from "@/lib/pdfGenerator";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AddInternalLetterModal from "@/components/AddInternalLetterModal";
@@ -36,11 +37,37 @@ export default function InternalLetters() {
   const saveIL = useSaveInternalLetter();
   const deleteIL = useDeleteInternalLetter();
   const saveNotification = useSaveNotification();
+  const uploadFile = useUploadFile();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+
+  const handleSyncPdf = async (letter: InternalLetter) => {
+    setGeneratingPdfId(letter.id);
+    try {
+      const typeSuffix = letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : '';
+      const safeNum = String(letter.internal_letter_number + typeSuffix).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${(letter.vendor_name || '').replace(/\s+/g, '_')}.pdf`;
+      const url = await generateAndUploadPdf({
+        type: 'internal_letter',
+        id: letter.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Internal Letter',
+        entityName: letter.vendor_name || '',
+        docReference: letter.id,
+      });
+      await saveIL.mutateAsync({ ...letter, dokumen: url });
+      toast.success('PDF Internal Letter berhasil diupload ke Google Drive');
+    } catch (e: any) {
+      toast.error('Gagal membuat PDF: ' + (e.message || 'Error'));
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
 
   const [editModal, setEditModal] = useState<{ isOpen: boolean; letter: InternalLetter | null }>({ isOpen: false, letter: null });
   const [editNumber, setEditNumber] = useState("");
@@ -96,7 +123,7 @@ export default function InternalLetters() {
     if (!editModal.letter) return;
     setIsSaving(true);
     try {
-      await saveIL.mutateAsync({
+      const updatedLetter = {
         ...editModal.letter,
         internal_letter_number: editNumber,
         tanggal: editTanggal,
@@ -104,7 +131,25 @@ export default function InternalLetters() {
         franco: editFranco,
         type: editType,
         updated_date: new Date().toISOString(),
-      });
+      };
+      await saveIL.mutateAsync(updatedLetter);
+
+      // Generate updated PDF in background (replaces existing file by name)
+      const typeSuffix = editType && editType !== 'Full' ? ` (${editType.toUpperCase()})` : '';
+      const safeNum = String(editNumber + typeSuffix).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${(editModal.letter.vendor_name || '').replace(/\s+/g, '_')}.pdf`;
+      generateAndUploadPdf({
+        type: 'internal_letter',
+        id: editModal.letter.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Internal Letter',
+        entityName: editModal.letter.vendor_name || '',
+        docReference: editModal.letter.id,
+      }).then(pdfUrl => {
+        saveIL.mutate({ ...updatedLetter, dokumen: pdfUrl });
+      }).catch(e => console.warn('PDF generation failed:', e));
+
       setEditModal({ isOpen: false, letter: null });
       refetch();
       toast.success('Internal Letter berhasil diperbarui');
@@ -219,6 +264,33 @@ export default function InternalLetters() {
                           </div>
                           {letter.tanggal && (
                             <div className="text-[11px] text-gray-400 font-sans mt-0.5">{formatDate(letter.tanggal)}</div>
+                          )}
+                          {letter.dokumen ? (
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <a href={letter.dokumen} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-sans font-normal text-blue-600 hover:text-blue-800 hover:underline">
+                                <FileText className="w-3.5 h-3.5" /> PDF Drive
+                              </a>
+                              <button
+                                onClick={() => handleSyncPdf(letter)}
+                                disabled={generatingPdfId === letter.id}
+                                className="text-[10px] text-gray-400 hover:text-blue-600 font-sans font-normal transition-colors"
+                                title="Perbarui PDF di Google Drive"
+                              >
+                                {generatingPdfId === letter.id ? <Loader2 className="w-2.5 h-2.5 animate-spin inline" /> : '↻'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-1.5">
+                              <button
+                                onClick={() => handleSyncPdf(letter)}
+                                disabled={generatingPdfId === letter.id}
+                                className="inline-flex items-center gap-1 text-[10px] font-sans font-normal px-2 py-0.5 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50"
+                                title="Generate dan upload PDF ke Google Drive"
+                              >
+                                {generatingPdfId === letter.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                                Upload PDF
+                              </button>
+                            </div>
                           )}
                         </td>
 

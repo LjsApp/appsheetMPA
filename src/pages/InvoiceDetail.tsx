@@ -1,11 +1,13 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink, Cloud } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification } from '@/hooks/useData';
+import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification, useUploadFile } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
 import type { NeracaDetail, NeracaItem } from '@/types';
+import { generateAndUploadPdf } from '@/lib/pdfGenerator';
+import { toast } from '@/store/toastStore';
 
 // ─── calculation helpers (same as QuotationDetail) ───────────────────────────
 function getDifficultyValue(detail: Partial<NeracaDetail>, difficulty: string): number {
@@ -124,8 +126,10 @@ export default function InvoiceDetail() {
   const { data: customers = [] } = useCustomers();
   const saveInvoice = useSaveInvoice();
   const saveNotification = useSaveNotification();
+  const uploadFile = useUploadFile();
 
   const [isRequestingVerif, setIsRequestingVerif] = useState(false);
+  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
 
   const invoice = invoices.find(inv => inv.id === id);
   const po = poIns.find(p => p.id === invoice?.po_in_id);
@@ -170,6 +174,31 @@ export default function InvoiceDetail() {
     return () => { document.title = 'SAPP'; };
   }, [invoice?.invoice_number]);
 
+  const handleUploadDrive = async () => {
+    if (!invoice) return;
+    setIsUploadingDrive(true);
+    try {
+      const cCode = customer?.code || '';
+      const safeNum = String(invoice.invoice_number || invoice.id).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
+      const url = await generateAndUploadPdf({
+        type: 'invoice',
+        id: invoice.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Invoice',
+        entityName: po?.customer_name || customer?.company_name || '',
+        docReference: invoice.id,
+      });
+      await saveInvoice.mutateAsync({ ...invoice, dokumen: url });
+      toast.success('Invoice berhasil diupload ke Google Drive!');
+    } catch (e: any) {
+      toast.error('Gagal upload ke Drive: ' + (e.message || 'Error'));
+    } finally {
+      setIsUploadingDrive(false);
+    }
+  };
+
   const handleRequestVerification = async () => {
     if (!invoice) return;
     if (!window.confirm(`Minta verifikasi pimpinan untuk Invoice: ${invoice.invoice_number}?`)) return;
@@ -204,6 +233,16 @@ export default function InvoiceDetail() {
   };
 
   const isLoading = loadingInv || loadingPo || loadingCo || loadingItems;
+
+  useEffect(() => {
+    if (!isLoading && invoice) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pdf-print-ready', { detail: { id, type: 'invoice' } }));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, invoice, id]);
+
   if (isLoading) return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   if (!invoice) return <div className="p-8 text-center text-red-600 font-medium">Invoice tidak ditemukan.</div>;
 
@@ -285,6 +324,20 @@ export default function InvoiceDetail() {
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigate('/invoices')}><RotateCcw className="w-4 h-4" /> Kembali</Button>
+              {invoice.dokumen && (
+                <a
+                  href={invoice.dokumen}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka di Drive
+                </a>
+              )}
+              <Button variant="secondary" onClick={handleUploadDrive} disabled={isUploadingDrive}>
+                {isUploadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                {invoice.dokumen ? 'Perbarui di Drive' : 'Upload ke Drive'}
+              </Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }
@@ -368,7 +421,7 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-8" id="invoice-doc">
 
         {/* PAGE 1 — SURAT PERMOHONAN PEMBAYARAN (SPP) */}
         <div className="print-doc-card bg-white max-w-[860px] mx-auto text-[11pt] overflow-hidden relative z-0">

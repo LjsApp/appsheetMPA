@@ -220,6 +220,7 @@ export interface Invoice {
   payment_date?: string;
   payment_proof_url?: string;
   payment_note?: string;
+  dokumen?: string;
   updated_date: string;
 }
 

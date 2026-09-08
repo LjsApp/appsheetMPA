@@ -1,6 +1,6 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2 } from 'lucide-react';
+import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2, Upload } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import TableToolbar from '@/components/TableToolbar';
@@ -36,6 +36,32 @@ export default function SuratJalanList() {
   const [addressOptions, setAddressOptions] = useState<{label: string, value: string}[]>([]);
   const [editResiList, setEditResiList] = useState<{id: string, no_resi: string, ekspedisi: string, url: string, file: File | null}[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+
+  const handleSyncPdf = async (item: any) => {
+    setGeneratingPdfId(item.id);
+    try {
+      const poIn = poIns.find(p => p.id === item.po_in_id);
+      const cCode = customers.find(c => c.id === poIn?.customer_id)?.code || '';
+      const safeNum = String(item.sj_number || item.id).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
+      const url = await generateAndUploadPdf({
+        type: 'surat_jalan',
+        id: item.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Surat Jalan',
+        entityName: item.customer_name || poIn?.customer_name || '',
+        docReference: item.id,
+      });
+      await saveSJ.mutateAsync({ ...item, dokumen: url });
+      toast.success('PDF Surat Jalan berhasil diupload ke Google Drive');
+    } catch (e: any) {
+      toast.error('Gagal membuat PDF: ' + (e.message || 'Error'));
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
 
   const parseResiData = (sj: any) => {
     if (sj.resi_data) {
@@ -194,6 +220,33 @@ export default function SuratJalanList() {
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-blue-700">
                       <div>{item.sj_number}</div>
                       <div className="text-[11px] text-gray-400 font-sans mt-0.5">{new Date(item.created_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                      {item.dokumen ? (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <a href={item.dokumen} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-sans font-normal text-blue-600 hover:text-blue-800 hover:underline">
+                            <FileText className="w-3.5 h-3.5" /> PDF Drive
+                          </a>
+                          <button
+                            onClick={() => handleSyncPdf(item)}
+                            disabled={generatingPdfId === item.id}
+                            className="text-[10px] text-gray-400 hover:text-blue-600 font-sans font-normal transition-colors"
+                            title="Perbarui PDF di Google Drive"
+                          >
+                            {generatingPdfId === item.id ? <Loader2 className="w-2.5 h-2.5 animate-spin inline" /> : '↻'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="mt-1.5">
+                          <button
+                            onClick={() => handleSyncPdf(item)}
+                            disabled={generatingPdfId === item.id}
+                            className="inline-flex items-center gap-1 text-[10px] font-sans font-normal px-2 py-0.5 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50"
+                            title="Generate dan upload PDF ke Google Drive"
+                          >
+                            {generatingPdfId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                            Upload PDF
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-xs">
                       {(() => {

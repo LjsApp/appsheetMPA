@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui";
 import SearchableSelect from "@/components/SearchableSelect";
-import { usePoIns, useInternalLetters, useNeracaItems, useVendorDiscounts, useSaveInternalLetter, useGetNextInternalLetterNumber, useNeracaQuotations, usePurchaseOrders } from "@/hooks/useData";
+import { usePoIns, useInternalLetters, useNeracaItems, useVendorDiscounts, useSaveInternalLetter, useGetNextInternalLetterNumber, useNeracaQuotations, usePurchaseOrders, useUploadFile } from "@/hooks/useData";
+import { generateAndUploadPdf } from "@/lib/pdfGenerator";
 
 interface Props {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function AddInternalLetterModal({ isOpen, onClose, onSuccess }: P
   const { data: purchaseOrders = [] } = usePurchaseOrders();
   const saveInternalLetter = useSaveInternalLetter();
   const getNextNumber = useGetNextInternalLetterNumber();
+  const uploadFile = useUploadFile();
 
   const [selectedPoInId, setSelectedPoInId] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -91,7 +93,7 @@ export default function AddInternalLetterModal({ isOpen, onClose, onSuccess }: P
           );
 
           // 1. IL DP
-          await saveInternalLetter.mutateAsync({
+          const ilDpPayload = {
             id: ilDpId,
             po_in_id: selectedPoIn.id,
             po_out_id: linkedPoOutDp?.id || "",
@@ -108,13 +110,28 @@ export default function AddInternalLetterModal({ isOpen, onClose, onSuccess }: P
             jumlah_item: vItems.length,
             total_nilai: dpVal,
             type: 'DP',
-            dokumen: JSON.stringify([]),
+            dokumen: "",
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
-          });
+          };
+          await saveInternalLetter.mutateAsync(ilDpPayload);
+
+          const safeNumDp = String(ilNumber + ' (DP)').replace(/\//g, '_');
+          const pdfFilenameDp = `PT MPA_${safeNumDp}_${(vendor.name || '').replace(/\s+/g, '_')}.pdf`;
+          generateAndUploadPdf({
+            type: 'internal_letter',
+            id: ilDpId,
+            filename: pdfFilenameDp,
+            uploadFileMutateAsync: uploadFile.mutateAsync,
+            module: 'Internal Letter',
+            entityName: vendor.name || '',
+            docReference: ilDpId,
+          }).then(pdfUrl => {
+            saveInternalLetter.mutate({ ...ilDpPayload, dokumen: pdfUrl });
+          }).catch(e => console.warn('IL DP PDF upload failed:', e));
           
           // 2. IL Sisa
-          await saveInternalLetter.mutateAsync({
+          const ilSisaPayload = {
             id: ilSisaId,
             po_in_id: selectedPoIn.id,
             po_out_id: linkedPoOutSisa?.id || "",
@@ -132,17 +149,32 @@ export default function AddInternalLetterModal({ isOpen, onClose, onSuccess }: P
             total_nilai: totalNilai - dpVal,
             type: 'Sisa',
             dp_reference_id: ilDpId,
-            dokumen: JSON.stringify([]),
+            dokumen: "",
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
-          });
+          };
+          await saveInternalLetter.mutateAsync(ilSisaPayload);
+
+          const safeNumSisa = String(ilNumber + ' (SISA)').replace(/\//g, '_');
+          const pdfFilenameSisa = `PT MPA_${safeNumSisa}_${(vendor.name || '').replace(/\s+/g, '_')}.pdf`;
+          generateAndUploadPdf({
+            type: 'internal_letter',
+            id: ilSisaId,
+            filename: pdfFilenameSisa,
+            uploadFileMutateAsync: uploadFile.mutateAsync,
+            module: 'Internal Letter',
+            entityName: vendor.name || '',
+            docReference: ilSisaId,
+          }).then(pdfUrl => {
+            saveInternalLetter.mutate({ ...ilSisaPayload, dokumen: pdfUrl });
+          }).catch(e => console.warn('IL Sisa PDF upload failed:', e));
         } else {
           // Buat 1 IL Full
           const linkedPoOut = purchaseOrders.find(
             (po) => po.quotation_id === selectedQuotation.id && po.vendor_id === vendor.id && (po.type === "Full" || !po.type)
           );
 
-          await saveInternalLetter.mutateAsync({
+          const ilFullPayload = {
             id: baseIlId,
             po_in_id: selectedPoIn.id,
             po_out_id: linkedPoOut?.id || "",
@@ -159,10 +191,25 @@ export default function AddInternalLetterModal({ isOpen, onClose, onSuccess }: P
             jumlah_item: vItems.length,
             total_nilai: totalNilai,
             type: 'Full',
-            dokumen: JSON.stringify([]),
+            dokumen: "",
             created_date: new Date().toISOString(),
             updated_date: new Date().toISOString(),
-          });
+          };
+          await saveInternalLetter.mutateAsync(ilFullPayload);
+
+          const safeNumFull = String(ilNumber).replace(/\//g, '_');
+          const pdfFilenameFull = `PT MPA_${safeNumFull}_${(vendor.name || '').replace(/\s+/g, '_')}.pdf`;
+          generateAndUploadPdf({
+            type: 'internal_letter',
+            id: baseIlId,
+            filename: pdfFilenameFull,
+            uploadFileMutateAsync: uploadFile.mutateAsync,
+            module: 'Internal Letter',
+            entityName: vendor.name || '',
+            docReference: baseIlId,
+          }).then(pdfUrl => {
+            saveInternalLetter.mutate({ ...ilFullPayload, dokumen: pdfUrl });
+          }).catch(e => console.warn('IL Full PDF upload failed:', e));
         }
       }
 

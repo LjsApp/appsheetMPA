@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, Upload, X, Banknote } from "lucide-react";
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, Upload, X, Banknote, ExternalLink, Cloud } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
 import { useInternalLetters, useSaveInternalLetter, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems, useUploadFile, useSaveNotification, useNotifications, useUsers } from "@/hooks/useData";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from "@/lib/utils";
+import { generateAndUploadPdf } from "@/lib/pdfGenerator";
+import { toast } from "@/store/toastStore";
 
 export default function InternalLetterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +35,32 @@ export default function InternalLetterDetail() {
   const [isUploadingBukti, setIsUploadingBukti] = useState(false);
   const [verifNote, setVerifNote] = useState('');
   const buktiInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
+
+  const handleUploadDrive = async () => {
+    if (!letter) return;
+    setIsUploadingDrive(true);
+    try {
+      const typeSuffix = letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : '';
+      const safeNum = String(letter.internal_letter_number + typeSuffix).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${(letter.vendor_name || '').replace(/\s+/g, '_')}.pdf`;
+      const url = await generateAndUploadPdf({
+        type: 'internal_letter',
+        id: letter.id,
+        filename: pdfFilename,
+        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
+        module: 'Internal Letter',
+        entityName: letter.vendor_name || '',
+        docReference: letter.id,
+      });
+      await saveIL.mutateAsync({ ...letter, dokumen: url });
+      toast.success('Internal Letter berhasil diupload ke Google Drive!');
+    } catch (e: any) {
+      toast.error('Gagal upload ke Drive: ' + (e.message || 'Error'));
+    } finally {
+      setIsUploadingDrive(false);
+    }
+  };
 
   const letter = letters.find((l) => l.id === id);
   const vendor = vendors.find((v) => v.id === letter?.vendor_id);
@@ -248,6 +276,15 @@ export default function InternalLetterDetail() {
     }
   };
 
+  useEffect(() => {
+    if (!isLoadingIL && !isLoadingCompany && letter) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pdf-print-ready', { detail: { id, type: 'internal_letter' } }));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingIL, isLoadingCompany, letter, id]);
+
   if (isLoadingIL || isLoadingCompany) {
     return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }
@@ -291,6 +328,20 @@ export default function InternalLetterDetail() {
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigate(-1)}><RotateCcw className="w-4 h-4" /> Kembali</Button>
+              {letter.dokumen && (
+                <a
+                  href={letter.dokumen}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka di Drive
+                </a>
+              )}
+              <Button variant="secondary" onClick={handleUploadDrive} disabled={isUploadingDrive}>
+                {isUploadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                {letter.dokumen ? 'Perbarui di Drive' : 'Upload ke Drive'}
+              </Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }

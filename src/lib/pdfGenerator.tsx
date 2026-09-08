@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import QuotationDetail from '@/pages/QuotationDetail';
 import PODetail from '@/pages/PODetail';
 import SuratJalanDetail from '@/pages/SuratJalanDetail';
+import InvoiceDetail from '@/pages/InvoiceDetail';
+import InternalLetterDetail from '@/pages/InternalLetterDetail';
 
 // Separate QueryClient for the hidden render — fresh data, no cache conflicts
 const pdfQueryClient = new QueryClient({
@@ -16,7 +18,7 @@ const pdfQueryClient = new QueryClient({
   },
 });
 
-export type PdfDocumentType = 'quotation' | 'po_out' | 'surat_jalan';
+export type PdfDocumentType = 'quotation' | 'po_out' | 'surat_jalan' | 'invoice' | 'internal_letter';
 
 interface GeneratePdfOptions {
   type: PdfDocumentType;
@@ -89,14 +91,16 @@ function buildHtmlPage(element: HTMLElement): string {
     #po-doc > table > thead,
     #surat-jalan-doc > table > thead,
     #sj-doc > table > thead,
-    #il-doc > table > thead { display: table-header-group !important; }
+    #il-doc > table > thead,
+    #invoice-doc table > thead { display: table-header-group !important; }
 
     /* Outer table tfoot (spacer) must stay at bottom of every page */
     #quotation-doc > table > tfoot,
     #po-doc > table > tfoot,
     #surat-jalan-doc > table > tfoot,
     #sj-doc > table > tfoot,
-    #il-doc > table > tfoot { display: table-footer-group !important; }
+    #il-doc > table > tfoot,
+    #invoice-doc table > tfoot { display: table-footer-group !important; }
 
     /* Page footer fixed at bottom — appears on EVERY page */
     .print-page-footer {
@@ -158,6 +162,8 @@ export async function generateAndUploadPdf({
           if (type === 'quotation') elementId = 'quotation-doc';
           if (type === 'po_out') elementId = 'po-doc';
           if (type === 'surat_jalan') elementId = 'surat-jalan-doc';
+          if (type === 'invoice') elementId = 'invoice-doc';
+          if (type === 'internal_letter') elementId = 'il-doc';
 
           let element = container.querySelector(`#${elementId}`);
           if (!element && type === 'surat_jalan') {
@@ -246,8 +252,16 @@ export async function generateAndUploadPdf({
       element = <PODetail />;
     } else if (type === 'surat_jalan') {
       path = `/surat-jalan/${id}`;
-      routePath = '/surat-jalan/:sjId';
+      routePath = '/surat-jalan/:id';
       element = <SuratJalanDetail />;
+    } else if (type === 'invoice') {
+      path = `/invoices/${id}`;
+      routePath = '/invoices/:id';
+      element = <InvoiceDetail />;
+    } else if (type === 'internal_letter') {
+      path = `/internal-letters/${id}`;
+      routePath = '/internal-letters/:id';
+      element = <InternalLetterDetail />;
     }
 
     root.render(

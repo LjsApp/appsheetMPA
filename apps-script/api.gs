@@ -890,20 +890,33 @@ function routeRequest(action, method, body, params) {
       var targetFolder = DriveApp.getRootFolder();
       var finalFilename = body.filename;
 
-      if (body.module && body.entityName) {
+      if (body.module) {
+        var masterFolder;
         var masterFolders = DriveApp.getRootFolder().getFoldersByName('AppscriptMPA_Storage');
         if (masterFolders.hasNext()) {
-          var masterFolder = masterFolders.next();
-          var moduleFolders = masterFolder.getFoldersByName(body.module);
-          if (moduleFolders.hasNext()) {
-            var moduleFolder = moduleFolders.next();
-            var entityFolders = moduleFolder.getFoldersByName(body.entityName);
-            if (entityFolders.hasNext()) {
-              targetFolder = entityFolders.next();
-            } else {
-              targetFolder = moduleFolder.createFolder(body.entityName);
-            }
+          masterFolder = masterFolders.next();
+        } else {
+          masterFolder = DriveApp.getRootFolder().createFolder('AppscriptMPA_Storage');
+        }
+
+        var moduleFolder;
+        var moduleFolders = masterFolder.getFoldersByName(body.module);
+        if (moduleFolders.hasNext()) {
+          moduleFolder = moduleFolders.next();
+        } else {
+          moduleFolder = masterFolder.createFolder(body.module);
+        }
+
+        if (body.entityName && String(body.entityName).trim()) {
+          var entityName = String(body.entityName).trim();
+          var entityFolders = moduleFolder.getFoldersByName(entityName);
+          if (entityFolders.hasNext()) {
+            targetFolder = entityFolders.next();
+          } else {
+            targetFolder = moduleFolder.createFolder(entityName);
           }
+        } else {
+          targetFolder = moduleFolder;
         }
       }
 
