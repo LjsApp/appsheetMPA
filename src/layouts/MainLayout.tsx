@@ -27,6 +27,7 @@ import { twMerge } from 'tailwind-merge';
 import { useAuthStore } from '@/store/authStore';
 import { useRoles, fetchApi } from '@/hooks/useData';
 import NotificationBell from '@/components/NotificationBell';
+import Toaster from '@/components/Toaster';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -168,6 +169,7 @@ export default function MainLayout() {
   };
 
   return (
+    <>
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Sidebar */}
       <aside className={cn(
@@ -431,5 +433,7 @@ export default function MainLayout() {
         </main>
       </div>
     </div>
+    <Toaster />
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { PageHeader, Button } from '@/components/ui';
 import { useRoles, useSaveRole, useDeleteRole } from '@/hooks/useData';
 import { Loader2, Plus, Pencil, Trash2, Shield, X, CheckSquare, Square } from 'lucide-react';
 import type { Role } from '@/types';
+import { useToast } from '@/store/toastStore';
 
 const ALL_PAGES = [
   { label: 'Dashboard Umum', path: '/' },
@@ -35,6 +36,7 @@ export default function Roles() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const toast = useToast();
 
   const openNew = () => {
     setEditingRole(null);
@@ -74,6 +76,9 @@ export default function Roles() {
       };
       await saveRole.mutateAsync(payload);
       setIsModalOpen(false);
+      toast.success(editingRole ? 'Role berhasil diperbarui' : 'Role berhasil ditambahkan');
+    } catch {
+      toast.error('Gagal menyimpan role');
     } finally {
       setIsSaving(false);
     }
@@ -81,7 +86,12 @@ export default function Roles() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus role ini?')) return;
-    await deleteRole.mutateAsync(id);
+    try {
+      await deleteRole.mutateAsync(id);
+      toast.success('Role berhasil dihapus');
+    } catch {
+      toast.error('Gagal menghapus role');
+    }
   };
 
   return (

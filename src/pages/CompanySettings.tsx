@@ -4,6 +4,7 @@ import { PageHeader, Button, FormField } from '@/components/ui';
 import { useCompany, useSaveCompany } from '@/hooks/useData';
 import { useForm, Controller } from 'react-hook-form';
 import { getDriveImageUrl } from '@/lib/utils';
+import { useToast } from '@/store/toastStore';
 interface CompanyForm {
   name: string;
   short_name: string;
@@ -23,6 +24,7 @@ export default function CompanySettings() {
 
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const toast = useToast();
 
   const { control, handleSubmit, reset } = useForm<CompanyForm>({
     defaultValues: {
@@ -97,25 +99,29 @@ export default function CompanySettings() {
           setIsUploading(false);
         };
         img.onerror = () => {
-          alert('Gagal memproses gambar');
+          toast.error('Gagal memproses gambar');
           setIsUploading(false);
         }
       };
     } catch (error) {
       console.error('Error uploading logo:', error);
-      alert('Gagal memproses logo');
+      toast.error('Gagal memproses logo');
       setIsUploading(false);
     }
   };
 
   const onSubmit = async (data: CompanyForm) => {
-    await saveCompany.mutateAsync({
-      id: company?.id || `CMP-${Date.now()}`,
-      ...data,
-      logo_url: logoUrl,
-      updated_date: new Date().toISOString()
-    });
-    alert('Pengaturan perusahaan berhasil disimpan!');
+    try {
+      await saveCompany.mutateAsync({
+        id: company?.id || `CMP-${Date.now()}`,
+        ...data,
+        logo_url: logoUrl,
+        updated_date: new Date().toISOString()
+      });
+      toast.success('Pengaturan perusahaan berhasil disimpan!');
+    } catch {
+      toast.error('Gagal menyimpan pengaturan perusahaan');
+    }
   };
 
   if (isLoading) {

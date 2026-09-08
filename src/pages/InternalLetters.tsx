@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import AddInternalLetterModal from "@/components/AddInternalLetterModal";
 import TableToolbar from "@/components/TableToolbar";
 import type { InternalLetter } from "@/types";
+import { useToast } from "@/store/toastStore";
 
 const toDateInput = (d?: string | null) => {
   if (!d) return "";
@@ -49,6 +50,7 @@ export default function InternalLetters() {
   const [editType, setEditType] = useState("Full");
   const [isSaving, setIsSaving] = useState(false);
   const [mintaVerifId, setMintaVerifId] = useState<string | null>(null);
+  const toast = useToast();
 
   const handleMintaVerifikasi = async (letter: InternalLetter) => {
     if (!window.confirm(`Minta verifikasi pimpinan untuk IL: ${letter.internal_letter_number}?`)) return;
@@ -76,7 +78,7 @@ export default function InternalLetters() {
       } catch { /* notifikasi gagal, status sudah berubah */ }
       refetch();
     } catch {
-      alert('Gagal mengubah status verifikasi');
+      toast.error('Gagal mengubah status verifikasi');
     } finally {
       setMintaVerifId(null);
     }
@@ -106,7 +108,8 @@ export default function InternalLetters() {
       });
       setEditModal({ isOpen: false, letter: null });
       refetch();
-    } catch { alert("Gagal menyimpan"); }
+      toast.success('Internal Letter berhasil diperbarui');
+    } catch { toast.error("Gagal menyimpan"); }
     finally { setIsSaving(false); }
   };
 
@@ -324,7 +327,7 @@ export default function InternalLetters() {
       <AddInternalLetterModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSuccess={() => { setShowAddModal(false); refetch(); }}
+        onSuccess={() => { setShowAddModal(false); refetch(); toast.success('Internal Letter berhasil ditambahkan'); }}
       />
 
       {editModal.isOpen && editModal.letter && (

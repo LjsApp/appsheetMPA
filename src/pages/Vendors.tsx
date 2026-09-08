@@ -9,6 +9,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import type { Vendor, PicVendor } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useVendors, useSaveVendor, useDeleteVendor, usePicVendors, useSavePicVendor, useDeletePicVendor, useUploadFile } from '@/hooks/useData';
+import { useToast } from '@/store/toastStore';
 
 export default function Vendors() {
   const [activeTab, setActiveTab] = useState<'vendors' | 'pics'>('vendors');
@@ -38,6 +39,7 @@ export default function Vendors() {
 
   const vendorForm = useForm<Vendor>();
   const picForm = useForm<PicVendor>();
+  const toast = useToast();
 
   const filteredVendors = useMemo(() => vendors.filter(v =>
     (v.vendor_name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -102,7 +104,7 @@ export default function Vendors() {
 
         payload.npwp = uploadedUrl;
       } catch (error) {
-        alert("Gagal mengunggah file NPWP. Silakan coba lagi.");
+        toast.error('Gagal mengunggah file NPWP. Silakan coba lagi.');
         return;
       }
     }
@@ -122,7 +124,9 @@ export default function Vendors() {
     saveVendor.mutate(payload, {
       onSuccess: () => {
         setIsVendorModalOpen(false);
-      }
+        toast.success(isEditingVendor ? 'Vendor berhasil diperbarui' : 'Vendor berhasil ditambahkan');
+      },
+      onError: () => toast.error('Gagal menyimpan vendor'),
     });
   };
 
@@ -142,9 +146,21 @@ export default function Vendors() {
     if (deleteModal.type === 'vendor') {
       const relatedPics = pics.filter(p => p.vendor_id === deleteModal.id);
       relatedPics.forEach(pic => deletePic.mutate(pic.id));
-      deleteVendor.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deleteVendor.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('Vendor berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus vendor'),
+      });
     } else if (deleteModal.type === 'pic') {
-      deletePic.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deletePic.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('PIC berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus PIC'),
+      });
     }
   };
 
@@ -179,7 +195,9 @@ export default function Vendors() {
     savePic.mutate(payload, {
       onSuccess: () => {
         setIsPicModalOpen(false);
-      }
+        toast.success(isEditingPic ? 'PIC berhasil diperbarui' : 'PIC berhasil ditambahkan');
+      },
+      onError: () => toast.error('Gagal menyimpan PIC'),
     });
   };
 
@@ -190,7 +208,13 @@ export default function Vendors() {
   const handleToggleVendorStatus = (vendor: Vendor) => {
     const currentStatus = vendor.status || 'Active';
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
-    saveVendor.mutate({ ...vendor, status: newStatus, updated_date: new Date().toISOString().split('T')[0] });
+    saveVendor.mutate(
+      { ...vendor, status: newStatus, updated_date: new Date().toISOString().split('T')[0] },
+      {
+        onSuccess: () => toast.success(`Status vendor diubah ke ${newStatus}`),
+        onError: () => toast.error('Gagal mengubah status'),
+      }
+    );
   };
 
   const handleTogglePicStatus = (pic: PicVendor) => {

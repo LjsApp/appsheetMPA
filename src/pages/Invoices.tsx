@@ -8,6 +8,7 @@ import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, 
 import { formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useToast } from '@/store/toastStore';
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ export default function Invoices() {
 
   const isLoading = loadingInv || loadingPo;
   const [requestingVerificationId, setRequestingVerificationId] = useState<string | null>(null);
+  const toast = useToast();
 
   const toInputDate = (d?: string): string => {
     if (!d) return new Date().toISOString().split('T')[0];
@@ -120,8 +122,9 @@ export default function Invoices() {
 
       setShowModal(false);
       resetModal();
+      toast.success('Invoice berhasil dibuat');
     } catch {
-      alert('Gagal membuat Invoice');
+      toast.error('Gagal membuat Invoice');
     } finally {
       setIsCreating(false);
     }
@@ -170,8 +173,9 @@ export default function Invoices() {
       setPaymentModal({ isOpen: false, invoice: null });
       setPaymentFile(null);
       setPaymentNote('');
+      toast.success('Invoice berhasil ditandai Lunas');
     } catch {
-      alert('Gagal menandai lunas');
+      toast.error('Gagal menandai lunas');
     } finally {
       setIsCreating(false);
     }
@@ -191,8 +195,9 @@ export default function Invoices() {
 
       setEditModal({ isOpen: false, invoice: null });
       resetModal();
+      toast.success('Invoice berhasil diperbarui');
     } catch {
-      alert('Gagal mengupdate Invoice');
+      toast.error('Gagal mengupdate Invoice');
     } finally {
       setIsCreating(false);
     }

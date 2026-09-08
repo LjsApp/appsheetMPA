@@ -9,6 +9,7 @@ import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useToast } from '@/store/toastStore';
 
 export default function SuratJalanList() {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function SuratJalanList() {
   const [addressOptions, setAddressOptions] = useState<{label: string, value: string}[]>([]);
   const [editResiList, setEditResiList] = useState<{id: string, no_resi: string, ekspedisi: string, url: string, file: File | null}[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const toast = useToast();
 
   const parseResiData = (sj: any) => {
     if (sj.resi_data) {
@@ -56,7 +58,13 @@ export default function SuratJalanList() {
 
   const executeDelete = () => {
     if (deleteModal.id) {
-      deleteSJ.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deleteSJ.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('Surat Jalan berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus Surat Jalan'),
+      });
     }
   };
 
@@ -110,6 +118,7 @@ export default function SuratJalanList() {
       await saveSJ.mutateAsync(data);
       setShowModal(false);
       setSelectedPoId('');
+      toast.success('Surat Jalan berhasil dibuat');
 
       // Generate PDF in background (non-blocking)
       const cCode = customers.find(c => c.id === poIn.customer_id)?.code || '';
@@ -126,7 +135,7 @@ export default function SuratJalanList() {
         saveSJ.mutate({ ...data, dokumen: pdfUrl });
       }).catch(e => console.warn('PDF generation failed:', e));
     } catch {
-      alert('Gagal membuat Surat Jalan');
+      toast.error('Gagal membuat Surat Jalan');
     } finally {
       setIsCreating(false);
     }

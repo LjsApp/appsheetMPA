@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Loader2, Lock, User, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { fetchApi } from '@/hooks/useData';
@@ -15,6 +15,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState('');
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [lockCountdown, setLockCountdown] = useState(0);
+
+  const MAX_ATTEMPTS = 5;
+  const LOCK_DURATION_MS = 2 * 60 * 1000; // 2 menit
 
   useEffect(() => {
     const checkSetupStatus = async () => {
@@ -32,6 +38,23 @@ export default function Login() {
     checkSetupStatus();
   }, [navigate]);
 
+  // Countdown timer for locked state
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const interval = setInterval(() => {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setLockedUntil(null);
+        setLockCountdown(0);
+        setLoginAttempts(0);
+        setError('');
+      } else {
+        setLockCountdown(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockedUntil]);
+
   if (checking) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -42,15 +65,33 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if locked
+    if (lockedUntil && Date.now() < lockedUntil) {
+      setError(`Terlalu banyak percobaan. Coba lagi dalam ${lockCountdown} detik.`);
+      return;
+    }
+
     setError('');
     setLoading(true);
-    
     try {
       const user = await fetchApi('login', 'POST', { email, password });
+      setLoginAttempts(0);
+      setLockedUntil(null);
       login(user);
       navigate('/', { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      const newAttempts = loginAttempts + 1;
+      setLoginAttempts(newAttempts);
+      const remaining = MAX_ATTEMPTS - newAttempts;
+      if (newAttempts >= MAX_ATTEMPTS) {
+        const until = Date.now() + LOCK_DURATION_MS;
+        setLockedUntil(until);
+        setLockCountdown(Math.ceil(LOCK_DURATION_MS / 1000));
+        setError(`Akun dikunci sementara karena terlalu banyak percobaan gagal. Coba lagi dalam 2 menit.`);
+      } else {
+        setError(`${err.message || 'Email atau password salah.'} (${remaining} percobaan tersisa)`);
+      }
     } finally {
       setLoading(false);
     }
@@ -117,8 +158,9 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
-                {error}
+              <div className={`text-sm p-3 rounded-lg border flex items-start gap-2 ${lockedUntil ? 'text-orange-700 bg-orange-50 border-orange-200' : 'text-red-600 bg-red-50 border-red-100'}`}>
+                {lockedUntil && <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-orange-500" />}
+                <span>{error}</span>
               </div>
             )}
 
@@ -126,14 +168,16 @@ export default function Login() {
               <Button
                 type="submit"
                 className="w-full flex justify-center py-2.5 gap-2"
-                disabled={loading}
+                disabled={loading || !!lockedUntil}
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
+                ) : lockedUntil ? (
+                  <ShieldAlert className="w-5 h-5" />
                 ) : (
                   <LogIn className="w-5 h-5" />
                 )}
-                Sign In
+                {lockedUntil ? `Terkunci (${lockCountdown}s)` : 'Sign In'}
               </Button>
             </div>
           </form>

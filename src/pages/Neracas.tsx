@@ -12,6 +12,7 @@ import { formatDate, formatCurrency } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import { useAuthStore } from '@/store/authStore';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
+import { useToast } from '@/store/toastStore';
 
 export default function Neracas() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export default function Neracas() {
   const [duplicateSourceId, setDuplicateSourceId] = useState<string>('');
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Neraca>();
+  const toast = useToast();
 
   const filteredInquiries = useMemo(() => {
     const s = search.toLowerCase();
@@ -97,7 +99,11 @@ export default function Neracas() {
       payload.updated_date = new Date().toISOString().split('T')[0];
     }
     saveNeraca.mutate(payload, {
-      onSuccess: () => setIsModalOpen(false),
+      onSuccess: () => {
+        setIsModalOpen(false);
+        toast.success(editingId ? 'Neraca berhasil diperbarui' : 'Neraca berhasil ditambahkan');
+      },
+      onError: () => toast.error('Gagal menyimpan neraca'),
     });
   };
 
@@ -110,9 +116,21 @@ export default function Neracas() {
   const executeDelete = () => {
     if (!deleteModal.id) return;
     if (deleteModal.type === 'inquiry') {
-      deleteInquiry.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deleteInquiry.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('Permintaan berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus permintaan'),
+      });
     } else if (deleteModal.type === 'neraca') {
-      deleteNeraca.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deleteNeraca.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('Neraca berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus neraca'),
+      });
     }
   };
 
@@ -123,7 +141,9 @@ export default function Neracas() {
       onSuccess: () => {
         setDuplicateModal({ isOpen: false, inquiryId: null });
         setDuplicateSourceId('');
-      }
+        toast.success('Neraca berhasil diduplikasi');
+      },
+      onError: () => toast.error('Gagal menduplikasi neraca'),
     });
   };
 

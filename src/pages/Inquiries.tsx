@@ -10,6 +10,7 @@ import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/store/toastStore';
 
 const INQUIRY_STATUSES: Inquiry['status'][] = ['Jalan', 'Batal', 'Telat'];
 
@@ -69,6 +70,7 @@ export default function Inquiries() {
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Inquiry>();
   const watchCustomerId = watch('customer_id');
   const user = useAuthStore(state => state.user);
+  const toast = useToast();
 
   // Compute effective progress status for an inquiry
   // We now rely purely on the database status which is actively synced across the app
@@ -192,7 +194,7 @@ export default function Inquiries() {
         currentDocs.push({ name: finalFilename, url });
         fileIdx++;
       } catch {
-        alert(`Gagal mengupload ${file.name}`);
+        toast.error(`Gagal mengupload ${file.name}`);
       }
     }
 
@@ -226,7 +228,9 @@ export default function Inquiries() {
         setIsModalOpen(false);
         setSelectedFiles([]);
         setUploadedDocs([]);
-      }
+        toast.success(editingId ? 'Permintaan berhasil diperbarui' : 'Permintaan berhasil ditambahkan');
+      },
+      onError: () => toast.error('Gagal menyimpan permintaan'),
     });
   };
 
@@ -243,7 +247,13 @@ export default function Inquiries() {
   const executeConfirm = () => {
     if (!confirmModal.id) return;
     if (confirmModal.type === 'delete') {
-      deleteInquiry.mutate(confirmModal.id, { onSuccess: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) });
+      deleteInquiry.mutate(confirmModal.id, {
+        onSuccess: () => {
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('Permintaan berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus permintaan'),
+      });
     } else if (confirmModal.type === 'moveToNeraca') {
       const i = inquiries.find(x => x.id === confirmModal.id);
       if (i) {
@@ -251,7 +261,13 @@ export default function Inquiries() {
           ...i,
           status: 'Neraca',
           updated_date: new Date().toISOString().split('T')[0],
-        }, { onSuccess: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) });
+        }, {
+          onSuccess: () => {
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            toast.success('Permintaan dipindahkan ke Neraca');
+          },
+          onError: () => toast.error('Gagal memindahkan ke Neraca'),
+        });
       }
     }
   };

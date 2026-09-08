@@ -9,6 +9,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import type { Customer, PIC } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useCustomers, useSaveCustomer, useDeleteCustomer, usePics, useSavePic, useDeletePic, useUploadFile } from '@/hooks/useData';
+import { useToast } from '@/store/toastStore';
 
 export default function Customers() {
   const [activeTab, setActiveTab] = useState<'customers' | 'pics'>('customers');
@@ -38,6 +39,7 @@ export default function Customers() {
 
   const customerForm = useForm<Customer>();
   const picForm = useForm<PIC>();
+  const toast = useToast();
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c =>
@@ -106,7 +108,7 @@ export default function Customers() {
 
         payload.npwp = uploadedUrl;
       } catch (error) {
-        alert("Gagal mengunggah file NPWP. Silakan coba lagi.");
+        toast.error('Gagal mengunggah file NPWP. Silakan coba lagi.');
         return;
       }
     }
@@ -126,7 +128,9 @@ export default function Customers() {
     saveCustomer.mutate(payload, {
       onSuccess: () => {
         setIsCustomerModalOpen(false);
-      }
+        toast.success(isEditingCustomer ? 'Customer berhasil diperbarui' : 'Customer berhasil ditambahkan');
+      },
+      onError: () => toast.error('Gagal menyimpan customer'),
     });
   };
 
@@ -146,9 +150,21 @@ export default function Customers() {
     if (deleteModal.type === 'customer') {
       const relatedPics = pics.filter(p => p.customer_id === deleteModal.id);
       relatedPics.forEach(pic => deletePic.mutate(pic.id));
-      deleteCustomer.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deleteCustomer.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('Customer berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus customer'),
+      });
     } else if (deleteModal.type === 'pic') {
-      deletePic.mutate(deleteModal.id, { onSuccess: () => setDeleteModal(prev => ({ ...prev, isOpen: false })) });
+      deletePic.mutate(deleteModal.id, {
+        onSuccess: () => {
+          setDeleteModal(prev => ({ ...prev, isOpen: false }));
+          toast.success('PIC berhasil dihapus');
+        },
+        onError: () => toast.error('Gagal menghapus PIC'),
+      });
     }
   };
 
@@ -184,7 +200,9 @@ export default function Customers() {
     savePic.mutate(payload, {
       onSuccess: () => {
         setIsPicModalOpen(false);
-      }
+        toast.success(isEditingPic ? 'PIC berhasil diperbarui' : 'PIC berhasil ditambahkan');
+      },
+      onError: () => toast.error('Gagal menyimpan PIC'),
     });
   };
 
@@ -195,7 +213,13 @@ export default function Customers() {
   const handleToggleCustomerStatus = (customer: Customer) => {
     const currentStatus = customer.status || 'Active';
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
-    saveCustomer.mutate({ ...customer, status: newStatus, updated_date: new Date().toISOString().split('T')[0] });
+    saveCustomer.mutate(
+      { ...customer, status: newStatus, updated_date: new Date().toISOString().split('T')[0] },
+      {
+        onSuccess: () => toast.success(`Status customer diubah ke ${newStatus}`),
+        onError: () => toast.error('Gagal mengubah status'),
+      }
+    );
   };
 
   const handleTogglePicStatus = (pic: PIC) => {

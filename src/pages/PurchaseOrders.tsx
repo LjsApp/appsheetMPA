@@ -11,6 +11,7 @@ import GeneratePoModal from '@/components/GeneratePoModal';
 import TableToolbar from '@/components/TableToolbar';
 import { useAuthStore } from '@/store/authStore';
 import { generateAndUploadPdf } from '@/lib/pdfGenerator';
+import { useToast } from '@/store/toastStore';
 
 export default function PurchaseOrders() {
   const user = useAuthStore(state => state.user);
@@ -45,6 +46,7 @@ export default function PurchaseOrders() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const uploadFile = useUploadFile();
+  const toast = useToast();
 
   const handleContinueAdd = (qt: NeracaQuotation) => {
     setShowAddModal(false);
@@ -155,8 +157,9 @@ export default function PurchaseOrders() {
 
       setEditModal({ isOpen: false, po: null });
       setNewFiles([]);
+      toast.success('PO Out berhasil diperbarui');
     } catch {
-      alert('Gagal menyimpan perubahan PO Out');
+      toast.error('Gagal menyimpan perubahan PO Out');
     } finally {
       setIsSaving(false);
     }
@@ -172,7 +175,7 @@ export default function PurchaseOrders() {
         updated_date: new Date().toISOString()
       });
     } catch (e) {
-      alert('Gagal mengubah status PO');
+      toast.error('Gagal mengubah status PO');
       return;
     }
 
