@@ -5,12 +5,13 @@ import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import Modal from '@/components/Modal';
 import { useForm } from 'react-hook-form';
 import { FileCheck2, Copy } from 'lucide-react';
-import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useNeracaQuotations, useDuplicateNeraca, usePurchaseOrders, usePoIns, useInvoices } from '@/hooks/useData';
+import { useInquiries, useNeracas, useSaveNeraca, useDeleteNeraca, useDeleteInquiry, useNeracaQuotations, useDuplicateNeraca, usePurchaseOrders, usePoIns, useInvoices, useAllNeracaItems, useAllNeracaDetails } from '@/hooks/useData';
 import TableToolbar from '@/components/TableToolbar';
 import type { Neraca } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import { useAuthStore } from '@/store/authStore';
+import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
 
 export default function Neracas() {
   const navigate = useNavigate();
@@ -33,6 +34,8 @@ export default function Neracas() {
   const { data: allPoIns = [] } = usePoIns();
   const { data: allInvoices = [] } = useInvoices();
   const duplicateNeraca = useDuplicateNeraca();
+  const { data: allNeracaItems = [] } = useAllNeracaItems();
+  const { data: allNeracaDetails = [] } = useAllNeracaDetails();
 
   
   // For DeleteConfirmModal
@@ -254,9 +257,19 @@ export default function Neracas() {
                                           </td>
                                           <td className="px-4 py-2.5 text-right text-xs font-semibold text-gray-800">
                                             {(() => {
+                                              // Try to get value from items (works even before quotation status)
+                                              const neracaItems = allNeracaItems.filter(i => i.neraca_id === n.id);
+                                              const neracaDetail = allNeracaDetails.find(d => d.neraca_id === n.id);
+                                              if (neracaItems.length > 0) {
+                                                const total = calculateNeracaGrandTotal(neracaItems, neracaDetail || undefined);
+                                                return total > 0
+                                                  ? <span className="font-mono">{formatCurrency(total)}</span>
+                                                  : <span className="text-gray-300">-</span>;
+                                              }
+                                              // Fallback: use quotation nilai if available
                                               const qt = allQuotations.find(q => q.neraca_id === n.id);
                                               return qt && Number(qt.nilai) > 0
-                                                ? <span className="font-mono">{Number(qt.nilai).toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })}</span>
+                                                ? <span className="font-mono">{formatCurrency(Number(qt.nilai))}</span>
                                                 : <span className="text-gray-300">-</span>;
                                             })()}
                                           </td>

@@ -106,7 +106,7 @@ export default function Verifikasi() {
         ref_type: type,
         ref_id: item.id,
         ref_number: docNum,
-        message: `✅ ${type === 'po' ? 'PO' : 'Invoice'} ${docNum} telah disetujui oleh Pimpinan.`,
+        message: `✅ ${type === 'po' ? 'PO' : 'Invoice'} ${docNum} telah disetujui oleh ${user?.name || 'Pimpinan'}.`,
         is_read: false,
         created_date: new Date().toISOString()
       });
@@ -141,7 +141,7 @@ export default function Verifikasi() {
             if (creator) targetUserId = creator.id;
           }
           await savePO.mutateAsync({ ...po, verification_status: 'Ditolak', verification_note: rejectReason, verified_by: user?.name, verified_date: new Date().toISOString() });
-          await saveNotification.mutateAsync({ id: Date.now().toString(), from_user_id: user?.id || 'system', from_user_name: user?.name || 'System', to_user_id: targetUserId, type: 'verification_result', ref_type: 'po', ref_id: id, ref_number: docNum, message: `❌ PO ${docNum} ditolak oleh Pimpinan. Catatan: ${rejectReason}`, is_read: false, created_date: new Date().toISOString() });
+          await saveNotification.mutateAsync({ id: Date.now().toString(), from_user_id: user?.id || 'system', from_user_name: user?.name || 'System', to_user_id: targetUserId, type: 'verification_result', ref_type: 'po', ref_id: id, ref_number: docNum, message: `❌ PO ${docNum} ditolak oleh ${user?.name || 'Pimpinan'}. Catatan: ${rejectReason}`, is_read: false, created_date: new Date().toISOString() });
         }
       } else {
         const inv = invoices.find(i => i.id === id);
@@ -151,7 +151,7 @@ export default function Verifikasi() {
             if (creator) targetUserId = creator.id;
           }
           await saveInvoice.mutateAsync({ ...inv, verification_status: 'Ditolak', verification_note: rejectReason, verified_by: user?.name, verified_date: new Date().toISOString() });
-          await saveNotification.mutateAsync({ id: Date.now().toString(), from_user_id: user?.id || 'system', from_user_name: user?.name || 'System', to_user_id: targetUserId, type: 'verification_result', ref_type: 'invoice', ref_id: id, ref_number: docNum, message: `❌ Invoice ${docNum} ditolak oleh Pimpinan. Catatan: ${rejectReason}`, is_read: false, created_date: new Date().toISOString() });
+          await saveNotification.mutateAsync({ id: Date.now().toString(), from_user_id: user?.id || 'system', from_user_name: user?.name || 'System', to_user_id: targetUserId, type: 'verification_result', ref_type: 'invoice', ref_id: id, ref_number: docNum, message: `❌ Invoice ${docNum} ditolak oleh ${user?.name || 'Pimpinan'}. Catatan: ${rejectReason}`, is_read: false, created_date: new Date().toISOString() });
         }
       }
       
@@ -258,7 +258,7 @@ export default function Verifikasi() {
           ref_type: 'internal_letter',
           ref_id: letter.id,
           ref_number: letter.internal_letter_number,
-          message: `❌ Internal Letter ${letter.internal_letter_number} ditolak. Catatan: ${ilRejectReason}`,
+          message: `❌ Internal Letter ${letter.internal_letter_number} ditolak oleh ${user?.name || 'Pimpinan'}. Catatan: ${ilRejectReason}`,
           is_read: false,
           created_date: new Date().toISOString()
         });

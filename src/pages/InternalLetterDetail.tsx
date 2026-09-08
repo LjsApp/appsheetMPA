@@ -189,7 +189,7 @@ export default function InternalLetterDetail() {
           ref_type: 'internal_letter',
           ref_id: letter.id,
           ref_number: letter.internal_letter_number,
-          message: `Internal Letter ${letter.internal_letter_number} telah disetujui oleh ${user?.name || 'Pimpinan'}`,
+          message: `✅ Internal Letter ${letter.internal_letter_number} telah disetujui oleh ${user?.name || 'Pimpinan'}`,
           is_read: false,
           created_date: new Date().toISOString()
         });
@@ -234,7 +234,7 @@ export default function InternalLetterDetail() {
           ref_type: 'internal_letter',
           ref_id: letter.id,
           ref_number: letter.internal_letter_number,
-          message: `Internal Letter ${letter.internal_letter_number} ditolak: ${rejectNote}`,
+          message: `❌ Internal Letter ${letter.internal_letter_number} ditolak oleh ${user?.name || 'Pimpinan'}. Catatan: ${rejectNote}`,
           is_read: false,
           created_date: new Date().toISOString()
         });

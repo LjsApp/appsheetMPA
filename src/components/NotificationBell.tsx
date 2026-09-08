@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, CheckCircle2, FileText, ShoppingCart, Receipt } from 'lucide-react';
+import { Bell, Check, CheckCircle2, FileText, ShoppingCart, Receipt, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications, useSaveNotification } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
@@ -8,6 +8,7 @@ import type { AppNotification } from '@/types';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore(state => state.user);
   const navigate = useNavigate();
@@ -64,12 +65,15 @@ export default function NotificationBell() {
 
   const markAllAsRead = async () => {
     const unread = myNotifications.filter(n => n.is_read === false || n.is_read === 'FALSE' || n.is_read === 'false');
+    setIsMarkingRead(true);
     try {
       await Promise.all(
         unread.map(notif => saveNotification.mutateAsync({ ...notif, is_read: true }))
       );
     } catch (e) {
       console.error('Failed to mark all as read', e);
+    } finally {
+      setIsMarkingRead(false);
     }
   };
 
@@ -99,11 +103,16 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
             <h3 className="font-semibold text-gray-900">Notifikasi</h3>
             {unreadCount > 0 && (
-              <button 
+              <button
                 onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                disabled={isMarkingRead}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Check className="w-3 h-3" /> Tandai dibaca
+                {isMarkingRead
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Check className="w-3 h-3" />
+                }
+                {isMarkingRead ? 'Memproses...' : 'Tandai dibaca'}
               </button>
             )}
           </div>
