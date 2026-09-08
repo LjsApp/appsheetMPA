@@ -681,6 +681,10 @@ export function useNotifications() {
     queryKey: ['notifications'],
     queryFn: () => fetchApi('getNotifications', 'GET', {}),
     refetchInterval: 30000, // Polling every 30s
+    retry: 1, // Only retry once on failure (network issues)
+    retryDelay: 3000,
+    // Return empty array on error to avoid UI breakage
+    placeholderData: [],
   });
 }
 

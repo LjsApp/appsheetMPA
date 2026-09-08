@@ -19,6 +19,54 @@ const pdfQueryClient = new QueryClient({
   },
 });
 
+/**
+ * html2canvas does not support oklch() CSS color function (used in modern Tailwind CSS).
+ * This function walks all elements in the given subtree and replaces any oklch computed
+ * style values with safe CSS2 equivalents so html2canvas can render them.
+ */
+function sanitizeOklchColors(root: HTMLElement) {
+  const COLOR_PROPS: (keyof CSSStyleDeclaration)[] = [
+    'color', 'backgroundColor', 'borderColor',
+    'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
+    'outlineColor', 'textDecorationColor', 'caretColor',
+  ];
+
+  // Inject a <style> that overrides CSS custom properties which may contain oklch
+  // This is more reliable than trying to patch computed styles individually
+  const overrideStyle = document.createElement('style');
+  overrideStyle.setAttribute('data-pdf-oklch-fix', 'true');
+  overrideStyle.textContent = `
+    [data-pdf-oklch-fix-scope] *,
+    [data-pdf-oklch-fix-scope] *::before,
+    [data-pdf-oklch-fix-scope] *::after {
+      --tw-ring-color: rgba(59,130,246,0.5) !important;
+      --tw-shadow-color: rgba(0,0,0,0.1) !important;
+    }
+  `;
+  root.setAttribute('data-pdf-oklch-fix-scope', 'true');
+  root.prepend(overrideStyle);
+
+  // Walk all elements and patch inline any oklch computed values
+  const allEls = [root, ...Array.from(root.querySelectorAll('*'))] as HTMLElement[];
+  allEls.forEach(el => {
+    if (!('style' in el)) return;
+    try {
+      const computed = window.getComputedStyle(el);
+      COLOR_PROPS.forEach(prop => {
+        const val = computed[prop] as string | undefined;
+        if (val && typeof val === 'string' && val.includes('oklch')) {
+          // Use a simple neutral fallback — preserve intent (text=black, bg=white, border=gray)
+          if (prop === 'color') (el.style as any)[prop] = '#111827';
+          else if (prop === 'backgroundColor') (el.style as any)[prop] = 'transparent';
+          else (el.style as any)[prop] = '#e5e7eb';
+        }
+      });
+    } catch {
+      // Skip elements where getComputedStyle throws (e.g. SVG internals)
+    }
+  });
+}
+
 export type PdfDocumentType = 'quotation' | 'po_out' | 'surat_jalan';
 
 interface GeneratePdfOptions {
@@ -68,6 +116,10 @@ export async function generateAndUploadPdf({
           if (!element) {
             throw new Error(`Element #${elementId} not found`);
           }
+
+          // Fix: html2canvas does not support oklch() CSS color function (used by Tailwind v3+).
+          // Walk the DOM and replace any oklch computed values with safe fallbacks.
+          sanitizeOklchColors(element as HTMLElement);
 
           // Options for html2pdf
           const opt = {
