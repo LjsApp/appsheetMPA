@@ -125,7 +125,24 @@ export async function generateAndUploadPdf({
           // 3. Build a complete HTML page including all app CSS
           const fullHtml = buildHtmlPage(element as HTMLElement);
 
-          // 4. Call Vercel serverless function (Puppeteer) to generate PDF
+          // 4. Detect local dev environment — Puppeteer API only available on Vercel
+          const isLocalDev = window.location.hostname === 'localhost' ||
+                             window.location.hostname === '127.0.0.1';
+
+          if (isLocalDev) {
+            // On localhost, /api/generate-pdf doesn't exist (Vercel serverless only).
+            // Skip PDF upload silently — it will work correctly in production.
+            console.info(
+              `[PDF] Skipping PDF upload on localhost — run "vercel dev" or deploy to Vercel to test PDF generation.\n` +
+              `[PDF] You can still use the browser's Ctrl+P → Save as PDF to get the print preview.`
+            );
+            root.unmount();
+            container.remove();
+            resolve(''); // Return empty string; calling code handles this gracefully
+            return;
+          }
+
+          // 5. Call Vercel serverless function (Puppeteer) to generate PDF
           const response = await fetch('/api/generate-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -137,7 +154,7 @@ export async function generateAndUploadPdf({
             throw new Error(`PDF API error: ${err.error || response.statusText}`);
           }
 
-          // 5. Convert PDF blob to base64
+          // 6. Convert PDF blob to base64
           const pdfBlob = await response.blob();
           const base64 = await new Promise<string>((res, rej) => {
             const reader = new FileReader();
@@ -146,7 +163,7 @@ export async function generateAndUploadPdf({
             reader.onerror = rej;
           });
 
-          // 6. Upload to Google Drive
+          // 7. Upload to Google Drive
           const url = await uploadFileMutateAsync({
             filename,
             mimeType: 'application/pdf',

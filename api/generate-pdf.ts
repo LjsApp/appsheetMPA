@@ -25,9 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: { width: 1200, height: 900 },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
     });
 
     const page = await browser.newPage();
