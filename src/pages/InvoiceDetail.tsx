@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink, Banknote } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
@@ -386,63 +386,6 @@ export default function InvoiceDetail() {
             </div>
           </div>
         </div>
-
-        {/* Card Bukti Pembayaran Customer (untuk user pembuat / yang mengajukan) */}
-        {invoice.payment_proof_url && (
-          <div className="max-w-[860px] mx-auto mb-5 bg-white border border-emerald-200 rounded-xl p-5 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 flex-shrink-0">
-                  <Banknote className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Bukti Pembayaran / Transfer Customer</h3>
-                  <p className="text-xs text-gray-500">
-                    Tanggal Bayar: <span className="font-semibold text-gray-700">{invoice.payment_date ? formatDate(invoice.payment_date) : '-'}</span> · Status: <span className="font-semibold text-emerald-700">Lunas</span>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <a
-                  href={invoice.payment_proof_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-lg border border-emerald-200 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" /> Buka di Tab Baru
-                </a>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-xs">
-              <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-1 text-gray-700">
-                <div className="flex"><span className="w-28 text-gray-500 shrink-0">Customer</span><span className="mr-1.5">:</span><span className="font-medium text-gray-900">{customer?.company_name || po?.customer_name || '-'}</span></div>
-                <div className="flex"><span className="w-28 text-gray-500 shrink-0">Total Tagihan</span><span className="mr-1.5">:</span><span className="font-bold text-blue-900">Rp {formatCurrency(resume.grand_total)}</span></div>
-              </div>
-              <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-1 text-gray-700">
-                <div className="flex"><span className="w-28 text-gray-500 shrink-0">Tanggal Bayar</span><span className="mr-1.5">:</span><span className="font-medium text-gray-900">{invoice.payment_date ? formatDate(invoice.payment_date) : '-'}</span></div>
-                <div className="flex"><span className="w-28 text-gray-500 shrink-0">Status</span><span className="mr-1.5">:</span><span className="font-semibold text-emerald-700">Lunas</span></div>
-              </div>
-            </div>
-
-            {invoice.payment_note && (
-              <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-xs text-gray-700">
-                <span className="font-semibold text-emerald-900">Catatan Pembayaran: </span>
-                {invoice.payment_note}
-              </div>
-            )}
-
-            <div className="flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded-xl p-4 overflow-hidden">
-              <img
-                src={getDriveImageUrl(invoice.payment_proof_url)}
-                alt="Bukti Transfer Customer"
-                referrerPolicy="no-referrer"
-                className="max-h-[460px] max-w-full rounded-lg object-contain shadow-sm border border-gray-200"
-              />
-              <p className="text-[11px] text-gray-400 mt-2">Klik tombol "Buka di Tab Baru" di atas untuk melihat ukuran penuh</p>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="space-y-8" id="invoice-doc">
