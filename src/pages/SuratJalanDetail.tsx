@@ -1,19 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, Cloud, ExternalLink } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, ExternalLink } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import {
   useSuratJalan,
-  useSaveSuratJalan,
   usePoIns,
   useNeracaItems,
   useCompany,
-  useCustomers,
-  useUploadFile,
 } from '@/hooks/useData';
 import { getDriveImageUrl, formatDate } from '@/lib/utils';
-import { generateAndUploadPdf } from '@/lib/pdfGenerator';
-import { toast } from '@/store/toastStore';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -27,49 +22,13 @@ export default function SuratJalanDetail() {
   const navigate = useNavigate();
 
   const { data: suratJalanList = [], isLoading: loadingSJ } = useSuratJalan();
-  const saveSJ = useSaveSuratJalan();
-
   const { data: poIns = [], isLoading: loadingPo } = usePoIns();
   const { data: company, isLoading: loadingCompany } = useCompany();
-  const { data: customers = [] } = useCustomers();
-  const uploadFile = useUploadFile();
-  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
 
   const sj = suratJalanList.find(s => s.id === id);
   const po = poIns.find(p => p.id === sj?.po_in_id);
 
   const { data: items = [], isLoading: loadingItems } = useNeracaItems(po?.neraca_id || '');
-
-  const handleUploadDrive = async () => {
-    if (!sj) return;
-    setIsUploadingDrive(true);
-    try {
-      const cust = customers.find(c => c.id === po?.customer_id || c.id === sj.customer_id || c.company_name === po?.customer_name);
-      const cCode = cust?.code || '';
-      const safeNum = String(sj.sj_number || sj.id).replace(/\//g, '_');
-      const pdfFilename = `PT MPA_${safeNum}${cCode ? `_${cCode}` : ''}.pdf`;
-      const entityName = po?.customer_name || sj.customer_name || cust?.company_name || '';
-      const url = await generateAndUploadPdf({
-        type: 'surat_jalan',
-        id: sj.id,
-        filename: pdfFilename,
-        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({
-          ...vars,
-          replaceByName: true,
-          replaceUrl: sj.dokumen || undefined,
-        }),
-        module: 'Surat Jalan',
-        entityName: entityName,
-        docReference: sj.id,
-      });
-      await saveSJ.mutateAsync({ ...sj, dokumen: url });
-      toast.success('Surat Jalan berhasil diupload ke Google Drive!');
-    } catch (e: any) {
-      toast.error('Gagal upload ke Drive: ' + (e.message || 'Error'));
-    } finally {
-      setIsUploadingDrive(false);
-    }
-  };
 
   useEffect(() => {
     if (sj && company) {
@@ -144,10 +103,6 @@ export default function SuratJalanDetail() {
                   <ExternalLink className="w-4 h-4" /> Buka di Drive
                 </a>
               )}
-              <Button variant="secondary" onClick={handleUploadDrive} disabled={isUploadingDrive}>
-                {isUploadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-                {sj.dokumen ? 'Perbarui di Drive' : 'Upload ke Drive'}
-              </Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }
@@ -208,7 +163,7 @@ export default function SuratJalanDetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span style={{display:"inline-block",background:"#1e3a5f",color:"#fff",fontWeight:"bold",fontSize:"8pt",textTransform:"uppercase",letterSpacing:"0.15em",padding:"6px 12px",borderRadius:"4px"}}>SURAT JALAN</span>
+                      <span className="inline-block bg-blue-800 text-white font-bold tracking-widest text-[8pt] uppercase px-3 py-1.5 rounded">SURAT JALAN</span>
                     </div>
                   </div>
                 </div>
@@ -254,11 +209,11 @@ export default function SuratJalanDetail() {
 
                   {/* Items Table */}
                   <table className="w-full mb-8 text-[11pt]" style={{ borderCollapse: 'collapse', border: '1px solid #000' }}>
-                    <thead>
-                      <tr style={{ background: '#1e3a5f', color: '#fff' }}>
-                        <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a5f', width: '5%' }}>No</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a5f' }}>Item</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a5f', width: '12%' }}>Qty</th>
+                    <thead className="bg-blue-900 text-white">
+                      <tr style={{ background: '#1e3a8a', color: '#fff' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a8a', width: '5%' }}>No</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a8a' }}>Item</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a8a', width: '12%' }}>Qty</th>
                       </tr>
                     </thead>
                     <tbody>

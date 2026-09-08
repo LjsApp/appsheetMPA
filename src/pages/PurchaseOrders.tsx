@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Plus, Pencil, X, Upload, FileText, SendHorizonal } from 'lucide-react';
@@ -72,7 +72,15 @@ export default function PurchaseOrders() {
     setEditRef(po.ref || '');
     let docs: any[] = [];
     if (po.dokumen) {
-      try { docs = JSON.parse(po.dokumen); } catch {}
+      try {
+        const parsed = JSON.parse(po.dokumen);
+        if (Array.isArray(parsed)) {
+          docs = parsed.filter(d => {
+            const name = typeof d === 'string' ? d : d?.name || '';
+            return !(name.startsWith('PT MPA_') && (name.includes('/PO/') || name.includes('_PO_')));
+          });
+        }
+      } catch {}
     }
     setExistingDocs(docs);
     setNewFiles([]);
@@ -102,11 +110,7 @@ export default function PurchaseOrders() {
       if (newFiles.length > 0) {
         let fileIdx = 1;
         for (const file of newFiles) {
-          const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
-          const poNum = editModal.po.po_number || '';
-          const vCode = vendors.find(v => v.id === editModal.po?.vendor_id)?.code || '';
-          const finalFilename = `PT MPA_${poNum}_${vCode}${newFiles.length > 1 ? '_' + fileIdx : ''}${ext ? '.' + ext : ''}`;
-          
+          const finalFilename = file.name;
           const base64 = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -140,8 +144,9 @@ export default function PurchaseOrders() {
 
       // Generate updated PDF in background (replaces existing file by name)
       const vCode = vendors.find(v => v.id === editModal.po?.vendor_id)?.code || '';
-      const pdfFilename = `PT MPA_${editPoNumber}_${vCode}.pdf`;
-      const poData = { ...editModal.po, po_number: editPoNumber };
+      const safeNum = String(editPoNumber).replace(/\//g, '_');
+      const pdfFilename = `PT MPA_${safeNum}_${vCode}.pdf`;
+      const poData = { ...editModal.po, po_number: editPoNumber, dokumen: JSON.stringify(finalDocs) };
       generateAndUploadPdf({
         type: 'po_out',
         id: editModal.po.id,
@@ -151,7 +156,7 @@ export default function PurchaseOrders() {
         entityName: editModal.po.vendor_name || '',
         docReference: editModal.po.id,
       }).then(pdfUrl => {
-        savePO.mutate({ ...poData, dokumen: JSON.stringify([...finalDocs, { name: pdfFilename, url: pdfUrl }]) });
+        savePO.mutate({ ...poData, pdf_url: pdfUrl });
       }).catch(e => console.warn('PDF generation failed:', e));
 
       setEditModal({ isOpen: false, po: null });
@@ -274,13 +279,6 @@ export default function PurchaseOrders() {
               <tbody className="divide-y divide-gray-100">
                 {paginatedGroups.map((group) => {
                   return group.map((po, index) => {
-                    let docs: any[] = [];
-                    if (po.dokumen) {
-                      try {
-                        docs = JSON.parse(po.dokumen);
-                      } catch {}
-                    }
-
                     const poIn = poIns.find(p => p.quotation_id === po.quotation_id);
 
                     return (
@@ -337,23 +335,34 @@ export default function PurchaseOrders() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          {docs.length > 0 ? (
-                            <div className="flex gap-2 flex-wrap">
-                              {docs.map((d: any, idx: number) => (
-                                <a
-                                  key={`${po.id}-doc-${idx}`}
-                                  href={d.url || d}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                                >
-                                  Dok.{idx + 1}
-                                </a>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>
-                          )}
+                          {(() => {
+                            let docs: any[] = [];
+                            try {
+                              const parsed = JSON.parse(po.dokumen);
+                              if (Array.isArray(parsed)) {
+                                docs = parsed.filter(d => {
+                                  const name = typeof d === 'string' ? d : d?.name || '';
+                                  return !(name.startsWith('PT MPA_') && (name.includes('/PO/') || name.includes('_PO_')));
+                                });
+                              }
+                            } catch {}
+                            if (docs.length === 0) return <span className="text-gray-400 text-xs italic">Tidak ada dokumen</span>;
+                            return (
+                              <div className="flex gap-2 flex-wrap">
+                                {docs.map((d: any, idx: number) => (
+                                  <a
+                                    key={`${po.id}-doc-${idx}`}
+                                    href={d.url || d}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                                  >
+                                    Dok.{idx + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </td>
                         {user?.is_super_admin && <td className="px-6 py-4 text-xs italic text-gray-500">{po.created_by || '-'}</td>}
                         <td className="px-6 py-4 text-right">

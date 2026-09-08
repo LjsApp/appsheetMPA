@@ -229,7 +229,7 @@ export default function GeneratePoModal({ quotation, onClose, onSuccess, skipPoI
             entityName: vendor.name || '',
             docReference: basePoId,
           }).then(pdfUrl => {
-            savePurchaseOrder.mutate({ ...poData, dokumen: JSON.stringify([{ name: pdfFilename, url: pdfUrl }]) });
+            savePurchaseOrder.mutate({ ...poData, pdf_url: pdfUrl });
           }).catch(e => console.warn('PDF generation failed:', e));
         }
       }

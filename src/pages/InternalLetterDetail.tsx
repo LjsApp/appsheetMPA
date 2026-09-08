@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, Upload, X, Banknote, ExternalLink, Cloud } from "lucide-react";
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, Upload, X, Banknote, ExternalLink } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
 import { useInternalLetters, useSaveInternalLetter, useVendors, usePoIns, usePurchaseOrders, useCompany, useVendorDiscounts, useNeracaItems, useUploadFile, useSaveNotification, useNotifications, useUsers } from "@/hooks/useData";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, getDriveImageUrl, formatDeliveryTime } from "@/lib/utils";
-import { generateAndUploadPdf } from "@/lib/pdfGenerator";
-import { toast } from "@/store/toastStore";
 
 export default function InternalLetterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,32 +33,6 @@ export default function InternalLetterDetail() {
   const [isUploadingBukti, setIsUploadingBukti] = useState(false);
   const [verifNote, setVerifNote] = useState('');
   const buktiInputRef = useRef<HTMLInputElement>(null);
-  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
-
-  const handleUploadDrive = async () => {
-    if (!letter) return;
-    setIsUploadingDrive(true);
-    try {
-      const typeSuffix = letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : '';
-      const safeNum = String(letter.internal_letter_number + typeSuffix).replace(/\//g, '_');
-      const pdfFilename = `PT MPA_${safeNum}_${(letter.vendor_name || '').replace(/\s+/g, '_')}.pdf`;
-      const url = await generateAndUploadPdf({
-        type: 'internal_letter',
-        id: letter.id,
-        filename: pdfFilename,
-        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
-        module: 'Internal Letter',
-        entityName: letter.vendor_name || '',
-        docReference: letter.id,
-      });
-      await saveIL.mutateAsync({ ...letter, dokumen: url });
-      toast.success('Internal Letter berhasil diupload ke Google Drive!');
-    } catch (e: any) {
-      toast.error('Gagal upload ke Drive: ' + (e.message || 'Error'));
-    } finally {
-      setIsUploadingDrive(false);
-    }
-  };
 
   const letter = letters.find((l) => l.id === id);
   const vendor = vendors.find((v) => v.id === letter?.vendor_id);
@@ -338,10 +310,6 @@ export default function InternalLetterDetail() {
                   <ExternalLink className="w-4 h-4" /> Buka di Drive
                 </a>
               )}
-              <Button variant="secondary" onClick={handleUploadDrive} disabled={isUploadingDrive}>
-                {isUploadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-                {letter.dokumen ? 'Perbarui di Drive' : 'Upload ke Drive'}
-              </Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }
@@ -460,7 +428,7 @@ export default function InternalLetterDetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span style={{ display: "inline-block", background: "#1e3a5f", color: "#fff", fontWeight: "bold", fontSize: "8pt", textTransform: "uppercase", letterSpacing: "0.15em", padding: "6px 12px", borderRadius: "4px" }}>
+                      <span className="inline-block bg-blue-800 text-white font-bold tracking-widest text-[8pt] uppercase px-3 py-1.5 rounded">
                         INTERNAL LETTER{letter.type && letter.type !== 'Full' ? ` (${letter.type.toUpperCase()})` : ''}
                       </span>
                     </div>
@@ -504,14 +472,14 @@ export default function InternalLetterDetail() {
                   {/* Items Table */}
                   <div className="mb-6 text-[12pt]">
                     <table className="w-full" style={{ borderCollapse: "collapse", border: "1px solid #000" }}>
-                      <thead style={{ background: "#1e3a5f", color: "#fff" }}>
+                      <thead className="bg-blue-900 text-white">
                         <tr>
-                          <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: "600", border: "1px solid #000", color: "#fff", background: "#1e3a5f", width: "5%" }}>No.</th>
-                          <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: "600", border: "1px solid #000", color: "#fff", background: "#1e3a5f", width: "42%" }}>Spesifikasi</th>
-                          <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: "600", border: "1px solid #000", color: "#fff", background: "#1e3a5f", width: "14%" }}>Delivery</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: "600", border: "1px solid #000", color: "#fff", background: "#1e3a5f", width: "6%" }}>Qty</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: "600", border: "1px solid #000", color: "#fff", background: "#1e3a5f", width: "16%" }}>Unit Price</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: "600", border: "1px solid #000", color: "#fff", background: "#1e3a5f", width: "17%" }}>Total Price</th>
+                          <th className="py-2.5 px-3 text-center font-semibold border-x border-black bg-blue-900 text-white" style={{ width: "5%" }}>No.</th>
+                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black bg-blue-900 text-white" style={{ width: "42%" }}>Spesifikasi</th>
+                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black bg-blue-900 text-white" style={{ width: "14%" }}>Delivery</th>
+                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black bg-blue-900 text-white" style={{ width: "6%" }}>Qty</th>
+                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black bg-blue-900 text-white" style={{ width: "16%" }}>Unit Price</th>
+                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black bg-blue-900 text-white" style={{ width: "17%" }}>Total Price</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black">

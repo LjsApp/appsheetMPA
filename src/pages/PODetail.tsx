@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 import { usePurchaseOrders, useVendors, useVendorDiscounts, useNeracaItems, useCompany, useSavePurchaseOrder, useSaveNotification } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
@@ -29,6 +29,25 @@ export default function PODetail() {
 
   const po = purchaseOrders.find(p => p.id === poId);
   const vendor = vendors.find(v => v.id === po?.vendor_id);
+
+  const drivePdfUrl = useMemo(() => {
+    if (!po) return null;
+    if (po.pdf_url) return po.pdf_url;
+    if (po.dokumen) {
+      if (typeof po.dokumen === 'string' && po.dokumen.startsWith('http')) return po.dokumen;
+      try {
+        const parsed = JSON.parse(po.dokumen);
+        if (Array.isArray(parsed)) {
+          const found = parsed.find((d: any) => (d.name && d.name.startsWith('PT MPA_')) || (d.url && (d.url.includes('drive.google.com') || d.url.includes('googleusercontent'))));
+          if (found?.url) return found.url;
+          if (parsed[0]?.url) return parsed[0].url;
+        }
+      } catch {
+        // Not JSON
+      }
+    }
+    return null;
+  }, [po]);
 
   const { data: items = [], isLoading: isLoadingItems } = useNeracaItems(po?.neraca_id || '');
   const { data: vds = [], isLoading: isLoadingVds } = useVendorDiscounts(po?.neraca_id || '');
@@ -168,6 +187,16 @@ export default function PODetail() {
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigate(-1)}><RotateCcw className="w-4 h-4" /> Kembali</Button>
+              {drivePdfUrl && (
+                <a
+                  href={drivePdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka di Drive
+                </a>
+              )}
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }

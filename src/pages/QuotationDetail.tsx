@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, ExternalLink } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
 
 import { useNeracaQuotations, useSaveNeracaQuotation, useNeracaItems, useNeracaDetail, useCompany, useInquiries, useCustomers, usePics } from '@/hooks/useData';
@@ -196,6 +196,16 @@ export default function QuotationDetail() {
           action={
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={() => navigate('/quotations')}><RotateCcw className="w-4 h-4" /> Kembali</Button>
+              {quotation.dokumen && (
+                <a
+                  href={quotation.dokumen}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka di Drive
+                </a>
+              )}
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }

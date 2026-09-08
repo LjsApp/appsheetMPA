@@ -1,13 +1,11 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink, Cloud } from 'lucide-react';
+import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
-import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification, useUploadFile } from '@/hooks/useData';
+import { useInvoices, usePoIns, useCompany, useCustomers, useNeracaItems, useNeracaDetail, useSaveInvoice, useSaveNotification } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, formatDate, getDriveImageUrl } from '@/lib/utils';
 import type { NeracaDetail, NeracaItem } from '@/types';
-import { generateAndUploadPdf } from '@/lib/pdfGenerator';
-import { toast } from '@/store/toastStore';
 
 // ─── calculation helpers (same as QuotationDetail) ───────────────────────────
 function getDifficultyValue(detail: Partial<NeracaDetail>, difficulty: string): number {
@@ -126,10 +124,8 @@ export default function InvoiceDetail() {
   const { data: customers = [] } = useCustomers();
   const saveInvoice = useSaveInvoice();
   const saveNotification = useSaveNotification();
-  const uploadFile = useUploadFile();
 
   const [isRequestingVerif, setIsRequestingVerif] = useState(false);
-  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
 
   const invoice = invoices.find(inv => inv.id === id);
   const po = poIns.find(p => p.id === invoice?.po_in_id);
@@ -173,31 +169,6 @@ export default function InvoiceDetail() {
     if (invoice) document.title = `Invoice_${invoice.invoice_number}`;
     return () => { document.title = 'SAPP'; };
   }, [invoice?.invoice_number]);
-
-  const handleUploadDrive = async () => {
-    if (!invoice) return;
-    setIsUploadingDrive(true);
-    try {
-      const cCode = customer?.code || '';
-      const safeNum = String(invoice.invoice_number || invoice.id).replace(/\//g, '_');
-      const pdfFilename = `PT MPA_${safeNum}_${cCode}.pdf`;
-      const url = await generateAndUploadPdf({
-        type: 'invoice',
-        id: invoice.id,
-        filename: pdfFilename,
-        uploadFileMutateAsync: (vars) => uploadFile.mutateAsync({ ...vars, replaceByName: true }),
-        module: 'Invoice',
-        entityName: po?.customer_name || customer?.company_name || '',
-        docReference: invoice.id,
-      });
-      await saveInvoice.mutateAsync({ ...invoice, dokumen: url });
-      toast.success('Invoice berhasil diupload ke Google Drive!');
-    } catch (e: any) {
-      toast.error('Gagal upload ke Drive: ' + (e.message || 'Error'));
-    } finally {
-      setIsUploadingDrive(false);
-    }
-  };
 
   const handleRequestVerification = async () => {
     if (!invoice) return;
@@ -334,10 +305,6 @@ export default function InvoiceDetail() {
                   <ExternalLink className="w-4 h-4" /> Buka di Drive
                 </a>
               )}
-              <Button variant="secondary" onClick={handleUploadDrive} disabled={isUploadingDrive}>
-                {isUploadingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-                {invoice.dokumen ? 'Perbarui di Drive' : 'Upload ke Drive'}
-              </Button>
               <Button variant="secondary" onClick={() => window.print()}><Download className="w-4 h-4" /> Export PDF</Button>
             </div>
           }

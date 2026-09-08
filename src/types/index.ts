@@ -169,6 +169,7 @@ export interface PurchaseOrder {
   jumlah_item: number;
   total_nilai: number;
   dokumen: string; // JSON array string
+  pdf_url?: string; // URL PDF auto-generated PO Out
   status: 'Active' | 'Deleted';
   type?: 'Full' | 'DP' | 'Sisa';
   dp_reference_id?: string;
