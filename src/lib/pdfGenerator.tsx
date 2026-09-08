@@ -87,12 +87,16 @@ function buildHtmlPage(element: HTMLElement): string {
     /* Outer table thead (kop surat) must repeat on every page */
     #quotation-doc > table > thead,
     #po-doc > table > thead,
-    #surat-jalan-doc > table > thead { display: table-header-group !important; }
+    #surat-jalan-doc > table > thead,
+    #sj-doc > table > thead,
+    #il-doc > table > thead { display: table-header-group !important; }
 
     /* Outer table tfoot (spacer) must stay at bottom of every page */
     #quotation-doc > table > tfoot,
     #po-doc > table > tfoot,
-    #surat-jalan-doc > table > tfoot { display: table-footer-group !important; }
+    #surat-jalan-doc > table > tfoot,
+    #sj-doc > table > tfoot,
+    #il-doc > table > tfoot { display: table-footer-group !important; }
 
     /* Page footer fixed at bottom — appears on EVERY page */
     .print-page-footer {
@@ -155,7 +159,10 @@ export async function generateAndUploadPdf({
           if (type === 'po_out') elementId = 'po-doc';
           if (type === 'surat_jalan') elementId = 'surat-jalan-doc';
 
-          const element = container.querySelector(`#${elementId}`);
+          let element = container.querySelector(`#${elementId}`);
+          if (!element && type === 'surat_jalan') {
+            element = container.querySelector('#sj-doc');
+          }
           if (!element) throw new Error(`Element #${elementId} not found`);
 
           // 3. Build a complete HTML page including all app CSS

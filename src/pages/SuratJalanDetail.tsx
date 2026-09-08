@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -43,7 +43,7 @@ export default function SuratJalanDetail() {
     if (sj && company) {
       const cName = company.name || 'SourceQuo';
       document.title = `${cName}_${String(sj.sj_number).replace(/\//g, '_')}`;
-      return () => { document.title = 'Vite + React + TS'; };
+      return () => { document.title = 'SAPP'; };
     }
   }, [company?.name, sj?.sj_number]);
 
@@ -86,7 +86,7 @@ export default function SuratJalanDetail() {
           body, html, #root { margin:0; padding:0; background:white !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; height:auto !important; overflow:visible !important; }
           .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
           .no-print { display: none !important; }
-          #sj-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
+          #surat-jalan-doc, #sj-doc { background:transparent !important; box-shadow:none !important; border:none !important; border-radius:0 !important; max-width:100% !important; margin:0 !important; position:relative; z-index:1; }
           thead { display: table-header-group; }
           tr { page-break-inside: avoid; }
           input { border: none !important; padding: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
@@ -115,7 +115,7 @@ export default function SuratJalanDetail() {
       </div>
 
       {/* Surat Jalan Document */}
-      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="sj-doc">
+      <div className="bg-white max-w-[860px] mx-auto text-[12pt] relative overflow-hidden z-0" id="surat-jalan-doc">
         
         {/* Watermark & footer - absolute on screen, fixed on print */}
         <img className="print-wm-tl" src="/watermark.png" alt="" />
@@ -221,23 +221,23 @@ export default function SuratJalanDetail() {
                   </div>
 
                   {/* Items Table */}
-                  <table className="w-full border-collapse mb-8 text-[11pt]">
+                  <table className="w-full mb-8 text-[11pt]" style={{ borderCollapse: 'collapse', border: '1px solid #000' }}>
                     <thead>
-                      <tr style={{background:"#1e3a5f",color:"#fff"}}>
-                        <th className="py-2.5 px-3 text-center font-semibold border border-black" style={{ width: '5%' }}>No</th>
-                        <th className="py-2.5 px-3 text-left font-semibold border border-black">Item</th>
-                        <th className="py-2.5 px-3 text-center font-semibold border border-black" style={{ width: '12%' }}>Qty</th>
+                      <tr style={{ background: '#1e3a5f', color: '#fff' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a5f', width: '5%' }}>No</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a5f' }}>Item</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', border: '1px solid #000', color: '#fff', background: '#1e3a5f', width: '12%' }}>Qty</th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="py-4 text-center italic text-gray-500 border border-black">Tidak ada item dalam Surat Jalan ini.</td>
+                          <td colSpan={3} style={{ padding: '16px 12px', textAlign: 'center', fontStyle: 'italic', color: '#6b7280', border: '1px solid #000' }}>Tidak ada item dalam Surat Jalan ini.</td>
                         </tr>
                       ) : items.map((item, idx) => (
-                        <tr key={item.id} style={{background:"#fff",pageBreakInside:"avoid"}}>
-                          <td className="py-3 px-3 text-center text-gray-600 align-top border border-black">{idx + 1}</td>
-                          <td className="py-3 px-3 align-top text-justify border border-black">
+                        <tr key={item.id} style={{ background: '#fff', pageBreakInside: 'avoid' }}>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: '#555', verticalAlign: 'top', border: '1px solid #000' }}>{idx + 1}</td>
+                          <td style={{ padding: '10px 12px', verticalAlign: 'top', textAlign: 'justify', border: '1px solid #000' }}>
                             <div className="text-gray-900">{item.item_customer}</div>
                             {item.item_vendor && item.item_vendor !== item.item_customer && (
                               <>
@@ -246,7 +246,7 @@ export default function SuratJalanDetail() {
                               </>
                             )}
                           </td>
-                          <td className="py-3 px-3 text-center text-gray-800 align-top border border-black">{item.qty || 1}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333', verticalAlign: 'top', border: '1px solid #000' }}>{item.qty || 1}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -130,7 +130,7 @@ export default function QuotationDetail() {
       const cName = company?.name || 'SourceQuo System';
       document.title = `${cName}_${quotation.quotation_number}`;
       return () => {
-        document.title = 'Vite + React + TS'; // reset on unmount
+        document.title = 'SAPP'; // reset on unmount
       };
     }
   }, [company?.name, quotation?.quotation_number]);

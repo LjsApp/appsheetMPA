@@ -167,7 +167,7 @@ export default function InvoiceDetail() {
 
   useEffect(() => {
     if (invoice) document.title = `Invoice_${invoice.invoice_number}`;
-    return () => { document.title = 'Vite + React + TS'; };
+    return () => { document.title = 'SAPP'; };
   }, [invoice?.invoice_number]);
 
   const handleRequestVerification = async () => {
