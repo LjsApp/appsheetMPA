@@ -56,7 +56,7 @@ const MENU_ITEMS: MenuItem[] = [
         label: 'Purchase',
         icon: ShoppingCart,
         children: [
-          { label: 'PO In',             icon: Download, path: '/po-in' },
+          { label: 'PO In', icon: Download, path: '/po-in' },
           { label: 'PO Out',             icon: Send,    path: '/po'    },
         ],
       },
@@ -99,7 +99,7 @@ export default function MainLayout() {
   const canAccess = (path: string) => {
     if (!user) return false;
     if (user.is_super_admin) return true; // super admin
-    if (allowedPaths.includes(path)) return true;
+    if (allowedPaths === null || allowedPaths.includes(path)) return true;
     return false;
   };
 
