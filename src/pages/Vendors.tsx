@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
 import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
@@ -9,7 +9,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import type { Vendor, PicVendor } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useVendors, useSaveVendor, useDeleteVendor, usePicVendors, useSavePicVendor, useDeletePicVendor, useUploadFile } from '@/hooks/useData';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 export default function Vendors() {
   const [activeTab, setActiveTab] = useState<'vendors' | 'pics'>('vendors');
@@ -39,7 +39,6 @@ export default function Vendors() {
 
   const vendorForm = useForm<Vendor>();
   const picForm = useForm<PicVendor>();
-  const toast = useToast();
 
   const filteredVendors = useMemo(() => vendors.filter(v =>
     (v.vendor_name || '').toLowerCase().includes(search.toLowerCase()) ||

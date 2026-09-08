@@ -29,13 +29,20 @@ export const useToastStore = create<ToastState>((set) => ({
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
 }));
 
-// Convenience hook
+// ─── Standalone toast (works OUTSIDE React components / in mutation callbacks) ───
+// Calls the store directly without using hooks, so it never has stale closure issues.
+export const toast = {
+  success: (message: string) =>
+    useToastStore.getState().addToast({ type: 'success', message }),
+  error: (message: string) =>
+    useToastStore.getState().addToast({ type: 'error', message, duration: 5000 }),
+  warning: (message: string) =>
+    useToastStore.getState().addToast({ type: 'warning', message }),
+  info: (message: string) =>
+    useToastStore.getState().addToast({ type: 'info', message }),
+};
+
+// Convenience hook (still available for components that prefer hooks)
 export function useToast() {
-  const addToast = useToastStore((s) => s.addToast);
-  return {
-    success: (message: string) => addToast({ type: 'success', message }),
-    error: (message: string) => addToast({ type: 'error', message, duration: 5000 }),
-    warning: (message: string) => addToast({ type: 'warning', message }),
-    info: (message: string) => addToast({ type: 'info', message }),
-  };
+  return toast;
 }

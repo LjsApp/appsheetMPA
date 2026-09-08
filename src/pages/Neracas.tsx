@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Loader2, ChevronDown, ChevronRight, ExternalLink, Edit2 } from 'lucide-react';
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
@@ -12,7 +12,7 @@ import { formatDate, formatCurrency } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import { useAuthStore } from '@/store/authStore';
 import { calculateNeracaGrandTotal } from '@/lib/neracaUtils';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 export default function Neracas() {
   const navigate = useNavigate();
@@ -47,7 +47,6 @@ export default function Neracas() {
   const [duplicateSourceId, setDuplicateSourceId] = useState<string>('');
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Neraca>();
-  const toast = useToast();
 
   const filteredInquiries = useMemo(() => {
     const s = search.toLowerCase();

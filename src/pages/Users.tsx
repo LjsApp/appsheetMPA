@@ -1,9 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { PageHeader, Button } from '@/components/ui';
 import { useUsers, useSaveUser, useDeleteUser, useRoles } from '@/hooks/useData';
 import { Loader2, Plus, Pencil, Trash2, UserCircle, X } from 'lucide-react';
 import type { AppUser } from '@/types';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 export default function Users() {
   const { data: users = [], isLoading } = useUsers();
@@ -19,7 +19,6 @@ export default function Users() {
   const [roleId, setRoleId] = useState('');
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   const [isSaving, setIsSaving] = useState(false);
-  const toast = useToast();
 
   const openNew = () => {
     setEditingUser(null);

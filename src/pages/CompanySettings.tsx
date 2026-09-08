@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Building2, Save, Upload, Loader2, X } from 'lucide-react';
 import { PageHeader, Button, FormField } from '@/components/ui';
 import { useCompany, useSaveCompany } from '@/hooks/useData';
 import { useForm, Controller } from 'react-hook-form';
 import { getDriveImageUrl } from '@/lib/utils';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 interface CompanyForm {
   name: string;
   short_name: string;
@@ -24,7 +24,6 @@ export default function CompanySettings() {
 
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
-  const toast = useToast();
 
   const { control, handleSubmit, reset } = useForm<CompanyForm>({
     defaultValues: {

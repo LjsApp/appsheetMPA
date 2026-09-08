@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Loader2, Building2, Users } from 'lucide-react';
 import { PageHeader, Button, Input, FormField } from '@/components/ui';
 import DataTable from '@/components/DataTable';
@@ -9,7 +9,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import type { Customer, PIC } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useCustomers, useSaveCustomer, useDeleteCustomer, usePics, useSavePic, useDeletePic, useUploadFile } from '@/hooks/useData';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 export default function Customers() {
   const [activeTab, setActiveTab] = useState<'customers' | 'pics'>('customers');
@@ -39,7 +39,6 @@ export default function Customers() {
 
   const customerForm = useForm<Customer>();
   const picForm = useForm<PIC>();
-  const toast = useToast();
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c =>

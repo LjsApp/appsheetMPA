@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Receipt, Plus, X, Trash2, Printer, Pencil, SendHorizonal, BadgeCheck, HandCoins, FileText } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -8,7 +8,7 @@ import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, 
 import { formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import SearchableSelect from '@/components/SearchableSelect';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -51,7 +51,6 @@ export default function Invoices() {
 
   const isLoading = loadingInv || loadingPo;
   const [requestingVerificationId, setRequestingVerificationId] = useState<string | null>(null);
-  const toast = useToast();
 
   const toInputDate = (d?: string): string => {
     if (!d) return new Date().toISOString().split('T')[0];

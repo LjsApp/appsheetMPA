@@ -21,44 +21,70 @@ const pdfQueryClient = new QueryClient({
 
 /**
  * html2canvas does not support oklch() CSS color function (used in modern Tailwind CSS).
- * This function walks all elements in the given subtree and replaces any oklch computed
- * style values with safe CSS2 equivalents so html2canvas can render them.
+ * This function walks all elements in the given subtree and replaces oklch computed
+ * style values with safe RGB equivalents that html2canvas can parse.
  */
+function oklchToRgbFallback(val: string): string {
+  // Parse oklch(L C H) or oklch(L C H / A)
+  const m = val.match(/oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+%?))?\s*\)/);
+  if (!m) return '#000000';
+
+  let L = parseFloat(m[1]);
+  if (m[1].endsWith('%')) L = L / 100;
+  // else L is 0-1 directly in oklch
+  const C = parseFloat(m[2]);
+  const H = parseFloat(m[3]) * (Math.PI / 180); // degrees to radians
+  const alpha = m[4] !== undefined ? (m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4])) : 1;
+
+  // Approx oklch → oklab
+  const a = C * Math.cos(H);
+  const b = C * Math.sin(H);
+
+  // oklab → linear sRGB (simplified Bradford-adapted matrices)
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+  const l3 = l_ * l_ * l_;
+  const m3 = m_ * m_ * m_;
+  const s3 = s_ * s_ * s_;
+
+  let r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+  let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+  let bl = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+
+  // Gamma correction (linear → sRGB)
+  const toSrgb = (c: number) => {
+    const cl = Math.max(0, Math.min(1, c));
+    return cl <= 0.0031308 ? 12.92 * cl : 1.055 * Math.pow(cl, 1 / 2.4) - 0.055;
+  };
+
+  const ri = Math.round(toSrgb(r) * 255);
+  const gi = Math.round(toSrgb(g) * 255);
+  const bi = Math.round(toSrgb(bl) * 255);
+
+  if (alpha < 1) {
+    return `rgba(${ri},${gi},${bi},${alpha.toFixed(2)})`;
+  }
+  return `rgb(${ri},${gi},${bi})`;
+}
+
 function sanitizeOklchColors(root: HTMLElement) {
   const COLOR_PROPS: (keyof CSSStyleDeclaration)[] = [
     'color', 'backgroundColor', 'borderColor',
     'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
-    'outlineColor', 'textDecorationColor', 'caretColor',
+    'outlineColor', 'textDecorationColor', 'caretColor', 'fill', 'stroke',
   ];
 
-  // Inject a <style> that overrides CSS custom properties which may contain oklch
-  // This is more reliable than trying to patch computed styles individually
-  const overrideStyle = document.createElement('style');
-  overrideStyle.setAttribute('data-pdf-oklch-fix', 'true');
-  overrideStyle.textContent = `
-    [data-pdf-oklch-fix-scope] *,
-    [data-pdf-oklch-fix-scope] *::before,
-    [data-pdf-oklch-fix-scope] *::after {
-      --tw-ring-color: rgba(59,130,246,0.5) !important;
-      --tw-shadow-color: rgba(0,0,0,0.1) !important;
-    }
-  `;
-  root.setAttribute('data-pdf-oklch-fix-scope', 'true');
-  root.prepend(overrideStyle);
-
-  // Walk all elements and patch inline any oklch computed values
   const allEls = [root, ...Array.from(root.querySelectorAll('*'))] as HTMLElement[];
   allEls.forEach(el => {
     if (!('style' in el)) return;
     try {
       const computed = window.getComputedStyle(el);
       COLOR_PROPS.forEach(prop => {
-        const val = computed[prop] as string | undefined;
+        const val = computed[prop as any] as string | undefined;
         if (val && typeof val === 'string' && val.includes('oklch')) {
-          // Use a simple neutral fallback — preserve intent (text=black, bg=white, border=gray)
-          if (prop === 'color') (el.style as any)[prop] = '#111827';
-          else if (prop === 'backgroundColor') (el.style as any)[prop] = 'transparent';
-          else (el.style as any)[prop] = '#e5e7eb';
+          (el.style as any)[prop] = oklchToRgbFallback(val);
         }
       });
     } catch {
@@ -66,6 +92,7 @@ function sanitizeOklchColors(root: HTMLElement) {
     }
   });
 }
+
 
 export type PdfDocumentType = 'quotation' | 'po_out' | 'surat_jalan';
 

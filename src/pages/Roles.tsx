@@ -1,9 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { PageHeader, Button } from '@/components/ui';
 import { useRoles, useSaveRole, useDeleteRole } from '@/hooks/useData';
 import { Loader2, Plus, Pencil, Trash2, Shield, X, CheckSquare, Square } from 'lucide-react';
 import type { Role } from '@/types';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 const ALL_PAGES = [
   { label: 'Dashboard Umum', path: '/' },
@@ -36,7 +36,6 @@ export default function Roles() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const toast = useToast();
 
   const openNew = () => {
     setEditingRole(null);

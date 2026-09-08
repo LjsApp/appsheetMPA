@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+﻿import { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Loader2, FileText, Upload, X, Bell, AlertTriangle } from 'lucide-react';
 import { PageHeader, Button, FormField, Input } from '@/components/ui';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -10,7 +10,7 @@ import type { Inquiry } from '@/types';
 import { useForm } from 'react-hook-form';
 import { useInquiries, useSaveInquiry, useDeleteInquiry, useCustomers, usePics, useUploadFile } from '@/hooks/useData';
 import { useAuthStore } from '@/store/authStore';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 const INQUIRY_STATUSES: Inquiry['status'][] = ['Jalan', 'Batal', 'Telat'];
 
@@ -70,7 +70,6 @@ export default function Inquiries() {
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Inquiry>();
   const watchCustomerId = watch('customer_id');
   const user = useAuthStore(state => state.user);
-  const toast = useToast();
 
   // Compute effective progress status for an inquiry
   // We now rely purely on the database status which is actively synced across the app

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Printer, Plus, Pencil, SendHorizonal, X } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import AddInternalLetterModal from "@/components/AddInternalLetterModal";
 import TableToolbar from "@/components/TableToolbar";
 import type { InternalLetter } from "@/types";
-import { useToast } from "@/store/toastStore";
+import { toast } from '@/store/toastStore';
 
 const toDateInput = (d?: string | null) => {
   if (!d) return "";
@@ -50,7 +50,6 @@ export default function InternalLetters() {
   const [editType, setEditType] = useState("Full");
   const [isSaving, setIsSaving] = useState(false);
   const [mintaVerifId, setMintaVerifId] = useState<string | null>(null);
-  const toast = useToast();
 
   const handleMintaVerifikasi = async (letter: InternalLetter) => {
     if (!window.confirm(`Minta verifikasi pimpinan untuk IL: ${letter.internal_letter_number}?`)) return;

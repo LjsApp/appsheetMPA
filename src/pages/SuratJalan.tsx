@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, FileText, Plus, X, Trash2, Printer, Edit2 } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -9,7 +9,7 @@ import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { generateAndUploadPdf } from '@/lib/pdfGenerator';
 import SearchableSelect from '@/components/SearchableSelect';
-import { useToast } from '@/store/toastStore';
+import { toast } from '@/store/toastStore';
 
 export default function SuratJalanList() {
   const navigate = useNavigate();
@@ -36,7 +36,6 @@ export default function SuratJalanList() {
   const [addressOptions, setAddressOptions] = useState<{label: string, value: string}[]>([]);
   const [editResiList, setEditResiList] = useState<{id: string, no_resi: string, ekspedisi: string, url: string, file: File | null}[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const toast = useToast();
 
   const parseResiData = (sj: any) => {
     if (sj.resi_data) {
