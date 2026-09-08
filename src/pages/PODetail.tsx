@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -278,7 +278,7 @@ export default function PODetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="inline-block bg-blue-800 text-white font-bold text-[8pt] uppercase tracking-widest px-3 py-1.5 rounded">
+                      <span style={{display:"inline-block",background:"#1e3a5f",color:"#fff",fontWeight:"bold",fontSize:"8pt",textTransform:"uppercase",letterSpacing:"0.15em",padding:"6px 12px",borderRadius:"4px"}}>
                         PURCHASE ORDER {po.type && po.type !== 'Full' ? `(${po.type})` : ''}
                       </span>
                     </div>
@@ -331,30 +331,30 @@ export default function PODetail() {
 
                   {/* Items Table — from vendor discount data */}
                   <div className="mb-6 text-[12pt]">
-                    <table className="w-full border-collapse border border-black">
-                      <thead className="bg-blue-900 text-white">
+                    <table className="w-full" style={{borderCollapse:"collapse",border:"1px solid #000"}}>
+                      <thead style={{background:"#1e3a5f",color:"#fff"}}>
                         <tr>
-                          <th className="py-2.5 px-3 text-center font-semibold border-x border-black" style={{width:'5%'}}>No.</th>
-                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{width:'42%'}}>Spesifikasi</th>
-                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{width:'14%'}}>Delivery</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'6%'}}>Qty</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'16%'}}>Unit Price</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'17%'}}>Total Price</th>
+                          <th style={{padding:"8px 12px",textAlign:"center",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'5%'}}>No.</th>
+                          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'42%'}}>Spesifikasi</th>
+                          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'14%'}}>Delivery</th>
+                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'6%'}}>Qty</th>
+                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'16%'}}>Unit Price</th>
+                          <th style={{padding:"8px 12px",textAlign:"right",fontWeight:"600",border:"1px solid #000",color:"#fff",background:"#1e3a5f"}} style={{width:'17%'}}>Total Price</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black">
                         {itemRows.length === 0 ? (
                           <tr><td colSpan={6} className="py-6 text-center text-gray-400">Tidak ada item untuk vendor ini.</td></tr>
                         ) : itemRows.map((item, idx) => (
-                          <tr key={item.id} className="break-inside-avoid bg-white">
-                            <td className="py-3 px-3 text-center text-gray-600 align-top border-x border-black">{idx + 1}</td>
-                            <td className="py-3 px-3 align-top text-justify border-x border-black">
+                          <tr key={item.id} style={{background:"#fff",pageBreakInside:"avoid"}}>
+                            <td style={{padding:"10px 12px",textAlign:"center",color:"#555",verticalAlign:"top",border:"1px solid #000"}}>{idx + 1}</td>
+                            <td style={{padding:"10px 12px",verticalAlign:"top",textAlign:"justify",border:"1px solid #000"}}>
                               <div className="text-gray-900">{item.item_vendor}</div>
                             </td>
-                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{formatDeliveryTime(item.dt_vk) || '-'}</td>
-                            <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{item.qty}</td>
-                            <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{formatCurrency(item.unitPrice)}</td>
-                            <td className="py-3 px-3 text-right font-semibold text-gray-900 align-top border-x border-black">{formatCurrency(item.totalBeli)}</td>
+                            <td style={{padding:"10px 12px",color:"#555",verticalAlign:"top",border:"1px solid #000"}}>{formatDeliveryTime(item.dt_vk) || '-'}</td>
+                            <td style={{padding:"10px 12px",textAlign:"right",color:"#333",verticalAlign:"top",border:"1px solid #000"}}>{item.qty}</td>
+                            <td style={{padding:"10px 12px",textAlign:"right",color:"#333",verticalAlign:"top",border:"1px solid #000"}}>{formatCurrency(item.unitPrice)}</td>
+                            <td style={{padding:"10px 12px",textAlign:"right",fontWeight:"600",color:"#111",verticalAlign:"top",border:"1px solid #000"}}>{formatCurrency(item.totalBeli)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -366,13 +366,13 @@ export default function PODetail() {
                         {discPct > 0 && (
                           <tr className="border-t border-black">
                             <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Discount ({discPct}%)</td>
-                            <td className="py-1 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(totalDiscVal)}</td>
+                            <td style={{padding:"4px 12px",textAlign:"right",fontWeight:"600",color:"#c0392b",border:"1px solid #000"}}>-{formatCurrency(totalDiscVal)}</td>
                           </tr>
                         )}
                         {!discPct && totalDiscVal > 0 && (
                           <tr className="border-t border-black">
                             <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Discount (Cash)</td>
-                            <td className="py-1 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(totalDiscVal)}</td>
+                            <td style={{padding:"4px 12px",textAlign:"right",fontWeight:"600",color:"#c0392b",border:"1px solid #000"}}>-{formatCurrency(totalDiscVal)}</td>
                           </tr>
                         )}
                         
@@ -418,7 +418,7 @@ export default function PODetail() {
                                 <td colSpan={5} className="py-1.5 px-3 text-right text-gray-600 border-x border-black italic">
                                   Less DP (No PO: {dpPo.po_number}, Tanggal: {formatDate(dpPo.created_date)})
                                 </td>
-                                <td className="py-1.5 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(dpPo.total_nilai)}</td>
+                                <td style={{padding:"4px 12px",textAlign:"right",fontWeight:"600",color:"#c0392b",border:"1px solid #000"}}>-{formatCurrency(dpPo.total_nilai)}</td>
                               </tr>
                             )}
                             <tr className="border-t border-black">

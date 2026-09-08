@@ -255,7 +255,7 @@ export default function QuotationDetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="inline-block bg-blue-800 text-white font-bold text-[8pt] uppercase tracking-widest px-3 py-1.5 rounded">QUOTATION</span>
+                      <span style={{display:'inline-block', background:'#1e3a5f', color:'#ffffff', fontWeight:'bold', fontSize:'8pt', textTransform:'uppercase', letterSpacing:'0.15em', padding:'6px 12px', borderRadius:'4px'}}>QUOTATION</span>
                     </div>
                   </div>
                 </div>
@@ -304,53 +304,53 @@ export default function QuotationDetail() {
 
                   {/* Items Table */}
                   <div className="mb-6 text-[12pt]">
-                    <table className="w-full border-collapse border border-black">
-                      <thead className="bg-blue-900 text-white">
+                    <table className="w-full" style={{borderCollapse:'collapse', border:'1px solid #000', fontSize:'12pt'}}>
+                      <thead style={{background:'#1e3a5f', color:'#ffffff'}}>
                         <tr>
-                          <th className="py-2.5 px-3 text-center font-semibold border-x border-black" style={{width:'5%'}}>No.</th>
-                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{width:'42%'}}>Spesifikasi</th>
-                          <th className="py-2.5 px-3 text-left font-semibold border-x border-black" style={{width:'14%'}}>Delivery</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'6%'}}>Qty</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'16%'}}>Unit Price</th>
-                          <th className="py-2.5 px-3 text-right font-semibold border-x border-black" style={{width:'17%'}}>Total Price</th>
+                          <th style={{padding:'8px 12px', textAlign:'center', fontWeight:'600', border:'1px solid #000', width:'5%', color:'#fff', background:'#1e3a5f'}}>No.</th>
+                          <th style={{padding:'8px 12px', textAlign:'left', fontWeight:'600', border:'1px solid #000', width:'42%', color:'#fff', background:'#1e3a5f'}}>Spesifikasi</th>
+                          <th style={{padding:'8px 12px', textAlign:'left', fontWeight:'600', border:'1px solid #000', width:'14%', color:'#fff', background:'#1e3a5f'}}>Delivery</th>
+                          <th style={{padding:'8px 12px', textAlign:'right', fontWeight:'600', border:'1px solid #000', width:'6%', color:'#fff', background:'#1e3a5f'}}>Qty</th>
+                          <th style={{padding:'8px 12px', textAlign:'right', fontWeight:'600', border:'1px solid #000', width:'16%', color:'#fff', background:'#1e3a5f'}}>Unit Price</th>
+                          <th style={{padding:'8px 12px', textAlign:'right', fontWeight:'600', border:'1px solid #000', width:'17%', color:'#fff', background:'#1e3a5f'}}>Total Price</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black">
                         {calculatedItems.length === 0 ? (
                           <tr><td colSpan={6} className="py-6 text-center text-gray-400">Tidak ada item dalam quotation ini.</td></tr>
                         ) : calculatedItems.map((item, idx) => (
-                          <tr key={item.id} className="break-inside-avoid bg-white">
-                            <td className="py-3 px-3 text-center text-gray-600 align-top border-x border-black">{idx + 1}</td>
-                            <td className="py-3 px-3 align-top text-justify border-x border-black">
-                              <div className="text-gray-900">{item.item_customer}</div>
-                              <div className="h-3"></div>
-                              <div className="text-gray-900"><span className="font-bold">Offer to:</span><br/>{item.item_vendor}</div>
+                          <tr key={item.id} style={{background:'#ffffff', pageBreakInside:'avoid'}}>
+                            <td style={{padding:'10px 12px', textAlign:'center', color:'#555', verticalAlign:'top', border:'1px solid #000'}}>{idx + 1}</td>
+                            <td style={{padding:'10px 12px', verticalAlign:'top', textAlign:'justify', border:'1px solid #000'}}>
+                              <div style={{color:'#111'}}>{item.item_customer}</div>
+                              <div style={{height:'10px'}}></div>
+                              <div style={{color:'#111'}}><span style={{fontWeight:'bold'}}>Offer to:</span><br/>{item.item_vendor}</div>
                             </td>
-                            <td className="py-3 px-3 text-gray-700 align-top border-x border-black">{formatDeliveryTime(item.dt_kc) || '-'}</td>
-                            <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{item.qty}</td>
-                            <td className="py-3 px-3 text-right text-gray-800 align-top border-x border-black">{formatCurrency(item.hj)}</td>
-                            <td className="py-3 px-3 text-right font-semibold text-gray-900 align-top border-x border-black">{formatCurrency(item.total)}</td>
+                            <td style={{padding:'10px 12px', color:'#555', verticalAlign:'top', border:'1px solid #000'}}>{formatDeliveryTime(item.dt_kc) || '-'}</td>
+                            <td style={{padding:'10px 12px', textAlign:'right', color:'#333', verticalAlign:'top', border:'1px solid #000'}}>{item.qty}</td>
+                            <td style={{padding:'10px 12px', textAlign:'right', color:'#333', verticalAlign:'top', border:'1px solid #000'}}>{formatCurrency(item.hj)}</td>
+                            <td style={{padding:'10px 12px', textAlign:'right', fontWeight:'600', color:'#111', verticalAlign:'top', border:'1px solid #000'}}>{formatCurrency(item.total)}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tbody className="border-t border-black break-inside-avoid">
-                        <tr className="border-t border-black">
-                          <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Sub Total</td>
-                          <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(subtotal)}</td>
+                        <tr style={{borderTop:'1px solid #000'}}>
+                          <td colSpan={5} style={{padding:'4px 12px', textAlign:'right', color:'#555', border:'1px solid #000'}}>Sub Total</td>
+                          <td style={{padding:'4px 12px', textAlign:'right', fontWeight:'600', color:'#333', border:'1px solid #000'}}>{formatCurrency(subtotal)}</td>
                         </tr>
                         {discPct > 0 && (
-                          <tr className="border-t border-black">
-                            <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">Discount ({discPct}%)</td>
-                            <td className="py-1 px-3 text-right font-semibold text-red-600 border-x border-black">-{formatCurrency(subtotal - jualAfterDisc)}</td>
+                          <tr style={{borderTop:'1px solid #000'}}>
+                            <td colSpan={5} style={{padding:'4px 12px', textAlign:'right', color:'#555', border:'1px solid #000'}}>Discount ({discPct}%)</td>
+                            <td style={{padding:'4px 12px', textAlign:'right', fontWeight:'600', color:'#c0392b', border:'1px solid #000'}}>-{formatCurrency(subtotal - jualAfterDisc)}</td>
                           </tr>
                         )}
-                        <tr className="border-t border-black">
-                          <td colSpan={5} className="py-1 px-3 text-right text-gray-600 border-x border-black">PPN {ppn}%</td>
-                          <td className="py-1 px-3 text-right font-semibold text-gray-800 border-x border-black">{formatCurrency(tax_amount)}</td>
+                        <tr style={{borderTop:'1px solid #000'}}>
+                          <td colSpan={5} style={{padding:'4px 12px', textAlign:'right', color:'#555', border:'1px solid #000'}}>PPN {ppn}%</td>
+                          <td style={{padding:'4px 12px', textAlign:'right', fontWeight:'600', color:'#333', border:'1px solid #000'}}>{formatCurrency(tax_amount)}</td>
                         </tr>
-                        <tr className="border-t border-black">
-                          <td colSpan={5} className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">Grand Total</td>
-                          <td className="py-1.5 px-3 text-right font-bold text-gray-900 border-x border-black">{formatCurrency(grand_total)}</td>
+                        <tr style={{borderTop:'1px solid #000'}}>
+                          <td colSpan={5} style={{padding:'6px 12px', textAlign:'right', fontWeight:'700', color:'#111', border:'1px solid #000'}}>Grand Total</td>
+                          <td style={{padding:'6px 12px', textAlign:'right', fontWeight:'700', color:'#111', border:'1px solid #000'}}>{formatCurrency(grand_total)}</td>
                         </tr>
                       </tbody>
                     </table>

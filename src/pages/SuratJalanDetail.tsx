@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, RotateCcw, Loader2, MapPin, Phone, Mail, AtSign } from 'lucide-react';
 import { PageHeader, Button } from '@/components/ui';
@@ -168,7 +168,7 @@ export default function SuratJalanDetail() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="inline-block bg-blue-800 text-white font-bold text-[8pt] uppercase tracking-widest px-3 py-1.5 rounded">SURAT JALAN</span>
+                      <span style={{display:"inline-block",background:"#1e3a5f",color:"#fff",fontWeight:"bold",fontSize:"8pt",textTransform:"uppercase",letterSpacing:"0.15em",padding:"6px 12px",borderRadius:"4px"}}>SURAT JALAN</span>
                     </div>
                   </div>
                 </div>
@@ -223,7 +223,7 @@ export default function SuratJalanDetail() {
                   {/* Items Table */}
                   <table className="w-full border-collapse mb-8 text-[11pt]">
                     <thead>
-                      <tr className="bg-blue-900 text-white">
+                      <tr style={{background:"#1e3a5f",color:"#fff"}}>
                         <th className="py-2.5 px-3 text-center font-semibold border border-black" style={{ width: '5%' }}>No</th>
                         <th className="py-2.5 px-3 text-left font-semibold border border-black">Item</th>
                         <th className="py-2.5 px-3 text-center font-semibold border border-black" style={{ width: '12%' }}>Qty</th>
@@ -235,7 +235,7 @@ export default function SuratJalanDetail() {
                           <td colSpan={3} className="py-4 text-center italic text-gray-500 border border-black">Tidak ada item dalam Surat Jalan ini.</td>
                         </tr>
                       ) : items.map((item, idx) => (
-                        <tr key={item.id} className="break-inside-avoid bg-white">
+                        <tr key={item.id} style={{background:"#fff",pageBreakInside:"avoid"}}>
                           <td className="py-3 px-3 text-center text-gray-600 align-top border border-black">{idx + 1}</td>
                           <td className="py-3 px-3 align-top text-justify border border-black">
                             <div className="text-gray-900">{item.item_customer}</div>
