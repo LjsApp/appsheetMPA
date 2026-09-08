@@ -8,6 +8,7 @@ import { useSuratJalan, useSaveSuratJalan, usePoIns, useDeleteSuratJalan, fetchA
 import type { POIn } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { generateAndUploadPdf } from '@/lib/pdfGenerator';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function SuratJalanList() {
   const navigate = useNavigate();
@@ -278,21 +279,19 @@ export default function SuratJalanList() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Pilih PO In</label>
-                <select
-                  value={selectedPoId}
-                  onChange={e => setSelectedPoId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                >
-                  <option value="">-- Pilih PO In --</option>
-                  {poIns.map(po => {
+                <SearchableSelect
+                  options={poIns.map(po => {
                     const isUsed = usedPoIds.has(po.id);
-                    return (
-                      <option key={po.id} value={po.id} disabled={isUsed}>
-                        {po.po_in_number || po.id} — {po.customer_name} — {po.judul}{isUsed ? ' (Sudah ada SJ)' : ''}
-                      </option>
-                    );
+                    return {
+                      value: po.id,
+                      label: `${po.po_in_number || po.id} — ${po.customer_name} — ${po.judul}${isUsed ? ' (Sudah ada SJ)' : ''}`,
+                      disabled: isUsed,
+                    };
                   })}
-                </select>
+                  value={selectedPoId}
+                  onChange={setSelectedPoId}
+                  placeholder="-- Pilih PO In --"
+                />
               </div>
               {selectedPoId && (
                 <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">

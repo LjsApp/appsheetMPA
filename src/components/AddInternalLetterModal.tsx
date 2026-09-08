@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui";
+import SearchableSelect from "@/components/SearchableSelect";
 import { usePoIns, useInternalLetters, useNeracaItems, useVendorDiscounts, useSaveInternalLetter, useGetNextInternalLetterNumber, useNeracaQuotations, usePurchaseOrders } from "@/hooks/useData";
 
 interface Props {
@@ -220,21 +221,19 @@ export default function AddInternalLetterModal({ isOpen, onClose, onSuccess }: P
           <label className="block text-xs font-medium text-gray-700 mb-1">
             Pilih PO In <span className="text-red-500">*</span>
           </label>
-          <select
-            value={selectedPoInId}
-            onChange={(e) => setSelectedPoInId(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">-- Pilih PO In --</option>
-            {poIns.map((p) => {
+          <SearchableSelect
+            options={poIns.map((p) => {
               const isUsed = usedPoInIds.has(p.id);
-              return (
-                <option key={p.id} value={p.id} disabled={isUsed}>
-                  {p.po_in_number || p.id} - {p.customer_name} {isUsed ? "(Sudah dibuat)" : ""}
-                </option>
-              );
+              return {
+                value: p.id,
+                label: `${p.po_in_number || p.id} - ${p.customer_name}${isUsed ? ' (Sudah dibuat)' : ''}`,
+                disabled: isUsed,
+              };
             })}
-          </select>
+            value={selectedPoInId}
+            onChange={setSelectedPoInId}
+            placeholder="-- Pilih PO In --"
+          />
         </div>
 
         {selectedPoIn && calculatedLetters.length > 0 && (

@@ -7,6 +7,7 @@ import TableToolbar from '@/components/TableToolbar';
 import { useInvoices, useSaveInvoice, useDeleteInvoice, usePoIns, useCustomers, useCompany, fetchApi, useSaveNotification, useUsers, useUploadFile, useInquiries, useSaveInquiry, useNeracas, useNeracaQuotations } from '@/hooks/useData';
 import { formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -301,21 +302,19 @@ export default function Invoices() {
           {!isEdit && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Pilih PO In</label>
-              <select
-                value={selectedPoId}
-                onChange={e => handlePoSelect(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              >
-                <option value="">-- Pilih PO In --</option>
-                {poIns.map(po => {
+              <SearchableSelect
+                options={poIns.map(po => {
                   const isUsed = invoices.some(inv => inv.po_in_id === po.id);
-                  return (
-                    <option key={po.id} value={po.id} disabled={isUsed}>
-                      {po.po_in_number || po.id} — {po.customer_name} {isUsed ? '(Sudah dibuat)' : ''}
-                    </option>
-                  );
+                  return {
+                    value: po.id,
+                    label: `${po.po_in_number || po.id} — ${po.customer_name}${isUsed ? ' (Sudah dibuat)' : ''}`,
+                    disabled: isUsed,
+                  };
                 })}
-              </select>
+                value={selectedPoId}
+                onChange={handlePoSelect}
+                placeholder="-- Pilih PO In --"
+              />
             </div>
           )}
 

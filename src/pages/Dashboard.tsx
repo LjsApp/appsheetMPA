@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui';
-import { 
+import {
   usePurchaseOrders, useInvoices, usePoIns, useNeracaQuotations,
   useBelanjaDapurIn, useBelanjaDapurOut, useBelanjaProyekIn, useBelanjaProyekOut
 } from '@/hooks/useData';
 import { formatCurrency } from '@/lib/utils';
-import { 
+import {
   Wallet, ShoppingCart, TrendingUp,
   FileText, ArrowRight, X, Clock
 } from 'lucide-react';
@@ -29,11 +29,11 @@ export default function Dashboard() {
     if (!dateStr) return false;
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return false;
-    
+
     const now = new Date();
-    
+
     if (dateFilter === 'Semua') return true;
-    
+
     if (dateFilter === '1 Bulan Terakhir') {
       const pastMonth = new Date();
       pastMonth.setMonth(now.getMonth() - 1);
@@ -85,14 +85,14 @@ export default function Dashboard() {
   const totalDapurOut = dapurOut.reduce((sum, item) => sum + (Number(item.nominal) || 0), 0);
   const totalProyekIn = proyekIn.reduce((sum, item) => sum + (Number(item.nominal) || 0), 0);
   const totalProyekOut = proyekOut.reduce((sum, item) => sum + (Number(item.nominal) || 0), 0);
-  
+
   const totalBelanjaIn = totalDapurIn + totalProyekIn;
   const totalBelanjaOut = totalDapurOut + totalProyekOut;
   const sisaBelanja = totalBelanjaIn - totalBelanjaOut;
 
   // Pembelian (PO Out)
   const totalPembelian = poOuts.reduce((sum, po) => sum + (po.status !== 'Deleted' ? (Number(po.total_nilai) || 0) : 0), 0);
-  
+
   const vendorPembelian = useMemo(() => {
     const map = new Map<string, number>();
     poOuts.filter(po => po.status !== 'Deleted').forEach(po => {
@@ -119,7 +119,7 @@ export default function Dashboard() {
   const totalPenjualan = totalLunas + totalPiutang;
 
   // Keuntungan
-  const keuntungan = totalPenjualan - totalPembelian - totalProyekOut;
+  const keuntungan = totalPenjualan - totalPembelian;
 
   // --- PROYEK ---
   // Total Quotation
@@ -161,7 +161,7 @@ export default function Dashboard() {
     <div className="space-y-8 pb-10 max-w-7xl mx-auto pt-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <PageHeader title="Dashboard Umum" subtitle="Ringkasan aktivitas keuangan dan proyek perusahaan" />
-        
+
         <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-500" />
@@ -197,14 +197,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-      
+
       {/* SECTION KEUANGAN */}
       <section>
         <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
           <Wallet className="w-6 h-6 text-blue-600" /> Keuangan
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Card Belanja */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10"><Wallet className="w-16 h-16 text-emerald-600" /></div>
@@ -223,7 +223,7 @@ export default function Dashboard() {
                 <span className="text-lg font-bold text-blue-700">{formatCurrency(sisaBelanja)}</span>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setModalContent({ isOpen: true, title: 'Detail Belanja', type: 'belanja' })}
               className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 rounded-lg transition-colors border border-gray-200 z-10"
             >
@@ -239,7 +239,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500 mb-1">Total Pembelian Keseluruhan</p>
               <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalPembelian)}</p>
             </div>
-            <button 
+            <button
               onClick={() => setModalContent({ isOpen: true, title: 'Detail Pembelian per Vendor', type: 'pembelian' })}
               className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 rounded-lg transition-colors border border-gray-200 z-10"
             >
@@ -265,7 +265,7 @@ export default function Dashboard() {
                 <p className="text-sm font-bold text-amber-700">{formatCurrency(totalPiutang)}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setModalContent({ isOpen: true, title: 'Detail Penjualan (Invoice)', type: 'penjualan' })}
               className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 rounded-lg transition-colors border border-gray-200 z-10"
             >
@@ -294,7 +294,7 @@ export default function Dashboard() {
           <FileText className="w-6 h-6 text-blue-600" /> Proyek
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
+
           {/* Card Total Quotation */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col">
             <div className="mb-4">
@@ -312,7 +312,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setModalContent({ isOpen: true, title: 'Semua Data Quotation Customer', type: 'quotation' })}
               className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-blue-50 hover:bg-blue-100 text-sm font-semibold text-blue-700 rounded-lg transition-colors"
             >
@@ -340,7 +340,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setModalContent({ isOpen: true, title: 'Semua Data PO In Customer', type: 'poin' })}
               className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-sm font-semibold text-emerald-700 rounded-lg transition-colors"
             >
@@ -368,7 +368,7 @@ export default function Dashboard() {
                 {fastPayments.length === 0 && <p className="text-sm text-gray-500 italic py-4 text-center">Belum ada data pelunasan</p>}
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setModalContent({ isOpen: true, title: 'Data Kecepatan Pembayaran', type: 'cepat' })}
               className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-amber-50 hover:bg-amber-100 text-sm font-semibold text-amber-700 rounded-lg transition-colors"
             >
@@ -390,7 +390,7 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="p-5 overflow-y-auto">
-              
+
               {/* MODAL: BELANJA */}
               {modalContent.type === 'belanja' && (
                 <div className="space-y-6">
@@ -502,7 +502,7 @@ export default function Dashboard() {
                       </table>
                     </div>
                   </div>
-                  
+
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex justify-between items-center text-blue-900 font-bold text-lg">
                     <span>Total Keseluruhan Penjualan</span>
                     <span>{formatCurrency(totalPenjualan)}</span>

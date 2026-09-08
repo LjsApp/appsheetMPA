@@ -4,6 +4,7 @@ import { ChevronDown, Search, X } from 'lucide-react';
 interface Option {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 interface SearchableSelectProps {
@@ -100,14 +101,17 @@ export default function SearchableSelect({
                 <div
                   key={opt.value}
                   onClick={() => {
+                    if (opt.disabled) return;
                     onChange(opt.value);
                     setIsOpen(false);
                     setSearchTerm('');
                   }}
-                  className={`px-3 py-2 text-sm cursor-pointer rounded-md ${
-                    value === opt.value
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
+                  className={`px-3 py-2 text-sm rounded-md ${
+                    opt.disabled 
+                      ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
+                      : value === opt.value
+                        ? 'bg-blue-50 text-blue-700 font-medium cursor-pointer'
+                        : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
                   }`}
                 >
                   {opt.label}

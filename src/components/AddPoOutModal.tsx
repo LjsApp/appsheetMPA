@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 
 import Modal from '@/components/Modal';
 import { Button } from '@/components/ui';
+import SearchableSelect from '@/components/SearchableSelect';
 import { usePoIns, useNeracaQuotations, usePurchaseOrders } from '@/hooks/useData';
 import type { NeracaQuotation } from '@/types';
 
@@ -22,6 +23,17 @@ export default function AddPoOutModal({ isOpen, onClose, onContinue }: AddPoOutM
   const usedPoInQuotationIds = useMemo(() => {
     return new Set(purchaseOrders.map(p => p.quotation_id).filter(Boolean));
   }, [purchaseOrders]);
+
+  const poInOptions = useMemo(() =>
+    poIns.map(p => {
+      const isUsed = usedPoInQuotationIds.has(p.quotation_id);
+      return {
+        value: p.id,
+        label: `${p.po_in_number || p.id} — ${p.customer_name}${isUsed ? ' ✓ Sudah PO Out' : ''}`,
+        disabled: isUsed,
+      };
+    }),
+  [poIns, usedPoInQuotationIds]);
 
   const handleContinue = () => {
     if (!selectedPoInId) return;
@@ -47,21 +59,12 @@ export default function AddPoOutModal({ isOpen, onClose, onContinue }: AddPoOutM
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Pilih PO In <span className="text-red-500">*</span></label>
-          <select
+          <SearchableSelect
+            options={poInOptions}
             value={selectedPoInId}
-            onChange={e => setSelectedPoInId(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="">-- Pilih PO In --</option>
-            {poIns.map(p => {
-              const isUsed = usedPoInQuotationIds.has(p.quotation_id);
-              return (
-                <option key={p.id} value={p.id} disabled={isUsed}>
-                  {p.po_in_number || p.id} — {p.customer_name} {isUsed ? ' ✓ Sudah PO Out' : ''}
-                </option>
-              );
-            })}
-          </select>
+            onChange={setSelectedPoInId}
+            placeholder="-- Pilih PO In --"
+          />
           {selectedPoInId && (
             <p className="text-xs text-gray-500 mt-2">
               Sistem akan membuat PO Out untuk vendor berdasarkan quotation yang terhubung dengan PO In ini.
